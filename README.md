@@ -4,6 +4,8 @@
 ## Navigation
 Go to: [http://orderappwebx.azurewebsites.net/](http://orderappwebx.azurewebsites.net/)
 
+**May be a bit slow because of the free azure plan**
+
 * **To create an order**: [/new](http://orderappwebx.azurewebsites.net/new)
 * **To edit an order**: [/edit?orderId={orderId}](http://orderappwebx.azurewebsites.net/edit?orderId={orderId})
 
