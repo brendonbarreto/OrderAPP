@@ -1,4 +1,4 @@
-﻿const angular = require('angular');
+const angular = require('angular');
 
 require('angular-route');
 require('angular-sanitize');
