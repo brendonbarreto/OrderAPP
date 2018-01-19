@@ -1,11 +1,11 @@
-﻿const angular = require('angular');
+const angular = require('angular');
 
-import 'angular-material'
-import 'angular-sanitize'
-import 'angular-route'
-import 'angular-input-masks'
-import 'angular-messages'
-import 'angular-material/angular-material.css'
+require('angular-route');
+require('angular-sanitize');
+require('angular-messages');
+require('angular-input-masks');
+require('angular-material');
+require('angular-material/angular-material.css')
 
 
 'use strict';
