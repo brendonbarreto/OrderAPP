@@ -1,15 +1,12 @@
 ﻿const angular = require('angular');
 
-import 'angular-material'
-import 'angular-sanitize'
-import 'angular-route'
-import 'angular-input-masks'
-import 'angular-messages'
-import 'angular-material/angular-material.css'
-
+require('angular-route');
+require('angular-sanitize');
+require('angular-messages');
+require('angular-material');
 
 'use strict';
-var app = angular.module('OrderApp', ['ngMaterial', 'ngSanitize', 'ngRoute', 'ui.utils.masks', 'ngMessages']);
+var app = angular.module('OrderApp', ['ngMaterial', 'ngSanitize', 'ngRoute', 'ngMessages']);
 
 //Enviroment setup
 app

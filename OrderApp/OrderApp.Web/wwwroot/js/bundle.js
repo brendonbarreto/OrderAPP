@@ -60,267 +60,15 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 15);
+/******/ 	return __webpack_require__(__webpack_require__.s = 1);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(root, factory) {
-    /* istanbul ignore next */
-    if (true) {
-        // AMD. Register as an anonymous module.
-        !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
-				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
-				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-    } else if (typeof exports === 'object') {
-        // Node. Does not work with strict CommonJS, but
-        // only CommonJS-like environments that support module.exports,
-        // like Node.
-        module.exports = factory();
-    } else {
-        // Browser globals (root is window)
-        root.StringMask = factory();
-    }
-}(this, function() {
-    var tokens = {
-        '0': {pattern: /\d/, _default: '0'},
-        '9': {pattern: /\d/, optional: true},
-        '#': {pattern: /\d/, optional: true, recursive: true},
-        'A': {pattern: /[a-zA-Z0-9]/},
-        'S': {pattern: /[a-zA-Z]/},
-        'U': {pattern: /[a-zA-Z]/, transform: function(c) { return c.toLocaleUpperCase(); }},
-        'L': {pattern: /[a-zA-Z]/, transform: function(c) { return c.toLocaleLowerCase(); }},
-        '$': {escape: true}
-    };
-
-    function isEscaped(pattern, pos) {
-        var count = 0;
-        var i = pos - 1;
-        var token = {escape: true};
-        while (i >= 0 && token && token.escape) {
-            token = tokens[pattern.charAt(i)];
-            count += token && token.escape ? 1 : 0;
-            i--;
-        }
-        return count > 0 && count % 2 === 1;
-    }
-
-    function calcOptionalNumbersToUse(pattern, value) {
-        var numbersInP = pattern.replace(/[^0]/g,'').length;
-        var numbersInV = value.replace(/[^\d]/g,'').length;
-        return numbersInV - numbersInP;
-    }
-
-    function concatChar(text, character, options, token) {
-        if (token && typeof token.transform === 'function') {
-            character = token.transform(character);
-        }
-        if (options.reverse) {
-            return character + text;
-        }
-        return text + character;
-    }
-
-    function hasMoreTokens(pattern, pos, inc) {
-        var pc = pattern.charAt(pos);
-        var token = tokens[pc];
-        if (pc === '') {
-            return false;
-        }
-        return token && !token.escape ? true : hasMoreTokens(pattern, pos + inc, inc);
-    }
-
-    function hasMoreRecursiveTokens(pattern, pos, inc) {
-        var pc = pattern.charAt(pos);
-        var token = tokens[pc];
-        if (pc === '') {
-            return false;
-        }
-        return token && token.recursive ? true : hasMoreRecursiveTokens(pattern, pos + inc, inc);
-    }
-
-    function insertChar(text, char, position) {
-        var t = text.split('');
-        t.splice(position, 0, char);
-        return t.join('');
-    }
-
-    function StringMask(pattern, opt) {
-        this.options = opt || {};
-        this.options = {
-            reverse: this.options.reverse || false,
-            usedefaults: this.options.usedefaults || this.options.reverse
-        };
-        this.pattern = pattern;
-    }
-
-    StringMask.prototype.process = function proccess(value) {
-        if (!value) {
-            return {result: '', valid: false};
-        }
-        value = value + '';
-        var pattern2 = this.pattern;
-        var valid = true;
-        var formatted = '';
-        var valuePos = this.options.reverse ? value.length - 1 : 0;
-        var patternPos = 0;
-        var optionalNumbersToUse = calcOptionalNumbersToUse(pattern2, value);
-        var escapeNext = false;
-        var recursive = [];
-        var inRecursiveMode = false;
-
-        var steps = {
-            start: this.options.reverse ? pattern2.length - 1 : 0,
-            end: this.options.reverse ? -1 : pattern2.length,
-            inc: this.options.reverse ? -1 : 1
-        };
-
-        function continueCondition(options) {
-            if (!inRecursiveMode && !recursive.length && hasMoreTokens(pattern2, patternPos, steps.inc)) {
-                // continue in the normal iteration
-                return true;
-            } else if (!inRecursiveMode && recursive.length &&
-                hasMoreRecursiveTokens(pattern2, patternPos, steps.inc)) {
-                // continue looking for the recursive tokens
-                // Note: all chars in the patterns after the recursive portion will be handled as static string
-                return true;
-            } else if (!inRecursiveMode) {
-                // start to handle the recursive portion of the pattern
-                inRecursiveMode = recursive.length > 0;
-            }
-
-            if (inRecursiveMode) {
-                var pc = recursive.shift();
-                recursive.push(pc);
-                if (options.reverse && valuePos >= 0) {
-                    patternPos++;
-                    pattern2 = insertChar(pattern2, pc, patternPos);
-                    return true;
-                } else if (!options.reverse && valuePos < value.length) {
-                    pattern2 = insertChar(pattern2, pc, patternPos);
-                    return true;
-                }
-            }
-            return patternPos < pattern2.length && patternPos >= 0;
-        }
-
-        /**
-         * Iterate over the pattern's chars parsing/matching the input value chars
-         * until the end of the pattern. If the pattern ends with recursive chars
-         * the iteration will continue until the end of the input value.
-         *
-         * Note: The iteration must stop if an invalid char is found.
-         */
-        for (patternPos = steps.start; continueCondition(this.options); patternPos = patternPos + steps.inc) {
-            // Value char
-            var vc = value.charAt(valuePos);
-            // Pattern char to match with the value char
-            var pc = pattern2.charAt(patternPos);
-
-            var token = tokens[pc];
-            if (recursive.length && token && !token.recursive) {
-                // In the recursive portion of the pattern: tokens not recursive must be seen as static chars
-                token = null;
-            }
-
-            // 1. Handle escape tokens in pattern
-            // go to next iteration: if the pattern char is a escape char or was escaped
-            if (!inRecursiveMode || vc) {
-                if (this.options.reverse && isEscaped(pattern2, patternPos)) {
-                    // pattern char is escaped, just add it and move on
-                    formatted = concatChar(formatted, pc, this.options, token);
-                    // skip escape token
-                    patternPos = patternPos + steps.inc;
-                    continue;
-                } else if (!this.options.reverse && escapeNext) {
-                    // pattern char is escaped, just add it and move on
-                    formatted = concatChar(formatted, pc, this.options, token);
-                    escapeNext = false;
-                    continue;
-                } else if (!this.options.reverse && token && token.escape) {
-                    // mark to escape the next pattern char
-                    escapeNext = true;
-                    continue;
-                }
-            }
-
-            // 2. Handle recursive tokens in pattern
-            // go to next iteration: if the value str is finished or
-            //                       if there is a normal token in the recursive portion of the pattern
-            if (!inRecursiveMode && token && token.recursive) {
-                // save it to repeat in the end of the pattern and handle the value char now
-                recursive.push(pc);
-            } else if (inRecursiveMode && !vc) {
-                // in recursive mode but value is finished. Add the pattern char if it is not a recursive token
-                formatted = concatChar(formatted, pc, this.options, token);
-                continue;
-            } else if (!inRecursiveMode && recursive.length > 0 && !vc) {
-                // recursiveMode not started but already in the recursive portion of the pattern
-                continue;
-            }
-
-            // 3. Handle the value
-            // break iterations: if value is invalid for the given pattern
-            if (!token) {
-                // add char of the pattern
-                formatted = concatChar(formatted, pc, this.options, token);
-                if (!inRecursiveMode && recursive.length) {
-                    // save it to repeat in the end of the pattern
-                    recursive.push(pc);
-                }
-            } else if (token.optional) {
-                // if token is optional, only add the value char if it matchs the token pattern
-                //                       if not, move on to the next pattern char
-                if (token.pattern.test(vc) && optionalNumbersToUse) {
-                    formatted = concatChar(formatted, vc, this.options, token);
-                    valuePos = valuePos + steps.inc;
-                    optionalNumbersToUse--;
-                } else if (recursive.length > 0 && vc) {
-                    valid = false;
-                    break;
-                }
-            } else if (token.pattern.test(vc)) {
-                // if token isn't optional the value char must match the token pattern
-                formatted = concatChar(formatted, vc, this.options, token);
-                valuePos = valuePos + steps.inc;
-            } else if (!vc && token._default && this.options.usedefaults) {
-                // if the token isn't optional and has a default value, use it if the value is finished
-                formatted = concatChar(formatted, token._default, this.options, token);
-            } else {
-                // the string value don't match the given pattern
-                valid = false;
-                break;
-            }
-        }
-
-        return {result: formatted, valid: valid};
-    };
-
-    StringMask.prototype.apply = function(value) {
-        return this.process(value).result;
-    };
-
-    StringMask.prototype.validate = function(value) {
-        return this.process(value).valid;
-    };
-
-    StringMask.process = function(value, pattern, options) {
-        return new StringMask(pattern, options).process(value);
-    };
-
-    StringMask.apply = function(value, pattern, options) {
-        return new StringMask(pattern, options).apply(value);
-    };
-
-    StringMask.validate = function(value, pattern, options) {
-        return new StringMask(pattern, options).validate(value);
-    };
-
-    return StringMask;
-}));
+__webpack_require__(2);
+module.exports = angular;
 
 
 /***/ }),
@@ -330,1489 +78,15 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 "use strict";
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = toDate;
-var MILLISECONDS_IN_HOUR = 3600000;
-var MILLISECONDS_IN_MINUTE = 60000;
-var DEFAULT_ADDITIONAL_DIGITS = 2;
-
-var patterns = {
-  dateTimeDelimeter: /[T ]/,
-  plainTime: /:/,
-
-  // year tokens
-  YY: /^(\d{2})$/,
-  YYY: [/^([+-]\d{2})$/, // 0 additional digits
-  /^([+-]\d{3})$/, // 1 additional digit
-  /^([+-]\d{4})$/ // 2 additional digits
-  ],
-  YYYY: /^(\d{4})/,
-  YYYYY: [/^([+-]\d{4})/, // 0 additional digits
-  /^([+-]\d{5})/, // 1 additional digit
-  /^([+-]\d{6})/ // 2 additional digits
-  ],
-
-  // date tokens
-  MM: /^-(\d{2})$/,
-  DDD: /^-?(\d{3})$/,
-  MMDD: /^-?(\d{2})-?(\d{2})$/,
-  Www: /^-?W(\d{2})$/,
-  WwwD: /^-?W(\d{2})-?(\d{1})$/,
-
-  HH: /^(\d{2}([.,]\d*)?)$/,
-  HHMM: /^(\d{2}):?(\d{2}([.,]\d*)?)$/,
-  HHMMSS: /^(\d{2}):?(\d{2}):?(\d{2}([.,]\d*)?)$/,
-
-  // timezone tokens
-  timezone: /([Z+-].*)$/,
-  timezoneZ: /^(Z)$/,
-  timezoneHH: /^([+-])(\d{2})$/,
-  timezoneHHMM: /^([+-])(\d{2}):?(\d{2})$/
-};
-
-/**
- * @name toDate
- * @category Common Helpers
- * @summary Convert the given argument to an instance of Date.
- *
- * @description
- * Convert the given argument to an instance of Date.
- *
- * If the argument is an instance of Date, the function returns its clone.
- *
- * If the argument is a number, it is treated as a timestamp.
- *
- * If an argument is a string, the function tries to parse it.
- * Function accepts complete ISO 8601 formats as well as partial implementations.
- * ISO 8601: http://en.wikipedia.org/wiki/ISO_8601
- *
- * If the argument is null, it is treated as an invalid date.
- *
- * If all above fails, the function passes the given argument to Date constructor.
- *
- * **Note**: *all* Date arguments passed to any *date-fns* function is processed by `toDate`.
- * All *date-fns* functions will throw `RangeError` if `options.additionalDigits` is not 0, 1, 2 or undefined.
- *
- * @param {*} argument - the value to convert
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - the additional number of digits in the extended year format
- * @returns {Date} the parsed date in the local time zone
- * @throws {TypeError} 1 argument required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- *
- * @example
- * // Convert string '2014-02-11T11:30:30' to date:
- * var result = toDate('2014-02-11T11:30:30')
- * //=> Tue Feb 11 2014 11:30:30
- *
- * @example
- * // Convert string '+02014101' to date,
- * // if the additional number of digits in the extended year format is 1:
- * var result = toDate('+02014101', {additionalDigits: 1})
- * //=> Fri Apr 11 2014 00:00:00
- */
-function toDate(argument, dirtyOptions) {
-  if (arguments.length < 1) {
-    throw new TypeError('1 argument required, but only ' + arguments.length + ' present');
-  }
-
-  if (argument === null) {
-    return new Date(NaN);
-  }
-
-  var options = dirtyOptions || {};
-
-  var additionalDigits = options.additionalDigits === undefined ? DEFAULT_ADDITIONAL_DIGITS : Number(options.additionalDigits);
-  if (additionalDigits !== 2 && additionalDigits !== 1 && additionalDigits !== 0) {
-    throw new RangeError('additionalDigits must be 0, 1 or 2');
-  }
-
-  // Clone the date
-  if (argument instanceof Date) {
-    // Prevent the date to lose the milliseconds when passed to new Date() in IE10
-    return new Date(argument.getTime());
-  } else if (typeof argument !== 'string') {
-    return new Date(argument);
-  }
-
-  var dateStrings = splitDateString(argument);
-
-  var parseYearResult = parseYear(dateStrings.date, additionalDigits);
-  var year = parseYearResult.year;
-  var restDateString = parseYearResult.restDateString;
-
-  var date = parseDate(restDateString, year);
-
-  if (date) {
-    var timestamp = date.getTime();
-    var time = 0;
-    var offset;
-
-    if (dateStrings.time) {
-      time = parseTime(dateStrings.time);
-    }
-
-    if (dateStrings.timezone) {
-      offset = parseTimezone(dateStrings.timezone);
-    } else {
-      // get offset accurate to hour in timezones that change offset
-      offset = new Date(timestamp + time).getTimezoneOffset();
-      offset = new Date(timestamp + time + offset * MILLISECONDS_IN_MINUTE).getTimezoneOffset();
-    }
-
-    return new Date(timestamp + time + offset * MILLISECONDS_IN_MINUTE);
-  } else {
-    return new Date(argument);
-  }
-}
-
-function splitDateString(dateString) {
-  var dateStrings = {};
-  var array = dateString.split(patterns.dateTimeDelimeter);
-  var timeString;
-
-  if (patterns.plainTime.test(array[0])) {
-    dateStrings.date = null;
-    timeString = array[0];
-  } else {
-    dateStrings.date = array[0];
-    timeString = array[1];
-  }
-
-  if (timeString) {
-    var token = patterns.timezone.exec(timeString);
-    if (token) {
-      dateStrings.time = timeString.replace(token[1], '');
-      dateStrings.timezone = token[1];
-    } else {
-      dateStrings.time = timeString;
-    }
-  }
-
-  return dateStrings;
-}
-
-function parseYear(dateString, additionalDigits) {
-  var patternYYY = patterns.YYY[additionalDigits];
-  var patternYYYYY = patterns.YYYYY[additionalDigits];
-
-  var token;
-
-  // YYYY or ±YYYYY
-  token = patterns.YYYY.exec(dateString) || patternYYYYY.exec(dateString);
-  if (token) {
-    var yearString = token[1];
-    return {
-      year: parseInt(yearString, 10),
-      restDateString: dateString.slice(yearString.length)
-    };
-  }
-
-  // YY or ±YYY
-  token = patterns.YY.exec(dateString) || patternYYY.exec(dateString);
-  if (token) {
-    var centuryString = token[1];
-    return {
-      year: parseInt(centuryString, 10) * 100,
-      restDateString: dateString.slice(centuryString.length)
-    };
-  }
-
-  // Invalid ISO-formatted year
-  return {
-    year: null
-  };
-}
-
-function parseDate(dateString, year) {
-  // Invalid ISO-formatted year
-  if (year === null) {
-    return null;
-  }
-
-  var token;
-  var date;
-  var month;
-  var week;
-
-  // YYYY
-  if (dateString.length === 0) {
-    date = new Date(0);
-    date.setUTCFullYear(year);
-    return date;
-  }
-
-  // YYYY-MM
-  token = patterns.MM.exec(dateString);
-  if (token) {
-    date = new Date(0);
-    month = parseInt(token[1], 10) - 1;
-    date.setUTCFullYear(year, month);
-    return date;
-  }
-
-  // YYYY-DDD or YYYYDDD
-  token = patterns.DDD.exec(dateString);
-  if (token) {
-    date = new Date(0);
-    var dayOfYear = parseInt(token[1], 10);
-    date.setUTCFullYear(year, 0, dayOfYear);
-    return date;
-  }
-
-  // YYYY-MM-DD or YYYYMMDD
-  token = patterns.MMDD.exec(dateString);
-  if (token) {
-    date = new Date(0);
-    month = parseInt(token[1], 10) - 1;
-    var day = parseInt(token[2], 10);
-    date.setUTCFullYear(year, month, day);
-    return date;
-  }
-
-  // YYYY-Www or YYYYWww
-  token = patterns.Www.exec(dateString);
-  if (token) {
-    week = parseInt(token[1], 10) - 1;
-    return dayOfISOYear(year, week);
-  }
-
-  // YYYY-Www-D or YYYYWwwD
-  token = patterns.WwwD.exec(dateString);
-  if (token) {
-    week = parseInt(token[1], 10) - 1;
-    var dayOfWeek = parseInt(token[2], 10) - 1;
-    return dayOfISOYear(year, week, dayOfWeek);
-  }
-
-  // Invalid ISO-formatted date
-  return null;
-}
-
-function parseTime(timeString) {
-  var token;
-  var hours;
-  var minutes;
-
-  // hh
-  token = patterns.HH.exec(timeString);
-  if (token) {
-    hours = parseFloat(token[1].replace(',', '.'));
-    return hours % 24 * MILLISECONDS_IN_HOUR;
-  }
-
-  // hh:mm or hhmm
-  token = patterns.HHMM.exec(timeString);
-  if (token) {
-    hours = parseInt(token[1], 10);
-    minutes = parseFloat(token[2].replace(',', '.'));
-    return hours % 24 * MILLISECONDS_IN_HOUR + minutes * MILLISECONDS_IN_MINUTE;
-  }
-
-  // hh:mm:ss or hhmmss
-  token = patterns.HHMMSS.exec(timeString);
-  if (token) {
-    hours = parseInt(token[1], 10);
-    minutes = parseInt(token[2], 10);
-    var seconds = parseFloat(token[3].replace(',', '.'));
-    return hours % 24 * MILLISECONDS_IN_HOUR + minutes * MILLISECONDS_IN_MINUTE + seconds * 1000;
-  }
-
-  // Invalid ISO-formatted time
-  return null;
-}
-
-function parseTimezone(timezoneString) {
-  var token;
-  var absoluteOffset;
-
-  // Z
-  token = patterns.timezoneZ.exec(timezoneString);
-  if (token) {
-    return 0;
-  }
-
-  // ±hh
-  token = patterns.timezoneHH.exec(timezoneString);
-  if (token) {
-    absoluteOffset = parseInt(token[2], 10) * 60;
-    return token[1] === '+' ? -absoluteOffset : absoluteOffset;
-  }
-
-  // ±hh:mm or ±hhmm
-  token = patterns.timezoneHHMM.exec(timezoneString);
-  if (token) {
-    absoluteOffset = parseInt(token[2], 10) * 60 + parseInt(token[3], 10);
-    return token[1] === '+' ? -absoluteOffset : absoluteOffset;
-  }
-
-  return 0;
-}
-
-function dayOfISOYear(isoYear, week, day) {
-  week = week || 0;
-  day = day || 0;
-  var date = new Date(0);
-  date.setUTCFullYear(isoYear, 0, 4);
-  var fourthOfJanuaryDay = date.getUTCDay() || 7;
-  var diff = week * 7 + day + 1 - fourthOfJanuaryDay;
-  date.setUTCDate(date.getUTCDate() + diff);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = function maskFactory(maskDefinition) {
-	return function MaskDirective() {
-		return {
-			restrict: 'A',
-			require: 'ngModel',
-			link: function(scope, element, attrs, ctrl) {
-				ctrl.$formatters.push(function formatter(value) {
-					if (ctrl.$isEmpty(value)) {
-						return value;
-					}
-
-					var cleanValue = maskDefinition.clearValue(value.toString());
-					return maskDefinition.format(cleanValue);
-				});
-
-				ctrl.$parsers.push(function parser(value) {
-					if (ctrl.$isEmpty(value)) {
-						return value;
-					}
-
-					var cleanValue = maskDefinition.clearValue(value.toString());
-					var formattedValue = maskDefinition.format(cleanValue);
-
-					if (ctrl.$viewValue !== formattedValue) {
-						ctrl.$setViewValue(formattedValue);
-						ctrl.$render();
-					}
-
-					if (angular.isUndefined(maskDefinition.getModelValue)) {
-						return cleanValue;
-					}
-
-					var actualModelType = typeof ctrl.$modelValue;
-					return maskDefinition.getModelValue(formattedValue, actualModelType);
-				});
-
-				angular.forEach(maskDefinition.validations, function(validatorFn, validationErrorKey) {
-					ctrl.$validators[validationErrorKey] = function validator(modelValue, viewValue) {
-						return ctrl.$isEmpty(modelValue) || validatorFn(modelValue, viewValue);
-					};
-				});
-			}
-		};
-	};
-};
-
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = startOfUTCISOWeek;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function startOfUTCISOWeek(dirtyDate, dirtyOptions) {
-  var weekStartsOn = 1;
-
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var day = date.getUTCDay();
-  var diff = (day < weekStartsOn ? 7 : 0) + day - weekStartsOn;
-
-  date.setUTCDate(date.getUTCDate() - diff);
-  date.setUTCHours(0, 0, 0, 0);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/**
- * br-validations
- * A library of validations applicable to several Brazilian data like I.E., CNPJ, CPF and others
- * @version v0.3.0
- * @link http://github.com/the-darc/br-validations
- * @license MIT
- */
-(function (root, factory) {
-	/* istanbul ignore next */
-	if (true) {
-		// AMD. Register as an anonymous module.
-		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
-				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
-				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	} else if (typeof exports === 'object') {
-		// Node. Does not work with strict CommonJS, but
-		// only CommonJS-like environments that support module.exports,
-		// like Node.
-		module.exports = factory();
-	} else {
-		// Browser globals (root is window)
-		root.BrV = factory();
-	}
-}(this, function () {
-var CNPJ = {};
-
-CNPJ.validate = function(c) {
-	var b = [6,5,4,3,2,9,8,7,6,5,4,3,2];
-	c = c.replace(/[^\d]/g,'');
-
-	var r = /^(0{14}|1{14}|2{14}|3{14}|4{14}|5{14}|6{14}|7{14}|8{14}|9{14})$/;
-	if (!c || c.length !== 14 || r.test(c)) {
-		return false;
-	}
-	c = c.split('');
-
-	for (var i = 0, n = 0; i < 12; i++) {
-		n += c[i] * b[i+1];
-	}
-	n = 11 - n%11;
-	n = n >= 10 ? 0 : n;
-	if (parseInt(c[12]) !== n)  {
-		return false;
-	}
-
-	for (i = 0, n = 0; i <= 12; i++) {
-		n += c[i] * b[i];
-	}
-	n = 11 - n%11;
-	n = n >= 10 ? 0 : n;
-	if (parseInt(c[13]) !== n)  {
-		return false;
-	}
-	return true;
-};
-
-
-var CPF = {};
-
-CPF.validate = function(cpf) {
-	cpf = cpf.replace(/[^\d]+/g,'');
-	var r = /^(0{11}|1{11}|2{11}|3{11}|4{11}|5{11}|6{11}|7{11}|8{11}|9{11})$/;
-	if (!cpf || cpf.length !== 11 || r.test(cpf)) {
-		return false;
-	}
-	function validateDigit(digit) {
-		var add = 0;
-		var init = digit - 9;
-		for (var i = 0; i < 9; i ++) {
-			add += parseInt(cpf.charAt(i + init)) * (i+1);
-		}
-		return (add%11)%10 === parseInt(cpf.charAt(digit));
-	}
-	return validateDigit(9) && validateDigit(10);
-};
-
-var IE = function(uf) {
-	if (!(this instanceof IE)) {
-		return new IE(uf);
-	}
-
-	this.rules = IErules[uf] || [];
-	this.rule;
-	IE.prototype._defineRule = function(value) {
-		this.rule = undefined;
-		for (var r = 0; r < this.rules.length && this.rule === undefined; r++) {
-			var str = value.replace(/[^\d]/g,'');
-			var ruleCandidate = this.rules[r];
-			if (str.length === ruleCandidate.chars && (!ruleCandidate.match || ruleCandidate.match.test(value))) {
-				this.rule = ruleCandidate;
-			}
-		}
-		return !!this.rule;
-	};
-
-	IE.prototype.validate = function(value) {
-		if (!value || !this._defineRule(value)) {
-			return false;
-		}
-		return this.rule.validate(value);
-	};
-};
-
-var IErules = {};
-
-var algorithmSteps = {
-	handleStr: {
-		onlyNumbers: function(str) {
-			return str.replace(/[^\d]/g,'').split('');
-		},
-		mgSpec: function(str) {
-			var s = str.replace(/[^\d]/g,'');
-			s = s.substr(0,3)+'0'+s.substr(3, s.length);
-			return s.split('');
-		}
-	},
-	sum: {
-		normalSum: function(handledStr, pesos) {
-			var nums = handledStr;
-			var sum = 0;
-			for (var i = 0; i < pesos.length; i++) {
-				sum += parseInt(nums[i]) * pesos[i];
-			}
-			return sum;
-		},
-		individualSum: function(handledStr, pesos) {
-			var nums = handledStr;
-			var sum = 0;
-			for (var i = 0; i < pesos.length; i++) {
-				var mult = parseInt(nums[i]) * pesos[i];
-				sum += mult%10 + parseInt(mult/10);
-			}
-			return sum;
-		},
-		apSpec: function(handledStr, pesos) {
-			var sum = this.normalSum(handledStr, pesos);
-			var ref = handledStr.join('');
-			if (ref >= '030000010' && ref <= '030170009') {
-				return sum + 5;
-			}
-			if (ref >= '030170010' && ref <= '030190229') {
-				return sum + 9;
-			}
-			return sum;
-		}
-	},
-	rest: {
-		mod11: function(sum) {
-			return sum%11;
-		},
-		mod10: function(sum) {
-			return sum%10;
-		},
-		mod9: function(sum) {
-			return sum%9;
-		}
-	},
-	expectedDV: {
-		minusRestOf11: function(rest) {
-			return rest < 2 ? 0 : 11 - rest;
-		},
-		minusRestOf11v2: function(rest) {
-			return rest < 2 ? 11 - rest - 10 : 11 - rest;
-		},
-		minusRestOf10: function(rest) {
-			return rest < 1 ? 0 : 10 - rest;
-		},
-		mod10: function(rest) {
-			return rest%10;
-		},
-		goSpec: function(rest, handledStr) {
-			var ref = handledStr.join('');
-			if (rest === 1) {
-				return ref >= '101031050' && ref <= '101199979' ? 1 : 0;
-			}
-			return rest === 0 ? 0 : 11 - rest;
-		},
-		apSpec: function(rest, handledStr) {
-			var ref = handledStr.join('');
-			if (rest === 0) {
-				return ref >= '030170010' && ref <= '030190229' ? 1 : 0;
-			}
-			return rest === 1 ? 0 : 11 - rest;
-		},
-		voidFn: function(rest) {
-			return rest;
-		}
-	}
-};
-
-
-/**
- * options {
- *     pesos: Array of values used to operate in sum step
- *     dvPos: Position of the DV to validate considering the handledStr
- *     algorithmSteps: The four DV's validation algorithm steps names
- * }
- */
-function validateDV(value, options) {
-	var steps = options.algorithmSteps;
-
-	// Step 01: Handle String
-	var handledStr = algorithmSteps.handleStr[steps[0]](value);
-
-	// Step 02: Sum chars
-	var sum = algorithmSteps.sum[steps[1]](handledStr, options.pesos);
-
-	// Step 03: Rest calculation
-	var rest = algorithmSteps.rest[steps[2]](sum);
-
-	// Fixed Step: Get current DV
-	var currentDV = parseInt(handledStr[options.dvpos]);
-
-	// Step 04: Expected DV calculation
-	var expectedDV = algorithmSteps.expectedDV[steps[3]](rest, handledStr);
-
-	// Fixed step: DV verification
-	return currentDV === expectedDV;
-}
-
-function validateIE(value, rule) {
-	for (var i = 0; i < rule.dvs.length; i++) {
-		// console.log('>> >> dv'+i);
-		if (!validateDV(value, rule.dvs[i])) {
-			return false;
-		}
-	}
-	return true;
-}
-
-IErules.PE = [{
-	//mask: new StringMask('0000000-00'),
-	chars: 9,
-	dvs: [{
-		dvpos: 7,
-		pesos: [8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	},{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-},{
-	// mask: new StringMask('00.0.000.0000000-0'),
-	chars: 14,
-	pesos: [[1,2,3,4,5,9,8,7,6,5,4,3,2]],
-	dvs: [{
-		dvpos: 13,
-		pesos: [5,4,3,2,1,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11v2']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.RS = [{
-	// mask: new StringMask('000/0000000'),
-	chars: 10,
-	dvs: [{
-		dvpos: 9,
-		pesos: [2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.AC = [{
-	// mask: new StringMask('00.000.000/000-00'),
-	chars: 13,
-	match: /^01/,
-	dvs: [{
-		dvpos: 11,
-		pesos: [4,3,2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	},{
-		dvpos: 12,
-		pesos: [5,4,3,2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.MG = [{
-	// mask: new StringMask('000.000.000/0000'),
-	chars: 13,
-	dvs: [{
-		dvpos: 12,
-		pesos: [1,2,1,2,1,2,1,2,1,2,1,2],
-		algorithmSteps: ['mgSpec', 'individualSum', 'mod10', 'minusRestOf10']
-	},{
-		dvpos: 12,
-		pesos: [3,2,11,10,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.SP = [{
-	// mask: new StringMask('000.000.000.000'),
-	chars: 12,
-	match: /^[0-9]/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [1,3,4,5,6,7,8,10],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'mod10']
-	},{
-		dvpos: 11,
-		pesos: [3,2,10,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'mod10']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-},{
-	// mask: new StringMask('P-00000000.0/000')
-	chars: 12,
-	match: /^P/i,
-	dvs: [{
-		dvpos: 8,
-		pesos: [1,3,4,5,6,7,8,10],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'mod10']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.DF = [{
-	// mask: new StringMask('00000000000-00'),
-	chars: 13,
-	dvs: [{
-		dvpos: 11,
-		pesos: [4,3,2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	},{
-		dvpos: 12,
-		pesos: [5,4,3,2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.ES = [{
-	// mask: new StringMask('000.000.00-0')
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.BA = [{
-	// mask: new StringMask('000000-00')
-	chars: 8,
-	match: /^[0123458]/,
-	dvs: [{
-		dvpos: 7,
-		pesos: [7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod10', 'minusRestOf10']
-	},{
-		dvpos: 6,
-		pesos: [8,7,6,5,4,3,0,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod10', 'minusRestOf10']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-},{
-	chars: 8,
-	match: /^[679]/,
-	dvs: [{
-		dvpos: 7,
-		pesos: [7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	},{
-		dvpos: 6,
-		pesos: [8,7,6,5,4,3,0,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-},{
-	// mask: new StringMask('0000000-00')
-	chars: 9,
-	match: /^[0-9][0123458]/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod10', 'minusRestOf10']
-	},{
-		dvpos: 7,
-		pesos: [9,8,7,6,5,4,3,0,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod10', 'minusRestOf10']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-},{
-	chars: 9,
-	match: /^[0-9][679]/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	},{
-		dvpos: 7,
-		pesos: [9,8,7,6,5,4,3,0,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.AM = [{
-	//mask: new StringMask('00.000.000-0')
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.RN = [{
-	// {mask: new StringMask('00.000.000-0')
-	chars: 9,
-	match: /^20/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-},{
-	// {mask: new StringMask('00.0.000.000-0'), chars: 10}
-	chars: 10,
-	match: /^20/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [10,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.RO = [{
-	// mask: new StringMask('0000000000000-0')
-	chars: 14,
-	dvs: [{
-		dvpos: 13,
-		pesos: [6,5,4,3,2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11v2']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.PR = [{
-	// mask: new StringMask('00000000-00')
-	chars: 10,
-	dvs: [{
-		dvpos: 8,
-		pesos: [3,2,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	},{
-		dvpos: 9,
-		pesos: [4,3,2,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.SC = [{
-	// {mask: new StringMask('000.000.000'), uf: 'SANTA CATARINA'}
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.RJ = [{
-	// {mask: new StringMask('00.000.00-0'), uf: 'RIO DE JANEIRO'}
-	chars: 8,
-	dvs: [{
-		dvpos: 7,
-		pesos: [2,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.PA = [{
-	// {mask: new StringMask('00-000000-0')
-	chars: 9,
-	match: /^15/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.SE = [{
-	// {mask: new StringMask('00000000-0')
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.PB = [{
-	// {mask: new StringMask('00000000-0')
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.CE = [{
-	// {mask: new StringMask('00000000-0')
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.PI = [{
-	// {mask: new StringMask('000000000')
-	chars: 9,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.MA = [{
-	// {mask: new StringMask('000000000')
-	chars: 9,
-	match: /^12/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.MT = [{
-	// {mask: new StringMask('0000000000-0')
-	chars: 11,
-	dvs: [{
-		dvpos: 10,
-		pesos: [3,2,9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.MS = [{
-	// {mask: new StringMask('000000000')
-	chars: 9,
-	match: /^28/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.TO = [{
-	// {mask: new StringMask('00000000000'),
-	chars: 11,
-	match: /^[0-9]{2}((0[123])|(99))/,
-	dvs: [{
-		dvpos: 10,
-		pesos: [9,8,0,0,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.AL = [{
-	// {mask: new StringMask('000000000')
-	chars: 9,
-	match: /^24[03578]/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'minusRestOf11']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.RR = [{
-	// {mask: new StringMask('00000000-0')
-	chars: 9,
-	match: /^24/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [1,2,3,4,5,6,7,8],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod9', 'voidFn']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.GO = [{
-	// {mask: new StringMask('00.000.000-0')
-	chars: 9,
-	match: /^1[015]/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'normalSum', 'mod11', 'goSpec']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-IErules.AP = [{
-	// {mask: new StringMask('000000000')
-	chars: 9,
-	match: /^03/,
-	dvs: [{
-		dvpos: 8,
-		pesos: [9,8,7,6,5,4,3,2],
-		algorithmSteps: ['onlyNumbers', 'apSpec', 'mod11', 'apSpec']
-	}],
-	validate: function(value) { return validateIE(value, this); }
-}];
-
-
-var PIS = {};
-
-PIS.validate = function(pis) {
-	pis = pis.replace(/[^\d]+/g,'');
-	var r = /^(0{11}|1{11}|2{11}|3{11}|4{11}|5{11}|6{11}|7{11}|8{11}|9{11})$/;
-
-	if (!pis || pis.length !== 11 || r.test(pis)) {
-		return false;
-	}
-
-	var pisi = pis.substring(0,10);
-	var pisd = pis.substring(10);
-
-	function calculateDigit(pis){
-        var p = [3,2,9,8,7,6,5,4,3,2];
-        var s = 0;
-        for(var i = 0; i <= 9; i++){
-            s += parseInt(pis.charAt(i)) * p[i];
-        }
-        var r = 11 - (s%11);
-        return (r === 10 || r === 11) ? 0 : r;
-	}
-
-	return Number(pisd) === calculateDigit(pisi);
-};
-
-	return {
-		ie: IE,
-		cpf: CPF,
-		cnpj: CNPJ,
-		pis: PIS
-	};
-}));
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = startOfUTCISOWeekYear;
-
-var _index = __webpack_require__(12);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(3);
-
-var _index4 = _interopRequireDefault(_index3);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function startOfUTCISOWeekYear(dirtyDate, dirtyOptions) {
-  var year = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var fourthOfJanuary = new Date(0);
-  fourthOfJanuary.setUTCFullYear(year, 0, 4);
-  fourthOfJanuary.setUTCHours(0, 0, 0, 0);
-  var date = (0, _index4.default)(fourthOfJanuary, dirtyOptions);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = {
-	maxNumber: function(ctrl, value, limit) {
-		var max = parseFloat(limit, 10);
-		return ctrl.$isEmpty(value) || isNaN(max) || value <= max;
-	},
-	minNumber: function(ctrl, value, limit) {
-		var min = parseFloat(limit, 10);
-		return ctrl.$isEmpty(value) || isNaN(min) || value >= min;
-	}
-};
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-function clearDelimitersAndLeadingZeros(value) {
-	if (value === '0') {
-		return '0';
-	}
-
-	var cleanValue = value.toString().replace(/^-/,'').replace(/^0*/, '');
-	return cleanValue.replace(/[^0-9]/g, '');
-}
-
-function prepareNumberToFormatter(value, decimals) {
-	return clearDelimitersAndLeadingZeros((parseFloat(value)).toFixed(decimals));
-}
-
-module.exports = {
-	clearDelimitersAndLeadingZeros: clearDelimitersAndLeadingZeros,
-	prepareNumberToFormatter: prepareNumberToFormatter
-};
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(17);
-module.exports = angular;
-
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = isValid;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * @name isValid
- * @category Common Helpers
- * @summary Is the given date valid?
- *
- * @description
- * Returns false if argument is Invalid Date and true otherwise.
- * Argument is converted to Date using `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * Invalid Date is a Date, whose time value is NaN.
- *
- * Time value of Date: http://es5.github.io/#x15.9.1.1
- *
- * @param {*} date - the date to check
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - passed to `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * @returns {Boolean} the date is valid
- * @throws {TypeError} 1 argument required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- *
- * @example
- * // For the valid date:
- * var result = isValid(new Date(2014, 1, 31))
- * //=> true
- *
- * @example
- * // For the value, convertable into a date:
- * var result = isValid('2014-02-31')
- * //=> true
- *
- * @example
- * // For the invalid date:
- * var result = isValid(new Date(''))
- * //=> false
- */
-function isValid(dirtyDate, dirtyOptions) {
-  if (arguments.length < 1) {
-    throw new TypeError('1 argument required, but only ' + arguments.length + ' present');
-  }
-
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  return !isNaN(date);
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 10 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _index = __webpack_require__(33);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(34);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(36);
-
-var _index6 = _interopRequireDefault(_index5);
-
-var _index7 = __webpack_require__(37);
-
-var _index8 = _interopRequireDefault(_index7);
-
-var _index9 = __webpack_require__(40);
-
-var _index10 = _interopRequireDefault(_index9);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * @type {Locale}
- * @category Locales
- * @summary English locale (United States).
- * @language English
- * @iso-639-2 eng
- */
-var locale = {
-  formatDistance: _index2.default,
-  formatLong: _index4.default,
-  formatRelative: _index6.default,
-  localize: _index8.default,
-  match: _index10.default,
-  options: {
-    weekStartsOn: 0 /* Sunday */
-    , firstWeekContainsDate: 1
-  }
-};
-
-exports.default = locale;
-module.exports = exports['default'];
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = getUTCISOWeek;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(3);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(5);
-
-var _index6 = _interopRequireDefault(_index5);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var MILLISECONDS_IN_WEEK = 604800000;
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function getUTCISOWeek(dirtyDate, dirtyOptions) {
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var diff = (0, _index4.default)(date, dirtyOptions).getTime() - (0, _index6.default)(date, dirtyOptions).getTime();
-
-  // Round the number of days to the nearest integer
-  // because the number of milliseconds in a week is not constant
-  // (e.g. it's different in the week of the daylight saving time clock shift)
-  return Math.round(diff / MILLISECONDS_IN_WEEK) + 1;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = getUTCISOWeekYear;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(3);
-
-var _index4 = _interopRequireDefault(_index3);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function getUTCISOWeekYear(dirtyDate, dirtyOptions) {
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var year = date.getUTCFullYear();
-
-  var fourthOfJanuaryOfNextYear = new Date(0);
-  fourthOfJanuaryOfNextYear.setUTCFullYear(year + 1, 0, 4);
-  fourthOfJanuaryOfNextYear.setUTCHours(0, 0, 0, 0);
-  var startOfNextYear = (0, _index4.default)(fourthOfJanuaryOfNextYear, dirtyOptions);
-
-  var fourthOfJanuaryOfThisYear = new Date(0);
-  fourthOfJanuaryOfThisYear.setUTCFullYear(year, 0, 4);
-  fourthOfJanuaryOfThisYear.setUTCHours(0, 0, 0, 0);
-  var startOfThisYear = (0, _index4.default)(fourthOfJanuaryOfThisYear, dirtyOptions);
-
-  if (date.getTime() >= startOfNextYear.getTime()) {
-    return year + 1;
-  } else if (date.getTime() >= startOfThisYear.getTime()) {
-    return year;
-  } else {
-    return year - 1;
-  }
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = cloneObject;
-function cloneObject(dirtyObject) {
-  dirtyObject = dirtyObject || {};
-  var object = {};
-
-  for (var property in dirtyObject) {
-    if (dirtyObject.hasOwnProperty(property)) {
-      object[property] = dirtyObject[property];
-    }
-  }
-
-  return object;
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-
-function viewMask(decimals, decimalDelimiter, thousandsDelimiter) {
-	var mask = '#' + thousandsDelimiter + '##0';
-
-	if (decimals > 0) {
-		mask += decimalDelimiter;
-		for (var i = 0; i < decimals; i++) {
-			mask += '0';
-		}
-	}
-
-	return new StringMask(mask, {
-		reverse: true
-	});
-}
-
-function modelMask(decimals) {
-	var mask = '###0';
-
-	if (decimals > 0) {
-		mask += '.';
-		for (var i = 0; i < decimals; i++) {
-			mask += '0';
-		}
-	}
-
-	return new StringMask(mask, {
-		reverse: true
-	});
-}
-
-module.exports = {
-	viewMask: viewMask,
-	modelMask: modelMask
-};
-
-
-/***/ }),
-/* 15 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-__webpack_require__(16);
-
-__webpack_require__(23);
-
-__webpack_require__(25);
-
-__webpack_require__(27);
-
-__webpack_require__(79);
-
-__webpack_require__(81);
-
-var angular = __webpack_require__(8);
+var angular = __webpack_require__(0);
+
+__webpack_require__(3);
+__webpack_require__(5);
+__webpack_require__(7);
+__webpack_require__(9);
 
 'use strict';
-var app = angular.module('OrderApp', ['ngMaterial', 'ngSanitize', 'ngRoute', 'ui.utils.masks', 'ngMessages']);
+var app = angular.module('OrderApp', ['ngMaterial', 'ngSanitize', 'ngRoute', 'ngMessages']);
 
 //Enviroment setup
 app.config(function ($mdThemingProvider) {
@@ -2237,25 +511,7 @@ app.directive('minValue', function () {
 });
 
 /***/ }),
-/* 16 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// Should already be required, here for clarity
-__webpack_require__(8);
-
-// Load Angular and dependent libs
-__webpack_require__(18);
-__webpack_require__(20);
-
-// Now load Angular Material
-__webpack_require__(22);
-
-// Export namespace
-module.exports = 'ngMaterial';
-
-
-/***/ }),
-/* 17 */
+/* 2 */
 /***/ (function(module, exports) {
 
 /**
@@ -36515,15 +34771,2841 @@ $provide.value("$locale", {
 !window.angular.$$csp().noInlineStyle && window.angular.element(document.head).prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>');
 
 /***/ }),
-/* 18 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(19);
+__webpack_require__(4);
+module.exports = 'ngRoute';
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports) {
+
+/**
+ * @license AngularJS v1.6.8
+ * (c) 2010-2017 Google, Inc. http://angularjs.org
+ * License: MIT
+ */
+(function(window, angular) {'use strict';
+
+/* global shallowCopy: true */
+
+/**
+ * Creates a shallow copy of an object, an array or a primitive.
+ *
+ * Assumes that there are no proto properties for objects.
+ */
+function shallowCopy(src, dst) {
+  if (isArray(src)) {
+    dst = dst || [];
+
+    for (var i = 0, ii = src.length; i < ii; i++) {
+      dst[i] = src[i];
+    }
+  } else if (isObject(src)) {
+    dst = dst || {};
+
+    for (var key in src) {
+      if (!(key.charAt(0) === '$' && key.charAt(1) === '$')) {
+        dst[key] = src[key];
+      }
+    }
+  }
+
+  return dst || src;
+}
+
+/* global shallowCopy: false */
+
+// `isArray` and `isObject` are necessary for `shallowCopy()` (included via `src/shallowCopy.js`).
+// They are initialized inside the `$RouteProvider`, to ensure `window.angular` is available.
+var isArray;
+var isObject;
+var isDefined;
+var noop;
+
+/**
+ * @ngdoc module
+ * @name ngRoute
+ * @description
+ *
+ * The `ngRoute` module provides routing and deeplinking services and directives for AngularJS apps.
+ *
+ * ## Example
+ * See {@link ngRoute.$route#examples $route} for an example of configuring and using `ngRoute`.
+ *
+ */
+/* global -ngRouteModule */
+var ngRouteModule = angular.
+  module('ngRoute', []).
+  info({ angularVersion: '1.6.8' }).
+  provider('$route', $RouteProvider).
+  // Ensure `$route` will be instantiated in time to capture the initial `$locationChangeSuccess`
+  // event (unless explicitly disabled). This is necessary in case `ngView` is included in an
+  // asynchronously loaded template.
+  run(instantiateRoute);
+var $routeMinErr = angular.$$minErr('ngRoute');
+var isEagerInstantiationEnabled;
+
+
+/**
+ * @ngdoc provider
+ * @name $routeProvider
+ * @this
+ *
+ * @description
+ *
+ * Used for configuring routes.
+ *
+ * ## Example
+ * See {@link ngRoute.$route#examples $route} for an example of configuring and using `ngRoute`.
+ *
+ * ## Dependencies
+ * Requires the {@link ngRoute `ngRoute`} module to be installed.
+ */
+function $RouteProvider() {
+  isArray = angular.isArray;
+  isObject = angular.isObject;
+  isDefined = angular.isDefined;
+  noop = angular.noop;
+
+  function inherit(parent, extra) {
+    return angular.extend(Object.create(parent), extra);
+  }
+
+  var routes = {};
+
+  /**
+   * @ngdoc method
+   * @name $routeProvider#when
+   *
+   * @param {string} path Route path (matched against `$location.path`). If `$location.path`
+   *    contains redundant trailing slash or is missing one, the route will still match and the
+   *    `$location.path` will be updated to add or drop the trailing slash to exactly match the
+   *    route definition.
+   *
+   *    * `path` can contain named groups starting with a colon: e.g. `:name`. All characters up
+   *        to the next slash are matched and stored in `$routeParams` under the given `name`
+   *        when the route matches.
+   *    * `path` can contain named groups starting with a colon and ending with a star:
+   *        e.g.`:name*`. All characters are eagerly stored in `$routeParams` under the given `name`
+   *        when the route matches.
+   *    * `path` can contain optional named groups with a question mark: e.g.`:name?`.
+   *
+   *    For example, routes like `/color/:color/largecode/:largecode*\/edit` will match
+   *    `/color/brown/largecode/code/with/slashes/edit` and extract:
+   *
+   *    * `color: brown`
+   *    * `largecode: code/with/slashes`.
+   *
+   *
+   * @param {Object} route Mapping information to be assigned to `$route.current` on route
+   *    match.
+   *
+   *    Object properties:
+   *
+   *    - `controller` – `{(string|Function)=}` – Controller fn that should be associated with
+   *      newly created scope or the name of a {@link angular.Module#controller registered
+   *      controller} if passed as a string.
+   *    - `controllerAs` – `{string=}` – An identifier name for a reference to the controller.
+   *      If present, the controller will be published to scope under the `controllerAs` name.
+   *    - `template` – `{(string|Function)=}` – html template as a string or a function that
+   *      returns an html template as a string which should be used by {@link
+   *      ngRoute.directive:ngView ngView} or {@link ng.directive:ngInclude ngInclude} directives.
+   *      This property takes precedence over `templateUrl`.
+   *
+   *      If `template` is a function, it will be called with the following parameters:
+   *
+   *      - `{Array.<Object>}` - route parameters extracted from the current
+   *        `$location.path()` by applying the current route
+   *
+   *      One of `template` or `templateUrl` is required.
+   *
+   *    - `templateUrl` – `{(string|Function)=}` – path or function that returns a path to an html
+   *      template that should be used by {@link ngRoute.directive:ngView ngView}.
+   *
+   *      If `templateUrl` is a function, it will be called with the following parameters:
+   *
+   *      - `{Array.<Object>}` - route parameters extracted from the current
+   *        `$location.path()` by applying the current route
+   *
+   *      One of `templateUrl` or `template` is required.
+   *
+   *    - `resolve` - `{Object.<string, Function>=}` - An optional map of dependencies which should
+   *      be injected into the controller. If any of these dependencies are promises, the router
+   *      will wait for them all to be resolved or one to be rejected before the controller is
+   *      instantiated.
+   *      If all the promises are resolved successfully, the values of the resolved promises are
+   *      injected and {@link ngRoute.$route#$routeChangeSuccess $routeChangeSuccess} event is
+   *      fired. If any of the promises are rejected the
+   *      {@link ngRoute.$route#$routeChangeError $routeChangeError} event is fired.
+   *      For easier access to the resolved dependencies from the template, the `resolve` map will
+   *      be available on the scope of the route, under `$resolve` (by default) or a custom name
+   *      specified by the `resolveAs` property (see below). This can be particularly useful, when
+   *      working with {@link angular.Module#component components} as route templates.<br />
+   *      <div class="alert alert-warning">
+   *        **Note:** If your scope already contains a property with this name, it will be hidden
+   *        or overwritten. Make sure, you specify an appropriate name for this property, that
+   *        does not collide with other properties on the scope.
+   *      </div>
+   *      The map object is:
+   *
+   *      - `key` – `{string}`: a name of a dependency to be injected into the controller.
+   *      - `factory` - `{string|Function}`: If `string` then it is an alias for a service.
+   *        Otherwise if function, then it is {@link auto.$injector#invoke injected}
+   *        and the return value is treated as the dependency. If the result is a promise, it is
+   *        resolved before its value is injected into the controller. Be aware that
+   *        `ngRoute.$routeParams` will still refer to the previous route within these resolve
+   *        functions.  Use `$route.current.params` to access the new route parameters, instead.
+   *
+   *    - `resolveAs` - `{string=}` - The name under which the `resolve` map will be available on
+   *      the scope of the route. If omitted, defaults to `$resolve`.
+   *
+   *    - `redirectTo` – `{(string|Function)=}` – value to update
+   *      {@link ng.$location $location} path with and trigger route redirection.
+   *
+   *      If `redirectTo` is a function, it will be called with the following parameters:
+   *
+   *      - `{Object.<string>}` - route parameters extracted from the current
+   *        `$location.path()` by applying the current route templateUrl.
+   *      - `{string}` - current `$location.path()`
+   *      - `{Object}` - current `$location.search()`
+   *
+   *      The custom `redirectTo` function is expected to return a string which will be used
+   *      to update `$location.url()`. If the function throws an error, no further processing will
+   *      take place and the {@link ngRoute.$route#$routeChangeError $routeChangeError} event will
+   *      be fired.
+   *
+   *      Routes that specify `redirectTo` will not have their controllers, template functions
+   *      or resolves called, the `$location` will be changed to the redirect url and route
+   *      processing will stop. The exception to this is if the `redirectTo` is a function that
+   *      returns `undefined`. In this case the route transition occurs as though there was no
+   *      redirection.
+   *
+   *    - `resolveRedirectTo` – `{Function=}` – a function that will (eventually) return the value
+   *      to update {@link ng.$location $location} URL with and trigger route redirection. In
+   *      contrast to `redirectTo`, dependencies can be injected into `resolveRedirectTo` and the
+   *      return value can be either a string or a promise that will be resolved to a string.
+   *
+   *      Similar to `redirectTo`, if the return value is `undefined` (or a promise that gets
+   *      resolved to `undefined`), no redirection takes place and the route transition occurs as
+   *      though there was no redirection.
+   *
+   *      If the function throws an error or the returned promise gets rejected, no further
+   *      processing will take place and the
+   *      {@link ngRoute.$route#$routeChangeError $routeChangeError} event will be fired.
+   *
+   *      `redirectTo` takes precedence over `resolveRedirectTo`, so specifying both on the same
+   *      route definition, will cause the latter to be ignored.
+   *
+   *    - `[reloadOnSearch=true]` - `{boolean=}` - reload route when only `$location.search()`
+   *      or `$location.hash()` changes.
+   *
+   *      If the option is set to `false` and url in the browser changes, then
+   *      `$routeUpdate` event is broadcasted on the root scope.
+   *
+   *    - `[caseInsensitiveMatch=false]` - `{boolean=}` - match routes without being case sensitive
+   *
+   *      If the option is set to `true`, then the particular route can be matched without being
+   *      case sensitive
+   *
+   * @returns {Object} self
+   *
+   * @description
+   * Adds a new route definition to the `$route` service.
+   */
+  this.when = function(path, route) {
+    //copy original route object to preserve params inherited from proto chain
+    var routeCopy = shallowCopy(route);
+    if (angular.isUndefined(routeCopy.reloadOnSearch)) {
+      routeCopy.reloadOnSearch = true;
+    }
+    if (angular.isUndefined(routeCopy.caseInsensitiveMatch)) {
+      routeCopy.caseInsensitiveMatch = this.caseInsensitiveMatch;
+    }
+    routes[path] = angular.extend(
+      routeCopy,
+      path && pathRegExp(path, routeCopy)
+    );
+
+    // create redirection for trailing slashes
+    if (path) {
+      var redirectPath = (path[path.length - 1] === '/')
+            ? path.substr(0, path.length - 1)
+            : path + '/';
+
+      routes[redirectPath] = angular.extend(
+        {redirectTo: path},
+        pathRegExp(redirectPath, routeCopy)
+      );
+    }
+
+    return this;
+  };
+
+  /**
+   * @ngdoc property
+   * @name $routeProvider#caseInsensitiveMatch
+   * @description
+   *
+   * A boolean property indicating if routes defined
+   * using this provider should be matched using a case insensitive
+   * algorithm. Defaults to `false`.
+   */
+  this.caseInsensitiveMatch = false;
+
+   /**
+    * @param path {string} path
+    * @param opts {Object} options
+    * @return {?Object}
+    *
+    * @description
+    * Normalizes the given path, returning a regular expression
+    * and the original path.
+    *
+    * Inspired by pathRexp in visionmedia/express/lib/utils.js.
+    */
+  function pathRegExp(path, opts) {
+    var insensitive = opts.caseInsensitiveMatch,
+        ret = {
+          originalPath: path,
+          regexp: path
+        },
+        keys = ret.keys = [];
+
+    path = path
+      .replace(/([().])/g, '\\$1')
+      .replace(/(\/)?:(\w+)(\*\?|[?*])?/g, function(_, slash, key, option) {
+        var optional = (option === '?' || option === '*?') ? '?' : null;
+        var star = (option === '*' || option === '*?') ? '*' : null;
+        keys.push({ name: key, optional: !!optional });
+        slash = slash || '';
+        return ''
+          + (optional ? '' : slash)
+          + '(?:'
+          + (optional ? slash : '')
+          + (star && '(.+?)' || '([^/]+)')
+          + (optional || '')
+          + ')'
+          + (optional || '');
+      })
+      .replace(/([/$*])/g, '\\$1');
+
+    ret.regexp = new RegExp('^' + path + '$', insensitive ? 'i' : '');
+    return ret;
+  }
+
+  /**
+   * @ngdoc method
+   * @name $routeProvider#otherwise
+   *
+   * @description
+   * Sets route definition that will be used on route change when no other route definition
+   * is matched.
+   *
+   * @param {Object|string} params Mapping information to be assigned to `$route.current`.
+   * If called with a string, the value maps to `redirectTo`.
+   * @returns {Object} self
+   */
+  this.otherwise = function(params) {
+    if (typeof params === 'string') {
+      params = {redirectTo: params};
+    }
+    this.when(null, params);
+    return this;
+  };
+
+  /**
+   * @ngdoc method
+   * @name $routeProvider#eagerInstantiationEnabled
+   * @kind function
+   *
+   * @description
+   * Call this method as a setter to enable/disable eager instantiation of the
+   * {@link ngRoute.$route $route} service upon application bootstrap. You can also call it as a
+   * getter (i.e. without any arguments) to get the current value of the
+   * `eagerInstantiationEnabled` flag.
+   *
+   * Instantiating `$route` early is necessary for capturing the initial
+   * {@link ng.$location#$locationChangeStart $locationChangeStart} event and navigating to the
+   * appropriate route. Usually, `$route` is instantiated in time by the
+   * {@link ngRoute.ngView ngView} directive. Yet, in cases where `ngView` is included in an
+   * asynchronously loaded template (e.g. in another directive's template), the directive factory
+   * might not be called soon enough for `$route` to be instantiated _before_ the initial
+   * `$locationChangeSuccess` event is fired. Eager instantiation ensures that `$route` is always
+   * instantiated in time, regardless of when `ngView` will be loaded.
+   *
+   * The default value is true.
+   *
+   * **Note**:<br />
+   * You may want to disable the default behavior when unit-testing modules that depend on
+   * `ngRoute`, in order to avoid an unexpected request for the default route's template.
+   *
+   * @param {boolean=} enabled - If provided, update the internal `eagerInstantiationEnabled` flag.
+   *
+   * @returns {*} The current value of the `eagerInstantiationEnabled` flag if used as a getter or
+   *     itself (for chaining) if used as a setter.
+   */
+  isEagerInstantiationEnabled = true;
+  this.eagerInstantiationEnabled = function eagerInstantiationEnabled(enabled) {
+    if (isDefined(enabled)) {
+      isEagerInstantiationEnabled = enabled;
+      return this;
+    }
+
+    return isEagerInstantiationEnabled;
+  };
+
+
+  this.$get = ['$rootScope',
+               '$location',
+               '$routeParams',
+               '$q',
+               '$injector',
+               '$templateRequest',
+               '$sce',
+               '$browser',
+      function($rootScope, $location, $routeParams, $q, $injector, $templateRequest, $sce, $browser) {
+
+    /**
+     * @ngdoc service
+     * @name $route
+     * @requires $location
+     * @requires $routeParams
+     *
+     * @property {Object} current Reference to the current route definition.
+     * The route definition contains:
+     *
+     *   - `controller`: The controller constructor as defined in the route definition.
+     *   - `locals`: A map of locals which is used by {@link ng.$controller $controller} service for
+     *     controller instantiation. The `locals` contain
+     *     the resolved values of the `resolve` map. Additionally the `locals` also contain:
+     *
+     *     - `$scope` - The current route scope.
+     *     - `$template` - The current route template HTML.
+     *
+     *     The `locals` will be assigned to the route scope's `$resolve` property. You can override
+     *     the property name, using `resolveAs` in the route definition. See
+     *     {@link ngRoute.$routeProvider $routeProvider} for more info.
+     *
+     * @property {Object} routes Object with all route configuration Objects as its properties.
+     *
+     * @description
+     * `$route` is used for deep-linking URLs to controllers and views (HTML partials).
+     * It watches `$location.url()` and tries to map the path to an existing route definition.
+     *
+     * Requires the {@link ngRoute `ngRoute`} module to be installed.
+     *
+     * You can define routes through {@link ngRoute.$routeProvider $routeProvider}'s API.
+     *
+     * The `$route` service is typically used in conjunction with the
+     * {@link ngRoute.directive:ngView `ngView`} directive and the
+     * {@link ngRoute.$routeParams `$routeParams`} service.
+     *
+     * @example
+     * This example shows how changing the URL hash causes the `$route` to match a route against the
+     * URL, and the `ngView` pulls in the partial.
+     *
+     * <example name="$route-service" module="ngRouteExample"
+     *          deps="angular-route.js" fixBase="true">
+     *   <file name="index.html">
+     *     <div ng-controller="MainController">
+     *       Choose:
+     *       <a href="Book/Moby">Moby</a> |
+     *       <a href="Book/Moby/ch/1">Moby: Ch1</a> |
+     *       <a href="Book/Gatsby">Gatsby</a> |
+     *       <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
+     *       <a href="Book/Scarlet">Scarlet Letter</a><br/>
+     *
+     *       <div ng-view></div>
+     *
+     *       <hr />
+     *
+     *       <pre>$location.path() = {{$location.path()}}</pre>
+     *       <pre>$route.current.templateUrl = {{$route.current.templateUrl}}</pre>
+     *       <pre>$route.current.params = {{$route.current.params}}</pre>
+     *       <pre>$route.current.scope.name = {{$route.current.scope.name}}</pre>
+     *       <pre>$routeParams = {{$routeParams}}</pre>
+     *     </div>
+     *   </file>
+     *
+     *   <file name="book.html">
+     *     controller: {{name}}<br />
+     *     Book Id: {{params.bookId}}<br />
+     *   </file>
+     *
+     *   <file name="chapter.html">
+     *     controller: {{name}}<br />
+     *     Book Id: {{params.bookId}}<br />
+     *     Chapter Id: {{params.chapterId}}
+     *   </file>
+     *
+     *   <file name="script.js">
+     *     angular.module('ngRouteExample', ['ngRoute'])
+     *
+     *      .controller('MainController', function($scope, $route, $routeParams, $location) {
+     *          $scope.$route = $route;
+     *          $scope.$location = $location;
+     *          $scope.$routeParams = $routeParams;
+     *      })
+     *
+     *      .controller('BookController', function($scope, $routeParams) {
+     *          $scope.name = 'BookController';
+     *          $scope.params = $routeParams;
+     *      })
+     *
+     *      .controller('ChapterController', function($scope, $routeParams) {
+     *          $scope.name = 'ChapterController';
+     *          $scope.params = $routeParams;
+     *      })
+     *
+     *     .config(function($routeProvider, $locationProvider) {
+     *       $routeProvider
+     *        .when('/Book/:bookId', {
+     *         templateUrl: 'book.html',
+     *         controller: 'BookController',
+     *         resolve: {
+     *           // I will cause a 1 second delay
+     *           delay: function($q, $timeout) {
+     *             var delay = $q.defer();
+     *             $timeout(delay.resolve, 1000);
+     *             return delay.promise;
+     *           }
+     *         }
+     *       })
+     *       .when('/Book/:bookId/ch/:chapterId', {
+     *         templateUrl: 'chapter.html',
+     *         controller: 'ChapterController'
+     *       });
+     *
+     *       // configure html5 to get links working on jsfiddle
+     *       $locationProvider.html5Mode(true);
+     *     });
+     *
+     *   </file>
+     *
+     *   <file name="protractor.js" type="protractor">
+     *     it('should load and compile correct template', function() {
+     *       element(by.linkText('Moby: Ch1')).click();
+     *       var content = element(by.css('[ng-view]')).getText();
+     *       expect(content).toMatch(/controller: ChapterController/);
+     *       expect(content).toMatch(/Book Id: Moby/);
+     *       expect(content).toMatch(/Chapter Id: 1/);
+     *
+     *       element(by.partialLinkText('Scarlet')).click();
+     *
+     *       content = element(by.css('[ng-view]')).getText();
+     *       expect(content).toMatch(/controller: BookController/);
+     *       expect(content).toMatch(/Book Id: Scarlet/);
+     *     });
+     *   </file>
+     * </example>
+     */
+
+    /**
+     * @ngdoc event
+     * @name $route#$routeChangeStart
+     * @eventType broadcast on root scope
+     * @description
+     * Broadcasted before a route change. At this  point the route services starts
+     * resolving all of the dependencies needed for the route change to occur.
+     * Typically this involves fetching the view template as well as any dependencies
+     * defined in `resolve` route property. Once  all of the dependencies are resolved
+     * `$routeChangeSuccess` is fired.
+     *
+     * The route change (and the `$location` change that triggered it) can be prevented
+     * by calling `preventDefault` method of the event. See {@link ng.$rootScope.Scope#$on}
+     * for more details about event object.
+     *
+     * @param {Object} angularEvent Synthetic event object.
+     * @param {Route} next Future route information.
+     * @param {Route} current Current route information.
+     */
+
+    /**
+     * @ngdoc event
+     * @name $route#$routeChangeSuccess
+     * @eventType broadcast on root scope
+     * @description
+     * Broadcasted after a route change has happened successfully.
+     * The `resolve` dependencies are now available in the `current.locals` property.
+     *
+     * {@link ngRoute.directive:ngView ngView} listens for the directive
+     * to instantiate the controller and render the view.
+     *
+     * @param {Object} angularEvent Synthetic event object.
+     * @param {Route} current Current route information.
+     * @param {Route|Undefined} previous Previous route information, or undefined if current is
+     * first route entered.
+     */
+
+    /**
+     * @ngdoc event
+     * @name $route#$routeChangeError
+     * @eventType broadcast on root scope
+     * @description
+     * Broadcasted if a redirection function fails or any redirection or resolve promises are
+     * rejected.
+     *
+     * @param {Object} angularEvent Synthetic event object
+     * @param {Route} current Current route information.
+     * @param {Route} previous Previous route information.
+     * @param {Route} rejection The thrown error or the rejection reason of the promise. Usually
+     * the rejection reason is the error that caused the promise to get rejected.
+     */
+
+    /**
+     * @ngdoc event
+     * @name $route#$routeUpdate
+     * @eventType broadcast on root scope
+     * @description
+     * The `reloadOnSearch` property has been set to false, and we are reusing the same
+     * instance of the Controller.
+     *
+     * @param {Object} angularEvent Synthetic event object
+     * @param {Route} current Current/previous route information.
+     */
+
+    var forceReload = false,
+        preparedRoute,
+        preparedRouteIsUpdateOnly,
+        $route = {
+          routes: routes,
+
+          /**
+           * @ngdoc method
+           * @name $route#reload
+           *
+           * @description
+           * Causes `$route` service to reload the current route even if
+           * {@link ng.$location $location} hasn't changed.
+           *
+           * As a result of that, {@link ngRoute.directive:ngView ngView}
+           * creates new scope and reinstantiates the controller.
+           */
+          reload: function() {
+            forceReload = true;
+
+            var fakeLocationEvent = {
+              defaultPrevented: false,
+              preventDefault: function fakePreventDefault() {
+                this.defaultPrevented = true;
+                forceReload = false;
+              }
+            };
+
+            $rootScope.$evalAsync(function() {
+              prepareRoute(fakeLocationEvent);
+              if (!fakeLocationEvent.defaultPrevented) commitRoute();
+            });
+          },
+
+          /**
+           * @ngdoc method
+           * @name $route#updateParams
+           *
+           * @description
+           * Causes `$route` service to update the current URL, replacing
+           * current route parameters with those specified in `newParams`.
+           * Provided property names that match the route's path segment
+           * definitions will be interpolated into the location's path, while
+           * remaining properties will be treated as query params.
+           *
+           * @param {!Object<string, string>} newParams mapping of URL parameter names to values
+           */
+          updateParams: function(newParams) {
+            if (this.current && this.current.$$route) {
+              newParams = angular.extend({}, this.current.params, newParams);
+              $location.path(interpolate(this.current.$$route.originalPath, newParams));
+              // interpolate modifies newParams, only query params are left
+              $location.search(newParams);
+            } else {
+              throw $routeMinErr('norout', 'Tried updating route when with no current route');
+            }
+          }
+        };
+
+    $rootScope.$on('$locationChangeStart', prepareRoute);
+    $rootScope.$on('$locationChangeSuccess', commitRoute);
+
+    return $route;
+
+    /////////////////////////////////////////////////////
+
+    /**
+     * @param on {string} current url
+     * @param route {Object} route regexp to match the url against
+     * @return {?Object}
+     *
+     * @description
+     * Check if the route matches the current url.
+     *
+     * Inspired by match in
+     * visionmedia/express/lib/router/router.js.
+     */
+    function switchRouteMatcher(on, route) {
+      var keys = route.keys,
+          params = {};
+
+      if (!route.regexp) return null;
+
+      var m = route.regexp.exec(on);
+      if (!m) return null;
+
+      for (var i = 1, len = m.length; i < len; ++i) {
+        var key = keys[i - 1];
+
+        var val = m[i];
+
+        if (key && val) {
+          params[key.name] = val;
+        }
+      }
+      return params;
+    }
+
+    function prepareRoute($locationEvent) {
+      var lastRoute = $route.current;
+
+      preparedRoute = parseRoute();
+      preparedRouteIsUpdateOnly = preparedRoute && lastRoute && preparedRoute.$$route === lastRoute.$$route
+          && angular.equals(preparedRoute.pathParams, lastRoute.pathParams)
+          && !preparedRoute.reloadOnSearch && !forceReload;
+
+      if (!preparedRouteIsUpdateOnly && (lastRoute || preparedRoute)) {
+        if ($rootScope.$broadcast('$routeChangeStart', preparedRoute, lastRoute).defaultPrevented) {
+          if ($locationEvent) {
+            $locationEvent.preventDefault();
+          }
+        }
+      }
+    }
+
+    function commitRoute() {
+      var lastRoute = $route.current;
+      var nextRoute = preparedRoute;
+
+      if (preparedRouteIsUpdateOnly) {
+        lastRoute.params = nextRoute.params;
+        angular.copy(lastRoute.params, $routeParams);
+        $rootScope.$broadcast('$routeUpdate', lastRoute);
+      } else if (nextRoute || lastRoute) {
+        forceReload = false;
+        $route.current = nextRoute;
+
+        var nextRoutePromise = $q.resolve(nextRoute);
+
+        $browser.$$incOutstandingRequestCount();
+
+        nextRoutePromise.
+          then(getRedirectionData).
+          then(handlePossibleRedirection).
+          then(function(keepProcessingRoute) {
+            return keepProcessingRoute && nextRoutePromise.
+              then(resolveLocals).
+              then(function(locals) {
+                // after route change
+                if (nextRoute === $route.current) {
+                  if (nextRoute) {
+                    nextRoute.locals = locals;
+                    angular.copy(nextRoute.params, $routeParams);
+                  }
+                  $rootScope.$broadcast('$routeChangeSuccess', nextRoute, lastRoute);
+                }
+              });
+          }).catch(function(error) {
+            if (nextRoute === $route.current) {
+              $rootScope.$broadcast('$routeChangeError', nextRoute, lastRoute, error);
+            }
+          }).finally(function() {
+            // Because `commitRoute()` is called from a `$rootScope.$evalAsync` block (see
+            // `$locationWatch`), this `$$completeOutstandingRequest()` call will not cause
+            // `outstandingRequestCount` to hit zero.  This is important in case we are redirecting
+            // to a new route which also requires some asynchronous work.
+
+            $browser.$$completeOutstandingRequest(noop);
+          });
+      }
+    }
+
+    function getRedirectionData(route) {
+      var data = {
+        route: route,
+        hasRedirection: false
+      };
+
+      if (route) {
+        if (route.redirectTo) {
+          if (angular.isString(route.redirectTo)) {
+            data.path = interpolate(route.redirectTo, route.params);
+            data.search = route.params;
+            data.hasRedirection = true;
+          } else {
+            var oldPath = $location.path();
+            var oldSearch = $location.search();
+            var newUrl = route.redirectTo(route.pathParams, oldPath, oldSearch);
+
+            if (angular.isDefined(newUrl)) {
+              data.url = newUrl;
+              data.hasRedirection = true;
+            }
+          }
+        } else if (route.resolveRedirectTo) {
+          return $q.
+            resolve($injector.invoke(route.resolveRedirectTo)).
+            then(function(newUrl) {
+              if (angular.isDefined(newUrl)) {
+                data.url = newUrl;
+                data.hasRedirection = true;
+              }
+
+              return data;
+            });
+        }
+      }
+
+      return data;
+    }
+
+    function handlePossibleRedirection(data) {
+      var keepProcessingRoute = true;
+
+      if (data.route !== $route.current) {
+        keepProcessingRoute = false;
+      } else if (data.hasRedirection) {
+        var oldUrl = $location.url();
+        var newUrl = data.url;
+
+        if (newUrl) {
+          $location.
+            url(newUrl).
+            replace();
+        } else {
+          newUrl = $location.
+            path(data.path).
+            search(data.search).
+            replace().
+            url();
+        }
+
+        if (newUrl !== oldUrl) {
+          // Exit out and don't process current next value,
+          // wait for next location change from redirect
+          keepProcessingRoute = false;
+        }
+      }
+
+      return keepProcessingRoute;
+    }
+
+    function resolveLocals(route) {
+      if (route) {
+        var locals = angular.extend({}, route.resolve);
+        angular.forEach(locals, function(value, key) {
+          locals[key] = angular.isString(value) ?
+              $injector.get(value) :
+              $injector.invoke(value, null, null, key);
+        });
+        var template = getTemplateFor(route);
+        if (angular.isDefined(template)) {
+          locals['$template'] = template;
+        }
+        return $q.all(locals);
+      }
+    }
+
+    function getTemplateFor(route) {
+      var template, templateUrl;
+      if (angular.isDefined(template = route.template)) {
+        if (angular.isFunction(template)) {
+          template = template(route.params);
+        }
+      } else if (angular.isDefined(templateUrl = route.templateUrl)) {
+        if (angular.isFunction(templateUrl)) {
+          templateUrl = templateUrl(route.params);
+        }
+        if (angular.isDefined(templateUrl)) {
+          route.loadedTemplateUrl = $sce.valueOf(templateUrl);
+          template = $templateRequest(templateUrl);
+        }
+      }
+      return template;
+    }
+
+    /**
+     * @returns {Object} the current active route, by matching it against the URL
+     */
+    function parseRoute() {
+      // Match a route
+      var params, match;
+      angular.forEach(routes, function(route, path) {
+        if (!match && (params = switchRouteMatcher($location.path(), route))) {
+          match = inherit(route, {
+            params: angular.extend({}, $location.search(), params),
+            pathParams: params});
+          match.$$route = route;
+        }
+      });
+      // No route matched; fallback to "otherwise" route
+      return match || routes[null] && inherit(routes[null], {params: {}, pathParams:{}});
+    }
+
+    /**
+     * @returns {string} interpolation of the redirect path with the parameters
+     */
+    function interpolate(string, params) {
+      var result = [];
+      angular.forEach((string || '').split(':'), function(segment, i) {
+        if (i === 0) {
+          result.push(segment);
+        } else {
+          var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
+          var key = segmentMatch[1];
+          result.push(params[key]);
+          result.push(segmentMatch[2] || '');
+          delete params[key];
+        }
+      });
+      return result.join('');
+    }
+  }];
+}
+
+instantiateRoute.$inject = ['$injector'];
+function instantiateRoute($injector) {
+  if (isEagerInstantiationEnabled) {
+    // Instantiate `$route`
+    $injector.get('$route');
+  }
+}
+
+ngRouteModule.provider('$routeParams', $RouteParamsProvider);
+
+
+/**
+ * @ngdoc service
+ * @name $routeParams
+ * @requires $route
+ * @this
+ *
+ * @description
+ * The `$routeParams` service allows you to retrieve the current set of route parameters.
+ *
+ * Requires the {@link ngRoute `ngRoute`} module to be installed.
+ *
+ * The route parameters are a combination of {@link ng.$location `$location`}'s
+ * {@link ng.$location#search `search()`} and {@link ng.$location#path `path()`}.
+ * The `path` parameters are extracted when the {@link ngRoute.$route `$route`} path is matched.
+ *
+ * In case of parameter name collision, `path` params take precedence over `search` params.
+ *
+ * The service guarantees that the identity of the `$routeParams` object will remain unchanged
+ * (but its properties will likely change) even when a route change occurs.
+ *
+ * Note that the `$routeParams` are only updated *after* a route change completes successfully.
+ * This means that you cannot rely on `$routeParams` being correct in route resolve functions.
+ * Instead you can use `$route.current.params` to access the new route's parameters.
+ *
+ * @example
+ * ```js
+ *  // Given:
+ *  // URL: http://server.com/index.html#/Chapter/1/Section/2?search=moby
+ *  // Route: /Chapter/:chapterId/Section/:sectionId
+ *  //
+ *  // Then
+ *  $routeParams ==> {chapterId:'1', sectionId:'2', search:'moby'}
+ * ```
+ */
+function $RouteParamsProvider() {
+  this.$get = function() { return {}; };
+}
+
+ngRouteModule.directive('ngView', ngViewFactory);
+ngRouteModule.directive('ngView', ngViewFillContentFactory);
+
+
+/**
+ * @ngdoc directive
+ * @name ngView
+ * @restrict ECA
+ *
+ * @description
+ * `ngView` is a directive that complements the {@link ngRoute.$route $route} service by
+ * including the rendered template of the current route into the main layout (`index.html`) file.
+ * Every time the current route changes, the included view changes with it according to the
+ * configuration of the `$route` service.
+ *
+ * Requires the {@link ngRoute `ngRoute`} module to be installed.
+ *
+ * @animations
+ * | Animation                        | Occurs                              |
+ * |----------------------------------|-------------------------------------|
+ * | {@link ng.$animate#enter enter}  | when the new element is inserted to the DOM |
+ * | {@link ng.$animate#leave leave}  | when the old element is removed from to the DOM  |
+ *
+ * The enter and leave animation occur concurrently.
+ *
+ * @scope
+ * @priority 400
+ * @param {string=} onload Expression to evaluate whenever the view updates.
+ *
+ * @param {string=} autoscroll Whether `ngView` should call {@link ng.$anchorScroll
+ *                  $anchorScroll} to scroll the viewport after the view is updated.
+ *
+ *                  - If the attribute is not set, disable scrolling.
+ *                  - If the attribute is set without value, enable scrolling.
+ *                  - Otherwise enable scrolling only if the `autoscroll` attribute value evaluated
+ *                    as an expression yields a truthy value.
+ * @example
+    <example name="ngView-directive" module="ngViewExample"
+             deps="angular-route.js;angular-animate.js"
+             animations="true" fixBase="true">
+      <file name="index.html">
+        <div ng-controller="MainCtrl as main">
+          Choose:
+          <a href="Book/Moby">Moby</a> |
+          <a href="Book/Moby/ch/1">Moby: Ch1</a> |
+          <a href="Book/Gatsby">Gatsby</a> |
+          <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
+          <a href="Book/Scarlet">Scarlet Letter</a><br/>
+
+          <div class="view-animate-container">
+            <div ng-view class="view-animate"></div>
+          </div>
+          <hr />
+
+          <pre>$location.path() = {{main.$location.path()}}</pre>
+          <pre>$route.current.templateUrl = {{main.$route.current.templateUrl}}</pre>
+          <pre>$route.current.params = {{main.$route.current.params}}</pre>
+          <pre>$routeParams = {{main.$routeParams}}</pre>
+        </div>
+      </file>
+
+      <file name="book.html">
+        <div>
+          controller: {{book.name}}<br />
+          Book Id: {{book.params.bookId}}<br />
+        </div>
+      </file>
+
+      <file name="chapter.html">
+        <div>
+          controller: {{chapter.name}}<br />
+          Book Id: {{chapter.params.bookId}}<br />
+          Chapter Id: {{chapter.params.chapterId}}
+        </div>
+      </file>
+
+      <file name="animations.css">
+        .view-animate-container {
+          position:relative;
+          height:100px!important;
+          background:white;
+          border:1px solid black;
+          height:40px;
+          overflow:hidden;
+        }
+
+        .view-animate {
+          padding:10px;
+        }
+
+        .view-animate.ng-enter, .view-animate.ng-leave {
+          transition:all cubic-bezier(0.250, 0.460, 0.450, 0.940) 1.5s;
+
+          display:block;
+          width:100%;
+          border-left:1px solid black;
+
+          position:absolute;
+          top:0;
+          left:0;
+          right:0;
+          bottom:0;
+          padding:10px;
+        }
+
+        .view-animate.ng-enter {
+          left:100%;
+        }
+        .view-animate.ng-enter.ng-enter-active {
+          left:0;
+        }
+        .view-animate.ng-leave.ng-leave-active {
+          left:-100%;
+        }
+      </file>
+
+      <file name="script.js">
+        angular.module('ngViewExample', ['ngRoute', 'ngAnimate'])
+          .config(['$routeProvider', '$locationProvider',
+            function($routeProvider, $locationProvider) {
+              $routeProvider
+                .when('/Book/:bookId', {
+                  templateUrl: 'book.html',
+                  controller: 'BookCtrl',
+                  controllerAs: 'book'
+                })
+                .when('/Book/:bookId/ch/:chapterId', {
+                  templateUrl: 'chapter.html',
+                  controller: 'ChapterCtrl',
+                  controllerAs: 'chapter'
+                });
+
+              $locationProvider.html5Mode(true);
+          }])
+          .controller('MainCtrl', ['$route', '$routeParams', '$location',
+            function MainCtrl($route, $routeParams, $location) {
+              this.$route = $route;
+              this.$location = $location;
+              this.$routeParams = $routeParams;
+          }])
+          .controller('BookCtrl', ['$routeParams', function BookCtrl($routeParams) {
+            this.name = 'BookCtrl';
+            this.params = $routeParams;
+          }])
+          .controller('ChapterCtrl', ['$routeParams', function ChapterCtrl($routeParams) {
+            this.name = 'ChapterCtrl';
+            this.params = $routeParams;
+          }]);
+
+      </file>
+
+      <file name="protractor.js" type="protractor">
+        it('should load and compile correct template', function() {
+          element(by.linkText('Moby: Ch1')).click();
+          var content = element(by.css('[ng-view]')).getText();
+          expect(content).toMatch(/controller: ChapterCtrl/);
+          expect(content).toMatch(/Book Id: Moby/);
+          expect(content).toMatch(/Chapter Id: 1/);
+
+          element(by.partialLinkText('Scarlet')).click();
+
+          content = element(by.css('[ng-view]')).getText();
+          expect(content).toMatch(/controller: BookCtrl/);
+          expect(content).toMatch(/Book Id: Scarlet/);
+        });
+      </file>
+    </example>
+ */
+
+
+/**
+ * @ngdoc event
+ * @name ngView#$viewContentLoaded
+ * @eventType emit on the current ngView scope
+ * @description
+ * Emitted every time the ngView content is reloaded.
+ */
+ngViewFactory.$inject = ['$route', '$anchorScroll', '$animate'];
+function ngViewFactory($route, $anchorScroll, $animate) {
+  return {
+    restrict: 'ECA',
+    terminal: true,
+    priority: 400,
+    transclude: 'element',
+    link: function(scope, $element, attr, ctrl, $transclude) {
+        var currentScope,
+            currentElement,
+            previousLeaveAnimation,
+            autoScrollExp = attr.autoscroll,
+            onloadExp = attr.onload || '';
+
+        scope.$on('$routeChangeSuccess', update);
+        update();
+
+        function cleanupLastView() {
+          if (previousLeaveAnimation) {
+            $animate.cancel(previousLeaveAnimation);
+            previousLeaveAnimation = null;
+          }
+
+          if (currentScope) {
+            currentScope.$destroy();
+            currentScope = null;
+          }
+          if (currentElement) {
+            previousLeaveAnimation = $animate.leave(currentElement);
+            previousLeaveAnimation.done(function(response) {
+              if (response !== false) previousLeaveAnimation = null;
+            });
+            currentElement = null;
+          }
+        }
+
+        function update() {
+          var locals = $route.current && $route.current.locals,
+              template = locals && locals.$template;
+
+          if (angular.isDefined(template)) {
+            var newScope = scope.$new();
+            var current = $route.current;
+
+            // Note: This will also link all children of ng-view that were contained in the original
+            // html. If that content contains controllers, ... they could pollute/change the scope.
+            // However, using ng-view on an element with additional content does not make sense...
+            // Note: We can't remove them in the cloneAttchFn of $transclude as that
+            // function is called before linking the content, which would apply child
+            // directives to non existing elements.
+            var clone = $transclude(newScope, function(clone) {
+              $animate.enter(clone, null, currentElement || $element).done(function onNgViewEnter(response) {
+                if (response !== false && angular.isDefined(autoScrollExp)
+                  && (!autoScrollExp || scope.$eval(autoScrollExp))) {
+                  $anchorScroll();
+                }
+              });
+              cleanupLastView();
+            });
+
+            currentElement = clone;
+            currentScope = current.scope = newScope;
+            currentScope.$emit('$viewContentLoaded');
+            currentScope.$eval(onloadExp);
+          } else {
+            cleanupLastView();
+          }
+        }
+    }
+  };
+}
+
+// This directive is called during the $transclude call of the first `ngView` directive.
+// It will replace and compile the content of the element with the loaded template.
+// We need this directive so that the element content is already filled when
+// the link function of another directive on the same element as ngView
+// is called.
+ngViewFillContentFactory.$inject = ['$compile', '$controller', '$route'];
+function ngViewFillContentFactory($compile, $controller, $route) {
+  return {
+    restrict: 'ECA',
+    priority: -400,
+    link: function(scope, $element) {
+      var current = $route.current,
+          locals = current.locals;
+
+      $element.html(locals.$template);
+
+      var link = $compile($element.contents());
+
+      if (current.controller) {
+        locals.$scope = scope;
+        var controller = $controller(current.controller, locals);
+        if (current.controllerAs) {
+          scope[current.controllerAs] = controller;
+        }
+        $element.data('$ngControllerController', controller);
+        $element.children().data('$ngControllerController', controller);
+      }
+      scope[current.resolveAs || '$resolve'] = locals;
+
+      link(scope);
+    }
+  };
+}
+
+
+})(window, window.angular);
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(6);
+module.exports = 'ngSanitize';
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports) {
+
+/**
+ * @license AngularJS v1.6.8
+ * (c) 2010-2017 Google, Inc. http://angularjs.org
+ * License: MIT
+ */
+(function(window, angular) {'use strict';
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *     Any commits to this file should be reviewed with security in mind.  *
+ *   Changes to this file can potentially create security vulnerabilities. *
+ *          An approval from 2 Core members with history of modifying      *
+ *                         this file is required.                          *
+ *                                                                         *
+ *  Does the change somehow allow for arbitrary javascript to be executed? *
+ *    Or allows for someone to change the prototype of built-in objects?   *
+ *     Or gives undesired access to variables likes document or window?    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+var $sanitizeMinErr = angular.$$minErr('$sanitize');
+var bind;
+var extend;
+var forEach;
+var isDefined;
+var lowercase;
+var noop;
+var nodeContains;
+var htmlParser;
+var htmlSanitizeWriter;
+
+/**
+ * @ngdoc module
+ * @name ngSanitize
+ * @description
+ *
+ * The `ngSanitize` module provides functionality to sanitize HTML.
+ *
+ * See {@link ngSanitize.$sanitize `$sanitize`} for usage.
+ */
+
+/**
+ * @ngdoc service
+ * @name $sanitize
+ * @kind function
+ *
+ * @description
+ *   Sanitizes an html string by stripping all potentially dangerous tokens.
+ *
+ *   The input is sanitized by parsing the HTML into tokens. All safe tokens (from a whitelist) are
+ *   then serialized back to properly escaped html string. This means that no unsafe input can make
+ *   it into the returned string.
+ *
+ *   The whitelist for URL sanitization of attribute values is configured using the functions
+ *   `aHrefSanitizationWhitelist` and `imgSrcSanitizationWhitelist` of {@link ng.$compileProvider
+ *   `$compileProvider`}.
+ *
+ *   The input may also contain SVG markup if this is enabled via {@link $sanitizeProvider}.
+ *
+ * @param {string} html HTML input.
+ * @returns {string} Sanitized HTML.
+ *
+ * @example
+   <example module="sanitizeExample" deps="angular-sanitize.js" name="sanitize-service">
+   <file name="index.html">
+     <script>
+         angular.module('sanitizeExample', ['ngSanitize'])
+           .controller('ExampleController', ['$scope', '$sce', function($scope, $sce) {
+             $scope.snippet =
+               '<p style="color:blue">an html\n' +
+               '<em onmouseover="this.textContent=\'PWN3D!\'">click here</em>\n' +
+               'snippet</p>';
+             $scope.deliberatelyTrustDangerousSnippet = function() {
+               return $sce.trustAsHtml($scope.snippet);
+             };
+           }]);
+     </script>
+     <div ng-controller="ExampleController">
+        Snippet: <textarea ng-model="snippet" cols="60" rows="3"></textarea>
+       <table>
+         <tr>
+           <td>Directive</td>
+           <td>How</td>
+           <td>Source</td>
+           <td>Rendered</td>
+         </tr>
+         <tr id="bind-html-with-sanitize">
+           <td>ng-bind-html</td>
+           <td>Automatically uses $sanitize</td>
+           <td><pre>&lt;div ng-bind-html="snippet"&gt;<br/>&lt;/div&gt;</pre></td>
+           <td><div ng-bind-html="snippet"></div></td>
+         </tr>
+         <tr id="bind-html-with-trust">
+           <td>ng-bind-html</td>
+           <td>Bypass $sanitize by explicitly trusting the dangerous value</td>
+           <td>
+           <pre>&lt;div ng-bind-html="deliberatelyTrustDangerousSnippet()"&gt;
+&lt;/div&gt;</pre>
+           </td>
+           <td><div ng-bind-html="deliberatelyTrustDangerousSnippet()"></div></td>
+         </tr>
+         <tr id="bind-default">
+           <td>ng-bind</td>
+           <td>Automatically escapes</td>
+           <td><pre>&lt;div ng-bind="snippet"&gt;<br/>&lt;/div&gt;</pre></td>
+           <td><div ng-bind="snippet"></div></td>
+         </tr>
+       </table>
+       </div>
+   </file>
+   <file name="protractor.js" type="protractor">
+     it('should sanitize the html snippet by default', function() {
+       expect(element(by.css('#bind-html-with-sanitize div')).getAttribute('innerHTML')).
+         toBe('<p>an html\n<em>click here</em>\nsnippet</p>');
+     });
+
+     it('should inline raw snippet if bound to a trusted value', function() {
+       expect(element(by.css('#bind-html-with-trust div')).getAttribute('innerHTML')).
+         toBe("<p style=\"color:blue\">an html\n" +
+              "<em onmouseover=\"this.textContent='PWN3D!'\">click here</em>\n" +
+              "snippet</p>");
+     });
+
+     it('should escape snippet without any filter', function() {
+       expect(element(by.css('#bind-default div')).getAttribute('innerHTML')).
+         toBe("&lt;p style=\"color:blue\"&gt;an html\n" +
+              "&lt;em onmouseover=\"this.textContent='PWN3D!'\"&gt;click here&lt;/em&gt;\n" +
+              "snippet&lt;/p&gt;");
+     });
+
+     it('should update', function() {
+       element(by.model('snippet')).clear();
+       element(by.model('snippet')).sendKeys('new <b onclick="alert(1)">text</b>');
+       expect(element(by.css('#bind-html-with-sanitize div')).getAttribute('innerHTML')).
+         toBe('new <b>text</b>');
+       expect(element(by.css('#bind-html-with-trust div')).getAttribute('innerHTML')).toBe(
+         'new <b onclick="alert(1)">text</b>');
+       expect(element(by.css('#bind-default div')).getAttribute('innerHTML')).toBe(
+         "new &lt;b onclick=\"alert(1)\"&gt;text&lt;/b&gt;");
+     });
+   </file>
+   </example>
+ */
+
+
+/**
+ * @ngdoc provider
+ * @name $sanitizeProvider
+ * @this
+ *
+ * @description
+ * Creates and configures {@link $sanitize} instance.
+ */
+function $SanitizeProvider() {
+  var svgEnabled = false;
+
+  this.$get = ['$$sanitizeUri', function($$sanitizeUri) {
+    if (svgEnabled) {
+      extend(validElements, svgElements);
+    }
+    return function(html) {
+      var buf = [];
+      htmlParser(html, htmlSanitizeWriter(buf, function(uri, isImage) {
+        return !/^unsafe:/.test($$sanitizeUri(uri, isImage));
+      }));
+      return buf.join('');
+    };
+  }];
+
+
+  /**
+   * @ngdoc method
+   * @name $sanitizeProvider#enableSvg
+   * @kind function
+   *
+   * @description
+   * Enables a subset of svg to be supported by the sanitizer.
+   *
+   * <div class="alert alert-warning">
+   *   <p>By enabling this setting without taking other precautions, you might expose your
+   *   application to click-hijacking attacks. In these attacks, sanitized svg elements could be positioned
+   *   outside of the containing element and be rendered over other elements on the page (e.g. a login
+   *   link). Such behavior can then result in phishing incidents.</p>
+   *
+   *   <p>To protect against these, explicitly setup `overflow: hidden` css rule for all potential svg
+   *   tags within the sanitized content:</p>
+   *
+   *   <br>
+   *
+   *   <pre><code>
+   *   .rootOfTheIncludedContent svg {
+   *     overflow: hidden !important;
+   *   }
+   *   </code></pre>
+   * </div>
+   *
+   * @param {boolean=} flag Enable or disable SVG support in the sanitizer.
+   * @returns {boolean|ng.$sanitizeProvider} Returns the currently configured value if called
+   *    without an argument or self for chaining otherwise.
+   */
+  this.enableSvg = function(enableSvg) {
+    if (isDefined(enableSvg)) {
+      svgEnabled = enableSvg;
+      return this;
+    } else {
+      return svgEnabled;
+    }
+  };
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Private stuff
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+  bind = angular.bind;
+  extend = angular.extend;
+  forEach = angular.forEach;
+  isDefined = angular.isDefined;
+  lowercase = angular.lowercase;
+  noop = angular.noop;
+
+  htmlParser = htmlParserImpl;
+  htmlSanitizeWriter = htmlSanitizeWriterImpl;
+
+  nodeContains = window.Node.prototype.contains || /** @this */ function(arg) {
+    // eslint-disable-next-line no-bitwise
+    return !!(this.compareDocumentPosition(arg) & 16);
+  };
+
+  // Regular Expressions for parsing tags and attributes
+  var SURROGATE_PAIR_REGEXP = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
+    // Match everything outside of normal chars and " (quote character)
+    NON_ALPHANUMERIC_REGEXP = /([^#-~ |!])/g;
+
+
+  // Good source of info about elements and attributes
+  // http://dev.w3.org/html5/spec/Overview.html#semantics
+  // http://simon.html5.org/html-elements
+
+  // Safe Void Elements - HTML5
+  // http://dev.w3.org/html5/spec/Overview.html#void-elements
+  var voidElements = toMap('area,br,col,hr,img,wbr');
+
+  // Elements that you can, intentionally, leave open (and which close themselves)
+  // http://dev.w3.org/html5/spec/Overview.html#optional-tags
+  var optionalEndTagBlockElements = toMap('colgroup,dd,dt,li,p,tbody,td,tfoot,th,thead,tr'),
+      optionalEndTagInlineElements = toMap('rp,rt'),
+      optionalEndTagElements = extend({},
+                                              optionalEndTagInlineElements,
+                                              optionalEndTagBlockElements);
+
+  // Safe Block Elements - HTML5
+  var blockElements = extend({}, optionalEndTagBlockElements, toMap('address,article,' +
+          'aside,blockquote,caption,center,del,dir,div,dl,figure,figcaption,footer,h1,h2,h3,h4,h5,' +
+          'h6,header,hgroup,hr,ins,map,menu,nav,ol,pre,section,table,ul'));
+
+  // Inline Elements - HTML5
+  var inlineElements = extend({}, optionalEndTagInlineElements, toMap('a,abbr,acronym,b,' +
+          'bdi,bdo,big,br,cite,code,del,dfn,em,font,i,img,ins,kbd,label,map,mark,q,ruby,rp,rt,s,' +
+          'samp,small,span,strike,strong,sub,sup,time,tt,u,var'));
+
+  // SVG Elements
+  // https://wiki.whatwg.org/wiki/Sanitization_rules#svg_Elements
+  // Note: the elements animate,animateColor,animateMotion,animateTransform,set are intentionally omitted.
+  // They can potentially allow for arbitrary javascript to be executed. See #11290
+  var svgElements = toMap('circle,defs,desc,ellipse,font-face,font-face-name,font-face-src,g,glyph,' +
+          'hkern,image,linearGradient,line,marker,metadata,missing-glyph,mpath,path,polygon,polyline,' +
+          'radialGradient,rect,stop,svg,switch,text,title,tspan');
+
+  // Blocked Elements (will be stripped)
+  var blockedElements = toMap('script,style');
+
+  var validElements = extend({},
+                                     voidElements,
+                                     blockElements,
+                                     inlineElements,
+                                     optionalEndTagElements);
+
+  //Attributes that have href and hence need to be sanitized
+  var uriAttrs = toMap('background,cite,href,longdesc,src,xlink:href');
+
+  var htmlAttrs = toMap('abbr,align,alt,axis,bgcolor,border,cellpadding,cellspacing,class,clear,' +
+      'color,cols,colspan,compact,coords,dir,face,headers,height,hreflang,hspace,' +
+      'ismap,lang,language,nohref,nowrap,rel,rev,rows,rowspan,rules,' +
+      'scope,scrolling,shape,size,span,start,summary,tabindex,target,title,type,' +
+      'valign,value,vspace,width');
+
+  // SVG attributes (without "id" and "name" attributes)
+  // https://wiki.whatwg.org/wiki/Sanitization_rules#svg_Attributes
+  var svgAttrs = toMap('accent-height,accumulate,additive,alphabetic,arabic-form,ascent,' +
+      'baseProfile,bbox,begin,by,calcMode,cap-height,class,color,color-rendering,content,' +
+      'cx,cy,d,dx,dy,descent,display,dur,end,fill,fill-rule,font-family,font-size,font-stretch,' +
+      'font-style,font-variant,font-weight,from,fx,fy,g1,g2,glyph-name,gradientUnits,hanging,' +
+      'height,horiz-adv-x,horiz-origin-x,ideographic,k,keyPoints,keySplines,keyTimes,lang,' +
+      'marker-end,marker-mid,marker-start,markerHeight,markerUnits,markerWidth,mathematical,' +
+      'max,min,offset,opacity,orient,origin,overline-position,overline-thickness,panose-1,' +
+      'path,pathLength,points,preserveAspectRatio,r,refX,refY,repeatCount,repeatDur,' +
+      'requiredExtensions,requiredFeatures,restart,rotate,rx,ry,slope,stemh,stemv,stop-color,' +
+      'stop-opacity,strikethrough-position,strikethrough-thickness,stroke,stroke-dasharray,' +
+      'stroke-dashoffset,stroke-linecap,stroke-linejoin,stroke-miterlimit,stroke-opacity,' +
+      'stroke-width,systemLanguage,target,text-anchor,to,transform,type,u1,u2,underline-position,' +
+      'underline-thickness,unicode,unicode-range,units-per-em,values,version,viewBox,visibility,' +
+      'width,widths,x,x-height,x1,x2,xlink:actuate,xlink:arcrole,xlink:role,xlink:show,xlink:title,' +
+      'xlink:type,xml:base,xml:lang,xml:space,xmlns,xmlns:xlink,y,y1,y2,zoomAndPan', true);
+
+  var validAttrs = extend({},
+                                  uriAttrs,
+                                  svgAttrs,
+                                  htmlAttrs);
+
+  function toMap(str, lowercaseKeys) {
+    var obj = {}, items = str.split(','), i;
+    for (i = 0; i < items.length; i++) {
+      obj[lowercaseKeys ? lowercase(items[i]) : items[i]] = true;
+    }
+    return obj;
+  }
+
+  /**
+   * Create an inert document that contains the dirty HTML that needs sanitizing
+   * Depending upon browser support we use one of three strategies for doing this.
+   * Support: Safari 10.x -> XHR strategy
+   * Support: Firefox -> DomParser strategy
+   */
+  var getInertBodyElement /* function(html: string): HTMLBodyElement */ = (function(window, document) {
+    var inertDocument;
+    if (document && document.implementation) {
+      inertDocument = document.implementation.createHTMLDocument('inert');
+    } else {
+      throw $sanitizeMinErr('noinert', 'Can\'t create an inert html document');
+    }
+    var inertBodyElement = (inertDocument.documentElement || inertDocument.getDocumentElement()).querySelector('body');
+
+    // Check for the Safari 10.1 bug - which allows JS to run inside the SVG G element
+    inertBodyElement.innerHTML = '<svg><g onload="this.parentNode.remove()"></g></svg>';
+    if (!inertBodyElement.querySelector('svg')) {
+      return getInertBodyElement_XHR;
+    } else {
+      // Check for the Firefox bug - which prevents the inner img JS from being sanitized
+      inertBodyElement.innerHTML = '<svg><p><style><img src="</style><img src=x onerror=alert(1)//">';
+      if (inertBodyElement.querySelector('svg img')) {
+        return getInertBodyElement_DOMParser;
+      } else {
+        return getInertBodyElement_InertDocument;
+      }
+    }
+
+    function getInertBodyElement_XHR(html) {
+      // We add this dummy element to ensure that the rest of the content is parsed as expected
+      // e.g. leading whitespace is maintained and tags like `<meta>` do not get hoisted to the `<head>` tag.
+      html = '<remove></remove>' + html;
+      try {
+        html = encodeURI(html);
+      } catch (e) {
+        return undefined;
+      }
+      var xhr = new window.XMLHttpRequest();
+      xhr.responseType = 'document';
+      xhr.open('GET', 'data:text/html;charset=utf-8,' + html, false);
+      xhr.send(null);
+      var body = xhr.response.body;
+      body.firstChild.remove();
+      return body;
+    }
+
+    function getInertBodyElement_DOMParser(html) {
+      // We add this dummy element to ensure that the rest of the content is parsed as expected
+      // e.g. leading whitespace is maintained and tags like `<meta>` do not get hoisted to the `<head>` tag.
+      html = '<remove></remove>' + html;
+      try {
+        var body = new window.DOMParser().parseFromString(html, 'text/html').body;
+        body.firstChild.remove();
+        return body;
+      } catch (e) {
+        return undefined;
+      }
+    }
+
+    function getInertBodyElement_InertDocument(html) {
+      inertBodyElement.innerHTML = html;
+
+      // Support: IE 9-11 only
+      // strip custom-namespaced attributes on IE<=11
+      if (document.documentMode) {
+        stripCustomNsAttrs(inertBodyElement);
+      }
+
+      return inertBodyElement;
+    }
+  })(window, window.document);
+
+  /**
+   * @example
+   * htmlParser(htmlString, {
+   *     start: function(tag, attrs) {},
+   *     end: function(tag) {},
+   *     chars: function(text) {},
+   *     comment: function(text) {}
+   * });
+   *
+   * @param {string} html string
+   * @param {object} handler
+   */
+  function htmlParserImpl(html, handler) {
+    if (html === null || html === undefined) {
+      html = '';
+    } else if (typeof html !== 'string') {
+      html = '' + html;
+    }
+
+    var inertBodyElement = getInertBodyElement(html);
+    if (!inertBodyElement) return '';
+
+    //mXSS protection
+    var mXSSAttempts = 5;
+    do {
+      if (mXSSAttempts === 0) {
+        throw $sanitizeMinErr('uinput', 'Failed to sanitize html because the input is unstable');
+      }
+      mXSSAttempts--;
+
+      // trigger mXSS if it is going to happen by reading and writing the innerHTML
+      html = inertBodyElement.innerHTML;
+      inertBodyElement = getInertBodyElement(html);
+    } while (html !== inertBodyElement.innerHTML);
+
+    var node = inertBodyElement.firstChild;
+    while (node) {
+      switch (node.nodeType) {
+        case 1: // ELEMENT_NODE
+          handler.start(node.nodeName.toLowerCase(), attrToMap(node.attributes));
+          break;
+        case 3: // TEXT NODE
+          handler.chars(node.textContent);
+          break;
+      }
+
+      var nextNode;
+      if (!(nextNode = node.firstChild)) {
+        if (node.nodeType === 1) {
+          handler.end(node.nodeName.toLowerCase());
+        }
+        nextNode = getNonDescendant('nextSibling', node);
+        if (!nextNode) {
+          while (nextNode == null) {
+            node = getNonDescendant('parentNode', node);
+            if (node === inertBodyElement) break;
+            nextNode = getNonDescendant('nextSibling', node);
+            if (node.nodeType === 1) {
+              handler.end(node.nodeName.toLowerCase());
+            }
+          }
+        }
+      }
+      node = nextNode;
+    }
+
+    while ((node = inertBodyElement.firstChild)) {
+      inertBodyElement.removeChild(node);
+    }
+  }
+
+  function attrToMap(attrs) {
+    var map = {};
+    for (var i = 0, ii = attrs.length; i < ii; i++) {
+      var attr = attrs[i];
+      map[attr.name] = attr.value;
+    }
+    return map;
+  }
+
+
+  /**
+   * Escapes all potentially dangerous characters, so that the
+   * resulting string can be safely inserted into attribute or
+   * element text.
+   * @param value
+   * @returns {string} escaped text
+   */
+  function encodeEntities(value) {
+    return value.
+      replace(/&/g, '&amp;').
+      replace(SURROGATE_PAIR_REGEXP, function(value) {
+        var hi = value.charCodeAt(0);
+        var low = value.charCodeAt(1);
+        return '&#' + (((hi - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000) + ';';
+      }).
+      replace(NON_ALPHANUMERIC_REGEXP, function(value) {
+        return '&#' + value.charCodeAt(0) + ';';
+      }).
+      replace(/</g, '&lt;').
+      replace(/>/g, '&gt;');
+  }
+
+  /**
+   * create an HTML/XML writer which writes to buffer
+   * @param {Array} buf use buf.join('') to get out sanitized html string
+   * @returns {object} in the form of {
+   *     start: function(tag, attrs) {},
+   *     end: function(tag) {},
+   *     chars: function(text) {},
+   *     comment: function(text) {}
+   * }
+   */
+  function htmlSanitizeWriterImpl(buf, uriValidator) {
+    var ignoreCurrentElement = false;
+    var out = bind(buf, buf.push);
+    return {
+      start: function(tag, attrs) {
+        tag = lowercase(tag);
+        if (!ignoreCurrentElement && blockedElements[tag]) {
+          ignoreCurrentElement = tag;
+        }
+        if (!ignoreCurrentElement && validElements[tag] === true) {
+          out('<');
+          out(tag);
+          forEach(attrs, function(value, key) {
+            var lkey = lowercase(key);
+            var isImage = (tag === 'img' && lkey === 'src') || (lkey === 'background');
+            if (validAttrs[lkey] === true &&
+              (uriAttrs[lkey] !== true || uriValidator(value, isImage))) {
+              out(' ');
+              out(key);
+              out('="');
+              out(encodeEntities(value));
+              out('"');
+            }
+          });
+          out('>');
+        }
+      },
+      end: function(tag) {
+        tag = lowercase(tag);
+        if (!ignoreCurrentElement && validElements[tag] === true && voidElements[tag] !== true) {
+          out('</');
+          out(tag);
+          out('>');
+        }
+        // eslint-disable-next-line eqeqeq
+        if (tag == ignoreCurrentElement) {
+          ignoreCurrentElement = false;
+        }
+      },
+      chars: function(chars) {
+        if (!ignoreCurrentElement) {
+          out(encodeEntities(chars));
+        }
+      }
+    };
+  }
+
+
+  /**
+   * When IE9-11 comes across an unknown namespaced attribute e.g. 'xlink:foo' it adds 'xmlns:ns1' attribute to declare
+   * ns1 namespace and prefixes the attribute with 'ns1' (e.g. 'ns1:xlink:foo'). This is undesirable since we don't want
+   * to allow any of these custom attributes. This method strips them all.
+   *
+   * @param node Root element to process
+   */
+  function stripCustomNsAttrs(node) {
+    while (node) {
+      if (node.nodeType === window.Node.ELEMENT_NODE) {
+        var attrs = node.attributes;
+        for (var i = 0, l = attrs.length; i < l; i++) {
+          var attrNode = attrs[i];
+          var attrName = attrNode.name.toLowerCase();
+          if (attrName === 'xmlns:ns1' || attrName.lastIndexOf('ns1:', 0) === 0) {
+            node.removeAttributeNode(attrNode);
+            i--;
+            l--;
+          }
+        }
+      }
+
+      var nextNode = node.firstChild;
+      if (nextNode) {
+        stripCustomNsAttrs(nextNode);
+      }
+
+      node = getNonDescendant('nextSibling', node);
+    }
+  }
+
+  function getNonDescendant(propName, node) {
+    // An element is clobbered if its `propName` property points to one of its descendants
+    var nextNode = node[propName];
+    if (nextNode && nodeContains.call(node, nextNode)) {
+      throw $sanitizeMinErr('elclob', 'Failed to sanitize html because the element is clobbered: {0}', node.outerHTML || node.outerText);
+    }
+    return nextNode;
+  }
+}
+
+function sanitizeText(chars) {
+  var buf = [];
+  var writer = htmlSanitizeWriter(buf, noop);
+  writer.chars(chars);
+  return buf.join('');
+}
+
+
+// define ngSanitize module and register $sanitize service
+angular.module('ngSanitize', [])
+  .provider('$sanitize', $SanitizeProvider)
+  .info({ angularVersion: '1.6.8' });
+
+/**
+ * @ngdoc filter
+ * @name linky
+ * @kind function
+ *
+ * @description
+ * Finds links in text input and turns them into html links. Supports `http/https/ftp/sftp/mailto` and
+ * plain email address links.
+ *
+ * Requires the {@link ngSanitize `ngSanitize`} module to be installed.
+ *
+ * @param {string} text Input text.
+ * @param {string} [target] Window (`_blank|_self|_parent|_top`) or named frame to open links in.
+ * @param {object|function(url)} [attributes] Add custom attributes to the link element.
+ *
+ *    Can be one of:
+ *
+ *    - `object`: A map of attributes
+ *    - `function`: Takes the url as a parameter and returns a map of attributes
+ *
+ *    If the map of attributes contains a value for `target`, it overrides the value of
+ *    the target parameter.
+ *
+ *
+ * @returns {string} Html-linkified and {@link $sanitize sanitized} text.
+ *
+ * @usage
+   <span ng-bind-html="linky_expression | linky"></span>
+ *
+ * @example
+   <example module="linkyExample" deps="angular-sanitize.js" name="linky-filter">
+     <file name="index.html">
+       <div ng-controller="ExampleController">
+       Snippet: <textarea ng-model="snippet" cols="60" rows="3"></textarea>
+       <table>
+         <tr>
+           <th>Filter</th>
+           <th>Source</th>
+           <th>Rendered</th>
+         </tr>
+         <tr id="linky-filter">
+           <td>linky filter</td>
+           <td>
+             <pre>&lt;div ng-bind-html="snippet | linky"&gt;<br>&lt;/div&gt;</pre>
+           </td>
+           <td>
+             <div ng-bind-html="snippet | linky"></div>
+           </td>
+         </tr>
+         <tr id="linky-target">
+          <td>linky target</td>
+          <td>
+            <pre>&lt;div ng-bind-html="snippetWithSingleURL | linky:'_blank'"&gt;<br>&lt;/div&gt;</pre>
+          </td>
+          <td>
+            <div ng-bind-html="snippetWithSingleURL | linky:'_blank'"></div>
+          </td>
+         </tr>
+         <tr id="linky-custom-attributes">
+          <td>linky custom attributes</td>
+          <td>
+            <pre>&lt;div ng-bind-html="snippetWithSingleURL | linky:'_self':{rel: 'nofollow'}"&gt;<br>&lt;/div&gt;</pre>
+          </td>
+          <td>
+            <div ng-bind-html="snippetWithSingleURL | linky:'_self':{rel: 'nofollow'}"></div>
+          </td>
+         </tr>
+         <tr id="escaped-html">
+           <td>no filter</td>
+           <td><pre>&lt;div ng-bind="snippet"&gt;<br>&lt;/div&gt;</pre></td>
+           <td><div ng-bind="snippet"></div></td>
+         </tr>
+       </table>
+     </file>
+     <file name="script.js">
+       angular.module('linkyExample', ['ngSanitize'])
+         .controller('ExampleController', ['$scope', function($scope) {
+           $scope.snippet =
+             'Pretty text with some links:\n' +
+             'http://angularjs.org/,\n' +
+             'mailto:us@somewhere.org,\n' +
+             'another@somewhere.org,\n' +
+             'and one more: ftp://127.0.0.1/.';
+           $scope.snippetWithSingleURL = 'http://angularjs.org/';
+         }]);
+     </file>
+     <file name="protractor.js" type="protractor">
+       it('should linkify the snippet with urls', function() {
+         expect(element(by.id('linky-filter')).element(by.binding('snippet | linky')).getText()).
+             toBe('Pretty text with some links: http://angularjs.org/, us@somewhere.org, ' +
+                  'another@somewhere.org, and one more: ftp://127.0.0.1/.');
+         expect(element.all(by.css('#linky-filter a')).count()).toEqual(4);
+       });
+
+       it('should not linkify snippet without the linky filter', function() {
+         expect(element(by.id('escaped-html')).element(by.binding('snippet')).getText()).
+             toBe('Pretty text with some links: http://angularjs.org/, mailto:us@somewhere.org, ' +
+                  'another@somewhere.org, and one more: ftp://127.0.0.1/.');
+         expect(element.all(by.css('#escaped-html a')).count()).toEqual(0);
+       });
+
+       it('should update', function() {
+         element(by.model('snippet')).clear();
+         element(by.model('snippet')).sendKeys('new http://link.');
+         expect(element(by.id('linky-filter')).element(by.binding('snippet | linky')).getText()).
+             toBe('new http://link.');
+         expect(element.all(by.css('#linky-filter a')).count()).toEqual(1);
+         expect(element(by.id('escaped-html')).element(by.binding('snippet')).getText())
+             .toBe('new http://link.');
+       });
+
+       it('should work with the target property', function() {
+        expect(element(by.id('linky-target')).
+            element(by.binding("snippetWithSingleURL | linky:'_blank'")).getText()).
+            toBe('http://angularjs.org/');
+        expect(element(by.css('#linky-target a')).getAttribute('target')).toEqual('_blank');
+       });
+
+       it('should optionally add custom attributes', function() {
+        expect(element(by.id('linky-custom-attributes')).
+            element(by.binding("snippetWithSingleURL | linky:'_self':{rel: 'nofollow'}")).getText()).
+            toBe('http://angularjs.org/');
+        expect(element(by.css('#linky-custom-attributes a')).getAttribute('rel')).toEqual('nofollow');
+       });
+     </file>
+   </example>
+ */
+angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
+  var LINKY_URL_REGEXP =
+        /((s?ftp|https?):\/\/|(www\.)|(mailto:)?[A-Za-z0-9._%+-]+@)\S*[^\s.;,(){}<>"\u201d\u2019]/i,
+      MAILTO_REGEXP = /^mailto:/i;
+
+  var linkyMinErr = angular.$$minErr('linky');
+  var isDefined = angular.isDefined;
+  var isFunction = angular.isFunction;
+  var isObject = angular.isObject;
+  var isString = angular.isString;
+
+  return function(text, target, attributes) {
+    if (text == null || text === '') return text;
+    if (!isString(text)) throw linkyMinErr('notstring', 'Expected string but received: {0}', text);
+
+    var attributesFn =
+      isFunction(attributes) ? attributes :
+      isObject(attributes) ? function getAttributesObject() {return attributes;} :
+      function getEmptyAttributesObject() {return {};};
+
+    var match;
+    var raw = text;
+    var html = [];
+    var url;
+    var i;
+    while ((match = raw.match(LINKY_URL_REGEXP))) {
+      // We can not end in these as they are sometimes found at the end of the sentence
+      url = match[0];
+      // if we did not match ftp/http/www/mailto then assume mailto
+      if (!match[2] && !match[4]) {
+        url = (match[3] ? 'http://' : 'mailto:') + url;
+      }
+      i = match.index;
+      addText(raw.substr(0, i));
+      addLink(url, match[0].replace(MAILTO_REGEXP, ''));
+      raw = raw.substring(i + match[0].length);
+    }
+    addText(raw);
+    return $sanitize(html.join(''));
+
+    function addText(text) {
+      if (!text) {
+        return;
+      }
+      html.push(sanitizeText(text));
+    }
+
+    function addLink(url, text) {
+      var key, linkAttributes = attributesFn(url);
+      html.push('<a ');
+
+      for (key in linkAttributes) {
+        html.push(key + '="' + linkAttributes[key] + '" ');
+      }
+
+      if (isDefined(target) && !('target' in linkAttributes)) {
+        html.push('target="',
+                  target,
+                  '" ');
+      }
+      html.push('href="',
+                url.replace(/"/g, '&quot;'),
+                '">');
+      addText(text);
+      html.push('</a>');
+    }
+  };
+}]);
+
+
+})(window, window.angular);
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(8);
+module.exports = 'ngMessages';
+
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports) {
+
+/**
+ * @license AngularJS v1.6.8
+ * (c) 2010-2017 Google, Inc. http://angularjs.org
+ * License: MIT
+ */
+(function(window, angular) {'use strict';
+
+var forEach;
+var isArray;
+var isString;
+var jqLite;
+
+/**
+ * @ngdoc module
+ * @name ngMessages
+ * @description
+ *
+ * The `ngMessages` module provides enhanced support for displaying messages within templates
+ * (typically within forms or when rendering message objects that return key/value data).
+ * Instead of relying on JavaScript code and/or complex ng-if statements within your form template to
+ * show and hide error messages specific to the state of an input field, the `ngMessages` and
+ * `ngMessage` directives are designed to handle the complexity, inheritance and priority
+ * sequencing based on the order of how the messages are defined in the template.
+ *
+ * Currently, the ngMessages module only contains the code for the `ngMessages`, `ngMessagesInclude`
+ * `ngMessage` and `ngMessageExp` directives.
+ *
+ * ## Usage
+ * The `ngMessages` directive allows keys in a key/value collection to be associated with a child element
+ * (or 'message') that will show or hide based on the truthiness of that key's value in the collection. A common use
+ * case for `ngMessages` is to display error messages for inputs using the `$error` object exposed by the
+ * {@link ngModel ngModel} directive.
+ *
+ * The child elements of the `ngMessages` directive are matched to the collection keys by a `ngMessage` or
+ * `ngMessageExp` directive. The value of these attributes must match a key in the collection that is provided by
+ * the `ngMessages` directive.
+ *
+ * Consider the following example, which illustrates a typical use case of `ngMessages`. Within the form `myForm` we
+ * have a text input named `myField` which is bound to the scope variable `field` using the {@link ngModel ngModel}
+ * directive.
+ *
+ * The `myField` field is a required input of type `email` with a maximum length of 15 characters.
+ *
+ * ```html
+ * <form name="myForm">
+ *   <label>
+ *     Enter text:
+ *     <input type="email" ng-model="field" name="myField" required maxlength="15" />
+ *   </label>
+ *   <div ng-messages="myForm.myField.$error" role="alert">
+ *     <div ng-message="required">Please enter a value for this field.</div>
+ *     <div ng-message="email">This field must be a valid email address.</div>
+ *     <div ng-message="maxlength">This field can be at most 15 characters long.</div>
+ *   </div>
+ * </form>
+ * ```
+ *
+ * In order to show error messages corresponding to `myField` we first create an element with an `ngMessages` attribute
+ * set to the `$error` object owned by the `myField` input in our `myForm` form.
+ *
+ * Within this element we then create separate elements for each of the possible errors that `myField` could have.
+ * The `ngMessage` attribute is used to declare which element(s) will appear for which error - for example,
+ * setting `ng-message="required"` specifies that this particular element should be displayed when there
+ * is no value present for the required field `myField` (because the key `required` will be `true` in the object
+ * `myForm.myField.$error`).
+ *
+ * ### Message order
+ *
+ * By default, `ngMessages` will only display one message for a particular key/value collection at any time. If more
+ * than one message (or error) key is currently true, then which message is shown is determined by the order of messages
+ * in the HTML template code (messages declared first are prioritised). This mechanism means the developer does not have
+ * to prioritize messages using custom JavaScript code.
+ *
+ * Given the following error object for our example (which informs us that the field `myField` currently has both the
+ * `required` and `email` errors):
+ *
+ * ```javascript
+ * <!-- keep in mind that ngModel automatically sets these error flags -->
+ * myField.$error = { required : true, email: true, maxlength: false };
+ * ```
+ * The `required` message will be displayed to the user since it appears before the `email` message in the DOM.
+ * Once the user types a single character, the `required` message will disappear (since the field now has a value)
+ * but the `email` message will be visible because it is still applicable.
+ *
+ * ### Displaying multiple messages at the same time
+ *
+ * While `ngMessages` will by default only display one error element at a time, the `ng-messages-multiple` attribute can
+ * be applied to the `ngMessages` container element to cause it to display all applicable error messages at once:
+ *
+ * ```html
+ * <!-- attribute-style usage -->
+ * <div ng-messages="myForm.myField.$error" ng-messages-multiple>...</div>
+ *
+ * <!-- element-style usage -->
+ * <ng-messages for="myForm.myField.$error" multiple>...</ng-messages>
+ * ```
+ *
+ * ## Reusing and Overriding Messages
+ * In addition to prioritization, ngMessages also allows for including messages from a remote or an inline
+ * template. This allows for generic collection of messages to be reused across multiple parts of an
+ * application.
+ *
+ * ```html
+ * <script type="text/ng-template" id="error-messages">
+ *   <div ng-message="required">This field is required</div>
+ *   <div ng-message="minlength">This field is too short</div>
+ * </script>
+ *
+ * <div ng-messages="myForm.myField.$error" role="alert">
+ *   <div ng-messages-include="error-messages"></div>
+ * </div>
+ * ```
+ *
+ * However, including generic messages may not be useful enough to match all input fields, therefore,
+ * `ngMessages` provides the ability to override messages defined in the remote template by redefining
+ * them within the directive container.
+ *
+ * ```html
+ * <!-- a generic template of error messages known as "my-custom-messages" -->
+ * <script type="text/ng-template" id="my-custom-messages">
+ *   <div ng-message="required">This field is required</div>
+ *   <div ng-message="minlength">This field is too short</div>
+ * </script>
+ *
+ * <form name="myForm">
+ *   <label>
+ *     Email address
+ *     <input type="email"
+ *            id="email"
+ *            name="myEmail"
+ *            ng-model="email"
+ *            minlength="5"
+ *            required />
+ *   </label>
+ *   <!-- any ng-message elements that appear BEFORE the ng-messages-include will
+ *        override the messages present in the ng-messages-include template -->
+ *   <div ng-messages="myForm.myEmail.$error" role="alert">
+ *     <!-- this required message has overridden the template message -->
+ *     <div ng-message="required">You did not enter your email address</div>
+ *
+ *     <!-- this is a brand new message and will appear last in the prioritization -->
+ *     <div ng-message="email">Your email address is invalid</div>
+ *
+ *     <!-- and here are the generic error messages -->
+ *     <div ng-messages-include="my-custom-messages"></div>
+ *   </div>
+ * </form>
+ * ```
+ *
+ * In the example HTML code above the message that is set on required will override the corresponding
+ * required message defined within the remote template. Therefore, with particular input fields (such
+ * email addresses, date fields, autocomplete inputs, etc...), specialized error messages can be applied
+ * while more generic messages can be used to handle other, more general input errors.
+ *
+ * ## Dynamic Messaging
+ * ngMessages also supports using expressions to dynamically change key values. Using arrays and
+ * repeaters to list messages is also supported. This means that the code below will be able to
+ * fully adapt itself and display the appropriate message when any of the expression data changes:
+ *
+ * ```html
+ * <form name="myForm">
+ *   <label>
+ *     Email address
+ *     <input type="email"
+ *            name="myEmail"
+ *            ng-model="email"
+ *            minlength="5"
+ *            required />
+ *   </label>
+ *   <div ng-messages="myForm.myEmail.$error" role="alert">
+ *     <div ng-message="required">You did not enter your email address</div>
+ *     <div ng-repeat="errorMessage in errorMessages">
+ *       <!-- use ng-message-exp for a message whose key is given by an expression -->
+ *       <div ng-message-exp="errorMessage.type">{{ errorMessage.text }}</div>
+ *     </div>
+ *   </div>
+ * </form>
+ * ```
+ *
+ * The `errorMessage.type` expression can be a string value or it can be an array so
+ * that multiple errors can be associated with a single error message:
+ *
+ * ```html
+ *   <label>
+ *     Email address
+ *     <input type="email"
+ *            ng-model="data.email"
+ *            name="myEmail"
+ *            ng-minlength="5"
+ *            ng-maxlength="100"
+ *            required />
+ *   </label>
+ *   <div ng-messages="myForm.myEmail.$error" role="alert">
+ *     <div ng-message-exp="'required'">You did not enter your email address</div>
+ *     <div ng-message-exp="['minlength', 'maxlength']">
+ *       Your email must be between 5 and 100 characters long
+ *     </div>
+ *   </div>
+ * ```
+ *
+ * Feel free to use other structural directives such as ng-if and ng-switch to further control
+ * what messages are active and when. Be careful, if you place ng-message on the same element
+ * as these structural directives, Angular may not be able to determine if a message is active
+ * or not. Therefore it is best to place the ng-message on a child element of the structural
+ * directive.
+ *
+ * ```html
+ * <div ng-messages="myForm.myEmail.$error" role="alert">
+ *   <div ng-if="showRequiredError">
+ *     <div ng-message="required">Please enter something</div>
+ *   </div>
+ * </div>
+ * ```
+ *
+ * ## Animations
+ * If the `ngAnimate` module is active within the application then the `ngMessages`, `ngMessage` and
+ * `ngMessageExp` directives will trigger animations whenever any messages are added and removed from
+ * the DOM by the `ngMessages` directive.
+ *
+ * Whenever the `ngMessages` directive contains one or more visible messages then the `.ng-active` CSS
+ * class will be added to the element. The `.ng-inactive` CSS class will be applied when there are no
+ * messages present. Therefore, CSS transitions and keyframes as well as JavaScript animations can
+ * hook into the animations whenever these classes are added/removed.
+ *
+ * Let's say that our HTML code for our messages container looks like so:
+ *
+ * ```html
+ * <div ng-messages="myMessages" class="my-messages" role="alert">
+ *   <div ng-message="alert" class="some-message">...</div>
+ *   <div ng-message="fail" class="some-message">...</div>
+ * </div>
+ * ```
+ *
+ * Then the CSS animation code for the message container looks like so:
+ *
+ * ```css
+ * .my-messages {
+ *   transition:1s linear all;
+ * }
+ * .my-messages.ng-active {
+ *   // messages are visible
+ * }
+ * .my-messages.ng-inactive {
+ *   // messages are hidden
+ * }
+ * ```
+ *
+ * Whenever an inner message is attached (becomes visible) or removed (becomes hidden) then the enter
+ * and leave animation is triggered for each particular element bound to the `ngMessage` directive.
+ *
+ * Therefore, the CSS code for the inner messages looks like so:
+ *
+ * ```css
+ * .some-message {
+ *   transition:1s linear all;
+ * }
+ *
+ * .some-message.ng-enter {}
+ * .some-message.ng-enter.ng-enter-active {}
+ *
+ * .some-message.ng-leave {}
+ * .some-message.ng-leave.ng-leave-active {}
+ * ```
+ *
+ * {@link ngAnimate Click here} to learn how to use JavaScript animations or to learn more about ngAnimate.
+ */
+angular.module('ngMessages', [], function initAngularHelpers() {
+  // Access helpers from angular core.
+  // Do it inside a `config` block to ensure `window.angular` is available.
+  forEach = angular.forEach;
+  isArray = angular.isArray;
+  isString = angular.isString;
+  jqLite = angular.element;
+})
+  .info({ angularVersion: '1.6.8' })
+
+  /**
+   * @ngdoc directive
+   * @module ngMessages
+   * @name ngMessages
+   * @restrict AE
+   *
+   * @description
+   * `ngMessages` is a directive that is designed to show and hide messages based on the state
+   * of a key/value object that it listens on. The directive itself complements error message
+   * reporting with the `ngModel` $error object (which stores a key/value state of validation errors).
+   *
+   * `ngMessages` manages the state of internal messages within its container element. The internal
+   * messages use the `ngMessage` directive and will be inserted/removed from the page depending
+   * on if they're present within the key/value object. By default, only one message will be displayed
+   * at a time and this depends on the prioritization of the messages within the template. (This can
+   * be changed by using the `ng-messages-multiple` or `multiple` attribute on the directive container.)
+   *
+   * A remote template can also be used to promote message reusability and messages can also be
+   * overridden.
+   *
+   * {@link module:ngMessages Click here} to learn more about `ngMessages` and `ngMessage`.
+   *
+   * @usage
+   * ```html
+   * <!-- using attribute directives -->
+   * <ANY ng-messages="expression" role="alert">
+   *   <ANY ng-message="stringValue">...</ANY>
+   *   <ANY ng-message="stringValue1, stringValue2, ...">...</ANY>
+   *   <ANY ng-message-exp="expressionValue">...</ANY>
+   * </ANY>
+   *
+   * <!-- or by using element directives -->
+   * <ng-messages for="expression" role="alert">
+   *   <ng-message when="stringValue">...</ng-message>
+   *   <ng-message when="stringValue1, stringValue2, ...">...</ng-message>
+   *   <ng-message when-exp="expressionValue">...</ng-message>
+   * </ng-messages>
+   * ```
+   *
+   * @param {string} ngMessages an angular expression evaluating to a key/value object
+   *                 (this is typically the $error object on an ngModel instance).
+   * @param {string=} ngMessagesMultiple|multiple when set, all messages will be displayed with true
+   *
+   * @example
+   * <example name="ngMessages-directive" module="ngMessagesExample"
+   *          deps="angular-messages.js"
+   *          animations="true" fixBase="true">
+   *   <file name="index.html">
+   *     <form name="myForm">
+   *       <label>
+   *         Enter your name:
+   *         <input type="text"
+   *                name="myName"
+   *                ng-model="name"
+   *                ng-minlength="5"
+   *                ng-maxlength="20"
+   *                required />
+   *       </label>
+   *       <pre>myForm.myName.$error = {{ myForm.myName.$error | json }}</pre>
+   *
+   *       <div ng-messages="myForm.myName.$error" style="color:maroon" role="alert">
+   *         <div ng-message="required">You did not enter a field</div>
+   *         <div ng-message="minlength">Your field is too short</div>
+   *         <div ng-message="maxlength">Your field is too long</div>
+   *       </div>
+   *     </form>
+   *   </file>
+   *   <file name="script.js">
+   *     angular.module('ngMessagesExample', ['ngMessages']);
+   *   </file>
+   * </example>
+   */
+  .directive('ngMessages', ['$animate', function($animate) {
+    var ACTIVE_CLASS = 'ng-active';
+    var INACTIVE_CLASS = 'ng-inactive';
+
+    return {
+      require: 'ngMessages',
+      restrict: 'AE',
+      controller: ['$element', '$scope', '$attrs', function NgMessagesCtrl($element, $scope, $attrs) {
+        var ctrl = this;
+        var latestKey = 0;
+        var nextAttachId = 0;
+
+        this.getAttachId = function getAttachId() { return nextAttachId++; };
+
+        var messages = this.messages = {};
+        var renderLater, cachedCollection;
+
+        this.render = function(collection) {
+          collection = collection || {};
+
+          renderLater = false;
+          cachedCollection = collection;
+
+          // this is true if the attribute is empty or if the attribute value is truthy
+          var multiple = isAttrTruthy($scope, $attrs.ngMessagesMultiple) ||
+                         isAttrTruthy($scope, $attrs.multiple);
+
+          var unmatchedMessages = [];
+          var matchedKeys = {};
+          var messageItem = ctrl.head;
+          var messageFound = false;
+          var totalMessages = 0;
+
+          // we use != instead of !== to allow for both undefined and null values
+          while (messageItem != null) {
+            totalMessages++;
+            var messageCtrl = messageItem.message;
+
+            var messageUsed = false;
+            if (!messageFound) {
+              forEach(collection, function(value, key) {
+                if (!messageUsed && truthy(value) && messageCtrl.test(key)) {
+                  // this is to prevent the same error name from showing up twice
+                  if (matchedKeys[key]) return;
+                  matchedKeys[key] = true;
+
+                  messageUsed = true;
+                  messageCtrl.attach();
+                }
+              });
+            }
+
+            if (messageUsed) {
+              // unless we want to display multiple messages then we should
+              // set a flag here to avoid displaying the next message in the list
+              messageFound = !multiple;
+            } else {
+              unmatchedMessages.push(messageCtrl);
+            }
+
+            messageItem = messageItem.next;
+          }
+
+          forEach(unmatchedMessages, function(messageCtrl) {
+            messageCtrl.detach();
+          });
+
+          if (unmatchedMessages.length !== totalMessages) {
+            $animate.setClass($element, ACTIVE_CLASS, INACTIVE_CLASS);
+          } else {
+            $animate.setClass($element, INACTIVE_CLASS, ACTIVE_CLASS);
+          }
+        };
+
+        $scope.$watchCollection($attrs.ngMessages || $attrs['for'], ctrl.render);
+
+        // If the element is destroyed, proactively destroy all the currently visible messages
+        $element.on('$destroy', function() {
+          forEach(messages, function(item) {
+            item.message.detach();
+          });
+        });
+
+        this.reRender = function() {
+          if (!renderLater) {
+            renderLater = true;
+            $scope.$evalAsync(function() {
+              if (renderLater && cachedCollection) {
+                ctrl.render(cachedCollection);
+              }
+            });
+          }
+        };
+
+        this.register = function(comment, messageCtrl) {
+          var nextKey = latestKey.toString();
+          messages[nextKey] = {
+            message: messageCtrl
+          };
+          insertMessageNode($element[0], comment, nextKey);
+          comment.$$ngMessageNode = nextKey;
+          latestKey++;
+
+          ctrl.reRender();
+        };
+
+        this.deregister = function(comment) {
+          var key = comment.$$ngMessageNode;
+          delete comment.$$ngMessageNode;
+          removeMessageNode($element[0], comment, key);
+          delete messages[key];
+          ctrl.reRender();
+        };
+
+        function findPreviousMessage(parent, comment) {
+          var prevNode = comment;
+          var parentLookup = [];
+
+          while (prevNode && prevNode !== parent) {
+            var prevKey = prevNode.$$ngMessageNode;
+            if (prevKey && prevKey.length) {
+              return messages[prevKey];
+            }
+
+            // dive deeper into the DOM and examine its children for any ngMessage
+            // comments that may be in an element that appears deeper in the list
+            if (prevNode.childNodes.length && parentLookup.indexOf(prevNode) === -1) {
+              parentLookup.push(prevNode);
+              prevNode = prevNode.childNodes[prevNode.childNodes.length - 1];
+            } else if (prevNode.previousSibling) {
+              prevNode = prevNode.previousSibling;
+            } else {
+              prevNode = prevNode.parentNode;
+              parentLookup.push(prevNode);
+            }
+          }
+        }
+
+        function insertMessageNode(parent, comment, key) {
+          var messageNode = messages[key];
+          if (!ctrl.head) {
+            ctrl.head = messageNode;
+          } else {
+            var match = findPreviousMessage(parent, comment);
+            if (match) {
+              messageNode.next = match.next;
+              match.next = messageNode;
+            } else {
+              messageNode.next = ctrl.head;
+              ctrl.head = messageNode;
+            }
+          }
+        }
+
+        function removeMessageNode(parent, comment, key) {
+          var messageNode = messages[key];
+
+          var match = findPreviousMessage(parent, comment);
+          if (match) {
+            match.next = messageNode.next;
+          } else {
+            ctrl.head = messageNode.next;
+          }
+        }
+      }]
+    };
+
+    function isAttrTruthy(scope, attr) {
+     return (isString(attr) && attr.length === 0) || //empty attribute
+            truthy(scope.$eval(attr));
+    }
+
+    function truthy(val) {
+      return isString(val) ? val.length : !!val;
+    }
+  }])
+
+  /**
+   * @ngdoc directive
+   * @name ngMessagesInclude
+   * @restrict AE
+   * @scope
+   *
+   * @description
+   * `ngMessagesInclude` is a directive with the purpose to import existing ngMessage template
+   * code from a remote template and place the downloaded template code into the exact spot
+   * that the ngMessagesInclude directive is placed within the ngMessages container. This allows
+   * for a series of pre-defined messages to be reused and also allows for the developer to
+   * determine what messages are overridden due to the placement of the ngMessagesInclude directive.
+   *
+   * @usage
+   * ```html
+   * <!-- using attribute directives -->
+   * <ANY ng-messages="expression" role="alert">
+   *   <ANY ng-messages-include="remoteTplString">...</ANY>
+   * </ANY>
+   *
+   * <!-- or by using element directives -->
+   * <ng-messages for="expression" role="alert">
+   *   <ng-messages-include src="expressionValue1">...</ng-messages-include>
+   * </ng-messages>
+   * ```
+   *
+   * {@link module:ngMessages Click here} to learn more about `ngMessages` and `ngMessage`.
+   *
+   * @param {string} ngMessagesInclude|src a string value corresponding to the remote template.
+   */
+  .directive('ngMessagesInclude',
+    ['$templateRequest', '$document', '$compile', function($templateRequest, $document, $compile) {
+
+    return {
+      restrict: 'AE',
+      require: '^^ngMessages', // we only require this for validation sake
+      link: function($scope, element, attrs) {
+        var src = attrs.ngMessagesInclude || attrs.src;
+        $templateRequest(src).then(function(html) {
+          if ($scope.$$destroyed) return;
+
+          if (isString(html) && !html.trim()) {
+            // Empty template - nothing to compile
+            replaceElementWithMarker(element, src);
+          } else {
+            // Non-empty template - compile and link
+            $compile(html)($scope, function(contents) {
+              element.after(contents);
+              replaceElementWithMarker(element, src);
+            });
+          }
+        });
+      }
+    };
+
+    // Helpers
+    function replaceElementWithMarker(element, src) {
+      // A comment marker is placed for debugging purposes
+      var comment = $compile.$$createComment ?
+          $compile.$$createComment('ngMessagesInclude', src) :
+          $document[0].createComment(' ngMessagesInclude: ' + src + ' ');
+      var marker = jqLite(comment);
+      element.after(marker);
+
+      // Don't pollute the DOM anymore by keeping an empty directive element
+      element.remove();
+    }
+  }])
+
+  /**
+   * @ngdoc directive
+   * @name ngMessage
+   * @restrict AE
+   * @scope
+   * @priority 1
+   *
+   * @description
+   * `ngMessage` is a directive with the purpose to show and hide a particular message.
+   * For `ngMessage` to operate, a parent `ngMessages` directive on a parent DOM element
+   * must be situated since it determines which messages are visible based on the state
+   * of the provided key/value map that `ngMessages` listens on.
+   *
+   * More information about using `ngMessage` can be found in the
+   * {@link module:ngMessages `ngMessages` module documentation}.
+   *
+   * @usage
+   * ```html
+   * <!-- using attribute directives -->
+   * <ANY ng-messages="expression" role="alert">
+   *   <ANY ng-message="stringValue">...</ANY>
+   *   <ANY ng-message="stringValue1, stringValue2, ...">...</ANY>
+   * </ANY>
+   *
+   * <!-- or by using element directives -->
+   * <ng-messages for="expression" role="alert">
+   *   <ng-message when="stringValue">...</ng-message>
+   *   <ng-message when="stringValue1, stringValue2, ...">...</ng-message>
+   * </ng-messages>
+   * ```
+   *
+   * @param {expression} ngMessage|when a string value corresponding to the message key.
+   */
+  .directive('ngMessage', ngMessageDirectiveFactory())
+
+
+  /**
+   * @ngdoc directive
+   * @name ngMessageExp
+   * @restrict AE
+   * @priority 1
+   * @scope
+   *
+   * @description
+   * `ngMessageExp` is the same as {@link directive:ngMessage `ngMessage`}, but instead of a static
+   * value, it accepts an expression to be evaluated for the message key.
+   *
+   * @usage
+   * ```html
+   * <!-- using attribute directives -->
+   * <ANY ng-messages="expression">
+   *   <ANY ng-message-exp="expressionValue">...</ANY>
+   * </ANY>
+   *
+   * <!-- or by using element directives -->
+   * <ng-messages for="expression">
+   *   <ng-message when-exp="expressionValue">...</ng-message>
+   * </ng-messages>
+   * ```
+   *
+   * {@link module:ngMessages Click here} to learn more about `ngMessages` and `ngMessage`.
+   *
+   * @param {expression} ngMessageExp|whenExp an expression value corresponding to the message key.
+   */
+  .directive('ngMessageExp', ngMessageDirectiveFactory());
+
+function ngMessageDirectiveFactory() {
+  return ['$animate', function($animate) {
+    return {
+      restrict: 'AE',
+      transclude: 'element',
+      priority: 1, // must run before ngBind, otherwise the text is set on the comment
+      terminal: true,
+      require: '^^ngMessages',
+      link: function(scope, element, attrs, ngMessagesCtrl, $transclude) {
+        var commentNode = element[0];
+
+        var records;
+        var staticExp = attrs.ngMessage || attrs.when;
+        var dynamicExp = attrs.ngMessageExp || attrs.whenExp;
+        var assignRecords = function(items) {
+          records = items
+              ? (isArray(items)
+                  ? items
+                  : items.split(/[\s,]+/))
+              : null;
+          ngMessagesCtrl.reRender();
+        };
+
+        if (dynamicExp) {
+          assignRecords(scope.$eval(dynamicExp));
+          scope.$watchCollection(dynamicExp, assignRecords);
+        } else {
+          assignRecords(staticExp);
+        }
+
+        var currentElement, messageCtrl;
+        ngMessagesCtrl.register(commentNode, messageCtrl = {
+          test: function(name) {
+            return contains(records, name);
+          },
+          attach: function() {
+            if (!currentElement) {
+              $transclude(function(elm, newScope) {
+                $animate.enter(elm, null, element);
+                currentElement = elm;
+
+                // Each time we attach this node to a message we get a new id that we can match
+                // when we are destroying the node later.
+                var $$attachId = currentElement.$$attachId = ngMessagesCtrl.getAttachId();
+
+                // in the event that the element or a parent element is destroyed
+                // by another structural directive then it's time
+                // to deregister the message from the controller
+                currentElement.on('$destroy', function() {
+                  if (currentElement && currentElement.$$attachId === $$attachId) {
+                    ngMessagesCtrl.deregister(commentNode);
+                    messageCtrl.detach();
+                  }
+                  newScope.$destroy();
+                });
+              });
+            }
+          },
+          detach: function() {
+            if (currentElement) {
+              var elm = currentElement;
+              currentElement = null;
+              $animate.leave(elm);
+            }
+          }
+        });
+      }
+    };
+  }];
+
+  function contains(collection, key) {
+    if (collection) {
+      return isArray(collection)
+          ? collection.indexOf(key) >= 0
+          : collection.hasOwnProperty(key);
+    }
+  }
+}
+
+
+})(window, window.angular);
+
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// Should already be required, here for clarity
+__webpack_require__(0);
+
+// Load Angular and dependent libs
+__webpack_require__(10);
+__webpack_require__(12);
+
+// Now load Angular Material
+__webpack_require__(14);
+
+// Export namespace
+module.exports = 'ngMaterial';
+
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(11);
 module.exports = 'ngAnimate';
 
 
 /***/ }),
-/* 19 */
+/* 11 */
 /***/ (function(module, exports) {
 
 /**
@@ -40687,15 +41769,15 @@ angular.module('ngAnimate', [], function initAngularHelpers() {
 
 
 /***/ }),
-/* 20 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(21);
+__webpack_require__(13);
 module.exports = 'ngAria';
 
 
 /***/ }),
-/* 21 */
+/* 13 */
 /***/ (function(module, exports) {
 
 /**
@@ -41102,7 +42184,7 @@ ngAriaModule.directive('ngShow', ['$aria', function($aria) {
 
 
 /***/ }),
-/* 22 */
+/* 14 */
 /***/ (function(module, exports) {
 
 /*!
@@ -77533,7390 +78615,6 @@ angular.module("material.core").constant("$MD_THEME_CSS", "md-autocomplete.md-TH
 
 
 })(window, window.angular);;window.ngMaterial={version:{full: "1.1.6"}};
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(24);
-module.exports = 'ngSanitize';
-
-
-/***/ }),
-/* 24 */
-/***/ (function(module, exports) {
-
-/**
- * @license AngularJS v1.6.8
- * (c) 2010-2017 Google, Inc. http://angularjs.org
- * License: MIT
- */
-(function(window, angular) {'use strict';
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *     Any commits to this file should be reviewed with security in mind.  *
- *   Changes to this file can potentially create security vulnerabilities. *
- *          An approval from 2 Core members with history of modifying      *
- *                         this file is required.                          *
- *                                                                         *
- *  Does the change somehow allow for arbitrary javascript to be executed? *
- *    Or allows for someone to change the prototype of built-in objects?   *
- *     Or gives undesired access to variables likes document or window?    *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-var $sanitizeMinErr = angular.$$minErr('$sanitize');
-var bind;
-var extend;
-var forEach;
-var isDefined;
-var lowercase;
-var noop;
-var nodeContains;
-var htmlParser;
-var htmlSanitizeWriter;
-
-/**
- * @ngdoc module
- * @name ngSanitize
- * @description
- *
- * The `ngSanitize` module provides functionality to sanitize HTML.
- *
- * See {@link ngSanitize.$sanitize `$sanitize`} for usage.
- */
-
-/**
- * @ngdoc service
- * @name $sanitize
- * @kind function
- *
- * @description
- *   Sanitizes an html string by stripping all potentially dangerous tokens.
- *
- *   The input is sanitized by parsing the HTML into tokens. All safe tokens (from a whitelist) are
- *   then serialized back to properly escaped html string. This means that no unsafe input can make
- *   it into the returned string.
- *
- *   The whitelist for URL sanitization of attribute values is configured using the functions
- *   `aHrefSanitizationWhitelist` and `imgSrcSanitizationWhitelist` of {@link ng.$compileProvider
- *   `$compileProvider`}.
- *
- *   The input may also contain SVG markup if this is enabled via {@link $sanitizeProvider}.
- *
- * @param {string} html HTML input.
- * @returns {string} Sanitized HTML.
- *
- * @example
-   <example module="sanitizeExample" deps="angular-sanitize.js" name="sanitize-service">
-   <file name="index.html">
-     <script>
-         angular.module('sanitizeExample', ['ngSanitize'])
-           .controller('ExampleController', ['$scope', '$sce', function($scope, $sce) {
-             $scope.snippet =
-               '<p style="color:blue">an html\n' +
-               '<em onmouseover="this.textContent=\'PWN3D!\'">click here</em>\n' +
-               'snippet</p>';
-             $scope.deliberatelyTrustDangerousSnippet = function() {
-               return $sce.trustAsHtml($scope.snippet);
-             };
-           }]);
-     </script>
-     <div ng-controller="ExampleController">
-        Snippet: <textarea ng-model="snippet" cols="60" rows="3"></textarea>
-       <table>
-         <tr>
-           <td>Directive</td>
-           <td>How</td>
-           <td>Source</td>
-           <td>Rendered</td>
-         </tr>
-         <tr id="bind-html-with-sanitize">
-           <td>ng-bind-html</td>
-           <td>Automatically uses $sanitize</td>
-           <td><pre>&lt;div ng-bind-html="snippet"&gt;<br/>&lt;/div&gt;</pre></td>
-           <td><div ng-bind-html="snippet"></div></td>
-         </tr>
-         <tr id="bind-html-with-trust">
-           <td>ng-bind-html</td>
-           <td>Bypass $sanitize by explicitly trusting the dangerous value</td>
-           <td>
-           <pre>&lt;div ng-bind-html="deliberatelyTrustDangerousSnippet()"&gt;
-&lt;/div&gt;</pre>
-           </td>
-           <td><div ng-bind-html="deliberatelyTrustDangerousSnippet()"></div></td>
-         </tr>
-         <tr id="bind-default">
-           <td>ng-bind</td>
-           <td>Automatically escapes</td>
-           <td><pre>&lt;div ng-bind="snippet"&gt;<br/>&lt;/div&gt;</pre></td>
-           <td><div ng-bind="snippet"></div></td>
-         </tr>
-       </table>
-       </div>
-   </file>
-   <file name="protractor.js" type="protractor">
-     it('should sanitize the html snippet by default', function() {
-       expect(element(by.css('#bind-html-with-sanitize div')).getAttribute('innerHTML')).
-         toBe('<p>an html\n<em>click here</em>\nsnippet</p>');
-     });
-
-     it('should inline raw snippet if bound to a trusted value', function() {
-       expect(element(by.css('#bind-html-with-trust div')).getAttribute('innerHTML')).
-         toBe("<p style=\"color:blue\">an html\n" +
-              "<em onmouseover=\"this.textContent='PWN3D!'\">click here</em>\n" +
-              "snippet</p>");
-     });
-
-     it('should escape snippet without any filter', function() {
-       expect(element(by.css('#bind-default div')).getAttribute('innerHTML')).
-         toBe("&lt;p style=\"color:blue\"&gt;an html\n" +
-              "&lt;em onmouseover=\"this.textContent='PWN3D!'\"&gt;click here&lt;/em&gt;\n" +
-              "snippet&lt;/p&gt;");
-     });
-
-     it('should update', function() {
-       element(by.model('snippet')).clear();
-       element(by.model('snippet')).sendKeys('new <b onclick="alert(1)">text</b>');
-       expect(element(by.css('#bind-html-with-sanitize div')).getAttribute('innerHTML')).
-         toBe('new <b>text</b>');
-       expect(element(by.css('#bind-html-with-trust div')).getAttribute('innerHTML')).toBe(
-         'new <b onclick="alert(1)">text</b>');
-       expect(element(by.css('#bind-default div')).getAttribute('innerHTML')).toBe(
-         "new &lt;b onclick=\"alert(1)\"&gt;text&lt;/b&gt;");
-     });
-   </file>
-   </example>
- */
-
-
-/**
- * @ngdoc provider
- * @name $sanitizeProvider
- * @this
- *
- * @description
- * Creates and configures {@link $sanitize} instance.
- */
-function $SanitizeProvider() {
-  var svgEnabled = false;
-
-  this.$get = ['$$sanitizeUri', function($$sanitizeUri) {
-    if (svgEnabled) {
-      extend(validElements, svgElements);
-    }
-    return function(html) {
-      var buf = [];
-      htmlParser(html, htmlSanitizeWriter(buf, function(uri, isImage) {
-        return !/^unsafe:/.test($$sanitizeUri(uri, isImage));
-      }));
-      return buf.join('');
-    };
-  }];
-
-
-  /**
-   * @ngdoc method
-   * @name $sanitizeProvider#enableSvg
-   * @kind function
-   *
-   * @description
-   * Enables a subset of svg to be supported by the sanitizer.
-   *
-   * <div class="alert alert-warning">
-   *   <p>By enabling this setting without taking other precautions, you might expose your
-   *   application to click-hijacking attacks. In these attacks, sanitized svg elements could be positioned
-   *   outside of the containing element and be rendered over other elements on the page (e.g. a login
-   *   link). Such behavior can then result in phishing incidents.</p>
-   *
-   *   <p>To protect against these, explicitly setup `overflow: hidden` css rule for all potential svg
-   *   tags within the sanitized content:</p>
-   *
-   *   <br>
-   *
-   *   <pre><code>
-   *   .rootOfTheIncludedContent svg {
-   *     overflow: hidden !important;
-   *   }
-   *   </code></pre>
-   * </div>
-   *
-   * @param {boolean=} flag Enable or disable SVG support in the sanitizer.
-   * @returns {boolean|ng.$sanitizeProvider} Returns the currently configured value if called
-   *    without an argument or self for chaining otherwise.
-   */
-  this.enableSvg = function(enableSvg) {
-    if (isDefined(enableSvg)) {
-      svgEnabled = enableSvg;
-      return this;
-    } else {
-      return svgEnabled;
-    }
-  };
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Private stuff
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-  bind = angular.bind;
-  extend = angular.extend;
-  forEach = angular.forEach;
-  isDefined = angular.isDefined;
-  lowercase = angular.lowercase;
-  noop = angular.noop;
-
-  htmlParser = htmlParserImpl;
-  htmlSanitizeWriter = htmlSanitizeWriterImpl;
-
-  nodeContains = window.Node.prototype.contains || /** @this */ function(arg) {
-    // eslint-disable-next-line no-bitwise
-    return !!(this.compareDocumentPosition(arg) & 16);
-  };
-
-  // Regular Expressions for parsing tags and attributes
-  var SURROGATE_PAIR_REGEXP = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
-    // Match everything outside of normal chars and " (quote character)
-    NON_ALPHANUMERIC_REGEXP = /([^#-~ |!])/g;
-
-
-  // Good source of info about elements and attributes
-  // http://dev.w3.org/html5/spec/Overview.html#semantics
-  // http://simon.html5.org/html-elements
-
-  // Safe Void Elements - HTML5
-  // http://dev.w3.org/html5/spec/Overview.html#void-elements
-  var voidElements = toMap('area,br,col,hr,img,wbr');
-
-  // Elements that you can, intentionally, leave open (and which close themselves)
-  // http://dev.w3.org/html5/spec/Overview.html#optional-tags
-  var optionalEndTagBlockElements = toMap('colgroup,dd,dt,li,p,tbody,td,tfoot,th,thead,tr'),
-      optionalEndTagInlineElements = toMap('rp,rt'),
-      optionalEndTagElements = extend({},
-                                              optionalEndTagInlineElements,
-                                              optionalEndTagBlockElements);
-
-  // Safe Block Elements - HTML5
-  var blockElements = extend({}, optionalEndTagBlockElements, toMap('address,article,' +
-          'aside,blockquote,caption,center,del,dir,div,dl,figure,figcaption,footer,h1,h2,h3,h4,h5,' +
-          'h6,header,hgroup,hr,ins,map,menu,nav,ol,pre,section,table,ul'));
-
-  // Inline Elements - HTML5
-  var inlineElements = extend({}, optionalEndTagInlineElements, toMap('a,abbr,acronym,b,' +
-          'bdi,bdo,big,br,cite,code,del,dfn,em,font,i,img,ins,kbd,label,map,mark,q,ruby,rp,rt,s,' +
-          'samp,small,span,strike,strong,sub,sup,time,tt,u,var'));
-
-  // SVG Elements
-  // https://wiki.whatwg.org/wiki/Sanitization_rules#svg_Elements
-  // Note: the elements animate,animateColor,animateMotion,animateTransform,set are intentionally omitted.
-  // They can potentially allow for arbitrary javascript to be executed. See #11290
-  var svgElements = toMap('circle,defs,desc,ellipse,font-face,font-face-name,font-face-src,g,glyph,' +
-          'hkern,image,linearGradient,line,marker,metadata,missing-glyph,mpath,path,polygon,polyline,' +
-          'radialGradient,rect,stop,svg,switch,text,title,tspan');
-
-  // Blocked Elements (will be stripped)
-  var blockedElements = toMap('script,style');
-
-  var validElements = extend({},
-                                     voidElements,
-                                     blockElements,
-                                     inlineElements,
-                                     optionalEndTagElements);
-
-  //Attributes that have href and hence need to be sanitized
-  var uriAttrs = toMap('background,cite,href,longdesc,src,xlink:href');
-
-  var htmlAttrs = toMap('abbr,align,alt,axis,bgcolor,border,cellpadding,cellspacing,class,clear,' +
-      'color,cols,colspan,compact,coords,dir,face,headers,height,hreflang,hspace,' +
-      'ismap,lang,language,nohref,nowrap,rel,rev,rows,rowspan,rules,' +
-      'scope,scrolling,shape,size,span,start,summary,tabindex,target,title,type,' +
-      'valign,value,vspace,width');
-
-  // SVG attributes (without "id" and "name" attributes)
-  // https://wiki.whatwg.org/wiki/Sanitization_rules#svg_Attributes
-  var svgAttrs = toMap('accent-height,accumulate,additive,alphabetic,arabic-form,ascent,' +
-      'baseProfile,bbox,begin,by,calcMode,cap-height,class,color,color-rendering,content,' +
-      'cx,cy,d,dx,dy,descent,display,dur,end,fill,fill-rule,font-family,font-size,font-stretch,' +
-      'font-style,font-variant,font-weight,from,fx,fy,g1,g2,glyph-name,gradientUnits,hanging,' +
-      'height,horiz-adv-x,horiz-origin-x,ideographic,k,keyPoints,keySplines,keyTimes,lang,' +
-      'marker-end,marker-mid,marker-start,markerHeight,markerUnits,markerWidth,mathematical,' +
-      'max,min,offset,opacity,orient,origin,overline-position,overline-thickness,panose-1,' +
-      'path,pathLength,points,preserveAspectRatio,r,refX,refY,repeatCount,repeatDur,' +
-      'requiredExtensions,requiredFeatures,restart,rotate,rx,ry,slope,stemh,stemv,stop-color,' +
-      'stop-opacity,strikethrough-position,strikethrough-thickness,stroke,stroke-dasharray,' +
-      'stroke-dashoffset,stroke-linecap,stroke-linejoin,stroke-miterlimit,stroke-opacity,' +
-      'stroke-width,systemLanguage,target,text-anchor,to,transform,type,u1,u2,underline-position,' +
-      'underline-thickness,unicode,unicode-range,units-per-em,values,version,viewBox,visibility,' +
-      'width,widths,x,x-height,x1,x2,xlink:actuate,xlink:arcrole,xlink:role,xlink:show,xlink:title,' +
-      'xlink:type,xml:base,xml:lang,xml:space,xmlns,xmlns:xlink,y,y1,y2,zoomAndPan', true);
-
-  var validAttrs = extend({},
-                                  uriAttrs,
-                                  svgAttrs,
-                                  htmlAttrs);
-
-  function toMap(str, lowercaseKeys) {
-    var obj = {}, items = str.split(','), i;
-    for (i = 0; i < items.length; i++) {
-      obj[lowercaseKeys ? lowercase(items[i]) : items[i]] = true;
-    }
-    return obj;
-  }
-
-  /**
-   * Create an inert document that contains the dirty HTML that needs sanitizing
-   * Depending upon browser support we use one of three strategies for doing this.
-   * Support: Safari 10.x -> XHR strategy
-   * Support: Firefox -> DomParser strategy
-   */
-  var getInertBodyElement /* function(html: string): HTMLBodyElement */ = (function(window, document) {
-    var inertDocument;
-    if (document && document.implementation) {
-      inertDocument = document.implementation.createHTMLDocument('inert');
-    } else {
-      throw $sanitizeMinErr('noinert', 'Can\'t create an inert html document');
-    }
-    var inertBodyElement = (inertDocument.documentElement || inertDocument.getDocumentElement()).querySelector('body');
-
-    // Check for the Safari 10.1 bug - which allows JS to run inside the SVG G element
-    inertBodyElement.innerHTML = '<svg><g onload="this.parentNode.remove()"></g></svg>';
-    if (!inertBodyElement.querySelector('svg')) {
-      return getInertBodyElement_XHR;
-    } else {
-      // Check for the Firefox bug - which prevents the inner img JS from being sanitized
-      inertBodyElement.innerHTML = '<svg><p><style><img src="</style><img src=x onerror=alert(1)//">';
-      if (inertBodyElement.querySelector('svg img')) {
-        return getInertBodyElement_DOMParser;
-      } else {
-        return getInertBodyElement_InertDocument;
-      }
-    }
-
-    function getInertBodyElement_XHR(html) {
-      // We add this dummy element to ensure that the rest of the content is parsed as expected
-      // e.g. leading whitespace is maintained and tags like `<meta>` do not get hoisted to the `<head>` tag.
-      html = '<remove></remove>' + html;
-      try {
-        html = encodeURI(html);
-      } catch (e) {
-        return undefined;
-      }
-      var xhr = new window.XMLHttpRequest();
-      xhr.responseType = 'document';
-      xhr.open('GET', 'data:text/html;charset=utf-8,' + html, false);
-      xhr.send(null);
-      var body = xhr.response.body;
-      body.firstChild.remove();
-      return body;
-    }
-
-    function getInertBodyElement_DOMParser(html) {
-      // We add this dummy element to ensure that the rest of the content is parsed as expected
-      // e.g. leading whitespace is maintained and tags like `<meta>` do not get hoisted to the `<head>` tag.
-      html = '<remove></remove>' + html;
-      try {
-        var body = new window.DOMParser().parseFromString(html, 'text/html').body;
-        body.firstChild.remove();
-        return body;
-      } catch (e) {
-        return undefined;
-      }
-    }
-
-    function getInertBodyElement_InertDocument(html) {
-      inertBodyElement.innerHTML = html;
-
-      // Support: IE 9-11 only
-      // strip custom-namespaced attributes on IE<=11
-      if (document.documentMode) {
-        stripCustomNsAttrs(inertBodyElement);
-      }
-
-      return inertBodyElement;
-    }
-  })(window, window.document);
-
-  /**
-   * @example
-   * htmlParser(htmlString, {
-   *     start: function(tag, attrs) {},
-   *     end: function(tag) {},
-   *     chars: function(text) {},
-   *     comment: function(text) {}
-   * });
-   *
-   * @param {string} html string
-   * @param {object} handler
-   */
-  function htmlParserImpl(html, handler) {
-    if (html === null || html === undefined) {
-      html = '';
-    } else if (typeof html !== 'string') {
-      html = '' + html;
-    }
-
-    var inertBodyElement = getInertBodyElement(html);
-    if (!inertBodyElement) return '';
-
-    //mXSS protection
-    var mXSSAttempts = 5;
-    do {
-      if (mXSSAttempts === 0) {
-        throw $sanitizeMinErr('uinput', 'Failed to sanitize html because the input is unstable');
-      }
-      mXSSAttempts--;
-
-      // trigger mXSS if it is going to happen by reading and writing the innerHTML
-      html = inertBodyElement.innerHTML;
-      inertBodyElement = getInertBodyElement(html);
-    } while (html !== inertBodyElement.innerHTML);
-
-    var node = inertBodyElement.firstChild;
-    while (node) {
-      switch (node.nodeType) {
-        case 1: // ELEMENT_NODE
-          handler.start(node.nodeName.toLowerCase(), attrToMap(node.attributes));
-          break;
-        case 3: // TEXT NODE
-          handler.chars(node.textContent);
-          break;
-      }
-
-      var nextNode;
-      if (!(nextNode = node.firstChild)) {
-        if (node.nodeType === 1) {
-          handler.end(node.nodeName.toLowerCase());
-        }
-        nextNode = getNonDescendant('nextSibling', node);
-        if (!nextNode) {
-          while (nextNode == null) {
-            node = getNonDescendant('parentNode', node);
-            if (node === inertBodyElement) break;
-            nextNode = getNonDescendant('nextSibling', node);
-            if (node.nodeType === 1) {
-              handler.end(node.nodeName.toLowerCase());
-            }
-          }
-        }
-      }
-      node = nextNode;
-    }
-
-    while ((node = inertBodyElement.firstChild)) {
-      inertBodyElement.removeChild(node);
-    }
-  }
-
-  function attrToMap(attrs) {
-    var map = {};
-    for (var i = 0, ii = attrs.length; i < ii; i++) {
-      var attr = attrs[i];
-      map[attr.name] = attr.value;
-    }
-    return map;
-  }
-
-
-  /**
-   * Escapes all potentially dangerous characters, so that the
-   * resulting string can be safely inserted into attribute or
-   * element text.
-   * @param value
-   * @returns {string} escaped text
-   */
-  function encodeEntities(value) {
-    return value.
-      replace(/&/g, '&amp;').
-      replace(SURROGATE_PAIR_REGEXP, function(value) {
-        var hi = value.charCodeAt(0);
-        var low = value.charCodeAt(1);
-        return '&#' + (((hi - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000) + ';';
-      }).
-      replace(NON_ALPHANUMERIC_REGEXP, function(value) {
-        return '&#' + value.charCodeAt(0) + ';';
-      }).
-      replace(/</g, '&lt;').
-      replace(/>/g, '&gt;');
-  }
-
-  /**
-   * create an HTML/XML writer which writes to buffer
-   * @param {Array} buf use buf.join('') to get out sanitized html string
-   * @returns {object} in the form of {
-   *     start: function(tag, attrs) {},
-   *     end: function(tag) {},
-   *     chars: function(text) {},
-   *     comment: function(text) {}
-   * }
-   */
-  function htmlSanitizeWriterImpl(buf, uriValidator) {
-    var ignoreCurrentElement = false;
-    var out = bind(buf, buf.push);
-    return {
-      start: function(tag, attrs) {
-        tag = lowercase(tag);
-        if (!ignoreCurrentElement && blockedElements[tag]) {
-          ignoreCurrentElement = tag;
-        }
-        if (!ignoreCurrentElement && validElements[tag] === true) {
-          out('<');
-          out(tag);
-          forEach(attrs, function(value, key) {
-            var lkey = lowercase(key);
-            var isImage = (tag === 'img' && lkey === 'src') || (lkey === 'background');
-            if (validAttrs[lkey] === true &&
-              (uriAttrs[lkey] !== true || uriValidator(value, isImage))) {
-              out(' ');
-              out(key);
-              out('="');
-              out(encodeEntities(value));
-              out('"');
-            }
-          });
-          out('>');
-        }
-      },
-      end: function(tag) {
-        tag = lowercase(tag);
-        if (!ignoreCurrentElement && validElements[tag] === true && voidElements[tag] !== true) {
-          out('</');
-          out(tag);
-          out('>');
-        }
-        // eslint-disable-next-line eqeqeq
-        if (tag == ignoreCurrentElement) {
-          ignoreCurrentElement = false;
-        }
-      },
-      chars: function(chars) {
-        if (!ignoreCurrentElement) {
-          out(encodeEntities(chars));
-        }
-      }
-    };
-  }
-
-
-  /**
-   * When IE9-11 comes across an unknown namespaced attribute e.g. 'xlink:foo' it adds 'xmlns:ns1' attribute to declare
-   * ns1 namespace and prefixes the attribute with 'ns1' (e.g. 'ns1:xlink:foo'). This is undesirable since we don't want
-   * to allow any of these custom attributes. This method strips them all.
-   *
-   * @param node Root element to process
-   */
-  function stripCustomNsAttrs(node) {
-    while (node) {
-      if (node.nodeType === window.Node.ELEMENT_NODE) {
-        var attrs = node.attributes;
-        for (var i = 0, l = attrs.length; i < l; i++) {
-          var attrNode = attrs[i];
-          var attrName = attrNode.name.toLowerCase();
-          if (attrName === 'xmlns:ns1' || attrName.lastIndexOf('ns1:', 0) === 0) {
-            node.removeAttributeNode(attrNode);
-            i--;
-            l--;
-          }
-        }
-      }
-
-      var nextNode = node.firstChild;
-      if (nextNode) {
-        stripCustomNsAttrs(nextNode);
-      }
-
-      node = getNonDescendant('nextSibling', node);
-    }
-  }
-
-  function getNonDescendant(propName, node) {
-    // An element is clobbered if its `propName` property points to one of its descendants
-    var nextNode = node[propName];
-    if (nextNode && nodeContains.call(node, nextNode)) {
-      throw $sanitizeMinErr('elclob', 'Failed to sanitize html because the element is clobbered: {0}', node.outerHTML || node.outerText);
-    }
-    return nextNode;
-  }
-}
-
-function sanitizeText(chars) {
-  var buf = [];
-  var writer = htmlSanitizeWriter(buf, noop);
-  writer.chars(chars);
-  return buf.join('');
-}
-
-
-// define ngSanitize module and register $sanitize service
-angular.module('ngSanitize', [])
-  .provider('$sanitize', $SanitizeProvider)
-  .info({ angularVersion: '1.6.8' });
-
-/**
- * @ngdoc filter
- * @name linky
- * @kind function
- *
- * @description
- * Finds links in text input and turns them into html links. Supports `http/https/ftp/sftp/mailto` and
- * plain email address links.
- *
- * Requires the {@link ngSanitize `ngSanitize`} module to be installed.
- *
- * @param {string} text Input text.
- * @param {string} [target] Window (`_blank|_self|_parent|_top`) or named frame to open links in.
- * @param {object|function(url)} [attributes] Add custom attributes to the link element.
- *
- *    Can be one of:
- *
- *    - `object`: A map of attributes
- *    - `function`: Takes the url as a parameter and returns a map of attributes
- *
- *    If the map of attributes contains a value for `target`, it overrides the value of
- *    the target parameter.
- *
- *
- * @returns {string} Html-linkified and {@link $sanitize sanitized} text.
- *
- * @usage
-   <span ng-bind-html="linky_expression | linky"></span>
- *
- * @example
-   <example module="linkyExample" deps="angular-sanitize.js" name="linky-filter">
-     <file name="index.html">
-       <div ng-controller="ExampleController">
-       Snippet: <textarea ng-model="snippet" cols="60" rows="3"></textarea>
-       <table>
-         <tr>
-           <th>Filter</th>
-           <th>Source</th>
-           <th>Rendered</th>
-         </tr>
-         <tr id="linky-filter">
-           <td>linky filter</td>
-           <td>
-             <pre>&lt;div ng-bind-html="snippet | linky"&gt;<br>&lt;/div&gt;</pre>
-           </td>
-           <td>
-             <div ng-bind-html="snippet | linky"></div>
-           </td>
-         </tr>
-         <tr id="linky-target">
-          <td>linky target</td>
-          <td>
-            <pre>&lt;div ng-bind-html="snippetWithSingleURL | linky:'_blank'"&gt;<br>&lt;/div&gt;</pre>
-          </td>
-          <td>
-            <div ng-bind-html="snippetWithSingleURL | linky:'_blank'"></div>
-          </td>
-         </tr>
-         <tr id="linky-custom-attributes">
-          <td>linky custom attributes</td>
-          <td>
-            <pre>&lt;div ng-bind-html="snippetWithSingleURL | linky:'_self':{rel: 'nofollow'}"&gt;<br>&lt;/div&gt;</pre>
-          </td>
-          <td>
-            <div ng-bind-html="snippetWithSingleURL | linky:'_self':{rel: 'nofollow'}"></div>
-          </td>
-         </tr>
-         <tr id="escaped-html">
-           <td>no filter</td>
-           <td><pre>&lt;div ng-bind="snippet"&gt;<br>&lt;/div&gt;</pre></td>
-           <td><div ng-bind="snippet"></div></td>
-         </tr>
-       </table>
-     </file>
-     <file name="script.js">
-       angular.module('linkyExample', ['ngSanitize'])
-         .controller('ExampleController', ['$scope', function($scope) {
-           $scope.snippet =
-             'Pretty text with some links:\n' +
-             'http://angularjs.org/,\n' +
-             'mailto:us@somewhere.org,\n' +
-             'another@somewhere.org,\n' +
-             'and one more: ftp://127.0.0.1/.';
-           $scope.snippetWithSingleURL = 'http://angularjs.org/';
-         }]);
-     </file>
-     <file name="protractor.js" type="protractor">
-       it('should linkify the snippet with urls', function() {
-         expect(element(by.id('linky-filter')).element(by.binding('snippet | linky')).getText()).
-             toBe('Pretty text with some links: http://angularjs.org/, us@somewhere.org, ' +
-                  'another@somewhere.org, and one more: ftp://127.0.0.1/.');
-         expect(element.all(by.css('#linky-filter a')).count()).toEqual(4);
-       });
-
-       it('should not linkify snippet without the linky filter', function() {
-         expect(element(by.id('escaped-html')).element(by.binding('snippet')).getText()).
-             toBe('Pretty text with some links: http://angularjs.org/, mailto:us@somewhere.org, ' +
-                  'another@somewhere.org, and one more: ftp://127.0.0.1/.');
-         expect(element.all(by.css('#escaped-html a')).count()).toEqual(0);
-       });
-
-       it('should update', function() {
-         element(by.model('snippet')).clear();
-         element(by.model('snippet')).sendKeys('new http://link.');
-         expect(element(by.id('linky-filter')).element(by.binding('snippet | linky')).getText()).
-             toBe('new http://link.');
-         expect(element.all(by.css('#linky-filter a')).count()).toEqual(1);
-         expect(element(by.id('escaped-html')).element(by.binding('snippet')).getText())
-             .toBe('new http://link.');
-       });
-
-       it('should work with the target property', function() {
-        expect(element(by.id('linky-target')).
-            element(by.binding("snippetWithSingleURL | linky:'_blank'")).getText()).
-            toBe('http://angularjs.org/');
-        expect(element(by.css('#linky-target a')).getAttribute('target')).toEqual('_blank');
-       });
-
-       it('should optionally add custom attributes', function() {
-        expect(element(by.id('linky-custom-attributes')).
-            element(by.binding("snippetWithSingleURL | linky:'_self':{rel: 'nofollow'}")).getText()).
-            toBe('http://angularjs.org/');
-        expect(element(by.css('#linky-custom-attributes a')).getAttribute('rel')).toEqual('nofollow');
-       });
-     </file>
-   </example>
- */
-angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
-  var LINKY_URL_REGEXP =
-        /((s?ftp|https?):\/\/|(www\.)|(mailto:)?[A-Za-z0-9._%+-]+@)\S*[^\s.;,(){}<>"\u201d\u2019]/i,
-      MAILTO_REGEXP = /^mailto:/i;
-
-  var linkyMinErr = angular.$$minErr('linky');
-  var isDefined = angular.isDefined;
-  var isFunction = angular.isFunction;
-  var isObject = angular.isObject;
-  var isString = angular.isString;
-
-  return function(text, target, attributes) {
-    if (text == null || text === '') return text;
-    if (!isString(text)) throw linkyMinErr('notstring', 'Expected string but received: {0}', text);
-
-    var attributesFn =
-      isFunction(attributes) ? attributes :
-      isObject(attributes) ? function getAttributesObject() {return attributes;} :
-      function getEmptyAttributesObject() {return {};};
-
-    var match;
-    var raw = text;
-    var html = [];
-    var url;
-    var i;
-    while ((match = raw.match(LINKY_URL_REGEXP))) {
-      // We can not end in these as they are sometimes found at the end of the sentence
-      url = match[0];
-      // if we did not match ftp/http/www/mailto then assume mailto
-      if (!match[2] && !match[4]) {
-        url = (match[3] ? 'http://' : 'mailto:') + url;
-      }
-      i = match.index;
-      addText(raw.substr(0, i));
-      addLink(url, match[0].replace(MAILTO_REGEXP, ''));
-      raw = raw.substring(i + match[0].length);
-    }
-    addText(raw);
-    return $sanitize(html.join(''));
-
-    function addText(text) {
-      if (!text) {
-        return;
-      }
-      html.push(sanitizeText(text));
-    }
-
-    function addLink(url, text) {
-      var key, linkAttributes = attributesFn(url);
-      html.push('<a ');
-
-      for (key in linkAttributes) {
-        html.push(key + '="' + linkAttributes[key] + '" ');
-      }
-
-      if (isDefined(target) && !('target' in linkAttributes)) {
-        html.push('target="',
-                  target,
-                  '" ');
-      }
-      html.push('href="',
-                url.replace(/"/g, '&quot;'),
-                '">');
-      addText(text);
-      html.push('</a>');
-    }
-  };
-}]);
-
-
-})(window, window.angular);
-
-
-/***/ }),
-/* 25 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(26);
-module.exports = 'ngRoute';
-
-
-/***/ }),
-/* 26 */
-/***/ (function(module, exports) {
-
-/**
- * @license AngularJS v1.6.8
- * (c) 2010-2017 Google, Inc. http://angularjs.org
- * License: MIT
- */
-(function(window, angular) {'use strict';
-
-/* global shallowCopy: true */
-
-/**
- * Creates a shallow copy of an object, an array or a primitive.
- *
- * Assumes that there are no proto properties for objects.
- */
-function shallowCopy(src, dst) {
-  if (isArray(src)) {
-    dst = dst || [];
-
-    for (var i = 0, ii = src.length; i < ii; i++) {
-      dst[i] = src[i];
-    }
-  } else if (isObject(src)) {
-    dst = dst || {};
-
-    for (var key in src) {
-      if (!(key.charAt(0) === '$' && key.charAt(1) === '$')) {
-        dst[key] = src[key];
-      }
-    }
-  }
-
-  return dst || src;
-}
-
-/* global shallowCopy: false */
-
-// `isArray` and `isObject` are necessary for `shallowCopy()` (included via `src/shallowCopy.js`).
-// They are initialized inside the `$RouteProvider`, to ensure `window.angular` is available.
-var isArray;
-var isObject;
-var isDefined;
-var noop;
-
-/**
- * @ngdoc module
- * @name ngRoute
- * @description
- *
- * The `ngRoute` module provides routing and deeplinking services and directives for AngularJS apps.
- *
- * ## Example
- * See {@link ngRoute.$route#examples $route} for an example of configuring and using `ngRoute`.
- *
- */
-/* global -ngRouteModule */
-var ngRouteModule = angular.
-  module('ngRoute', []).
-  info({ angularVersion: '1.6.8' }).
-  provider('$route', $RouteProvider).
-  // Ensure `$route` will be instantiated in time to capture the initial `$locationChangeSuccess`
-  // event (unless explicitly disabled). This is necessary in case `ngView` is included in an
-  // asynchronously loaded template.
-  run(instantiateRoute);
-var $routeMinErr = angular.$$minErr('ngRoute');
-var isEagerInstantiationEnabled;
-
-
-/**
- * @ngdoc provider
- * @name $routeProvider
- * @this
- *
- * @description
- *
- * Used for configuring routes.
- *
- * ## Example
- * See {@link ngRoute.$route#examples $route} for an example of configuring and using `ngRoute`.
- *
- * ## Dependencies
- * Requires the {@link ngRoute `ngRoute`} module to be installed.
- */
-function $RouteProvider() {
-  isArray = angular.isArray;
-  isObject = angular.isObject;
-  isDefined = angular.isDefined;
-  noop = angular.noop;
-
-  function inherit(parent, extra) {
-    return angular.extend(Object.create(parent), extra);
-  }
-
-  var routes = {};
-
-  /**
-   * @ngdoc method
-   * @name $routeProvider#when
-   *
-   * @param {string} path Route path (matched against `$location.path`). If `$location.path`
-   *    contains redundant trailing slash or is missing one, the route will still match and the
-   *    `$location.path` will be updated to add or drop the trailing slash to exactly match the
-   *    route definition.
-   *
-   *    * `path` can contain named groups starting with a colon: e.g. `:name`. All characters up
-   *        to the next slash are matched and stored in `$routeParams` under the given `name`
-   *        when the route matches.
-   *    * `path` can contain named groups starting with a colon and ending with a star:
-   *        e.g.`:name*`. All characters are eagerly stored in `$routeParams` under the given `name`
-   *        when the route matches.
-   *    * `path` can contain optional named groups with a question mark: e.g.`:name?`.
-   *
-   *    For example, routes like `/color/:color/largecode/:largecode*\/edit` will match
-   *    `/color/brown/largecode/code/with/slashes/edit` and extract:
-   *
-   *    * `color: brown`
-   *    * `largecode: code/with/slashes`.
-   *
-   *
-   * @param {Object} route Mapping information to be assigned to `$route.current` on route
-   *    match.
-   *
-   *    Object properties:
-   *
-   *    - `controller` – `{(string|Function)=}` – Controller fn that should be associated with
-   *      newly created scope or the name of a {@link angular.Module#controller registered
-   *      controller} if passed as a string.
-   *    - `controllerAs` – `{string=}` – An identifier name for a reference to the controller.
-   *      If present, the controller will be published to scope under the `controllerAs` name.
-   *    - `template` – `{(string|Function)=}` – html template as a string or a function that
-   *      returns an html template as a string which should be used by {@link
-   *      ngRoute.directive:ngView ngView} or {@link ng.directive:ngInclude ngInclude} directives.
-   *      This property takes precedence over `templateUrl`.
-   *
-   *      If `template` is a function, it will be called with the following parameters:
-   *
-   *      - `{Array.<Object>}` - route parameters extracted from the current
-   *        `$location.path()` by applying the current route
-   *
-   *      One of `template` or `templateUrl` is required.
-   *
-   *    - `templateUrl` – `{(string|Function)=}` – path or function that returns a path to an html
-   *      template that should be used by {@link ngRoute.directive:ngView ngView}.
-   *
-   *      If `templateUrl` is a function, it will be called with the following parameters:
-   *
-   *      - `{Array.<Object>}` - route parameters extracted from the current
-   *        `$location.path()` by applying the current route
-   *
-   *      One of `templateUrl` or `template` is required.
-   *
-   *    - `resolve` - `{Object.<string, Function>=}` - An optional map of dependencies which should
-   *      be injected into the controller. If any of these dependencies are promises, the router
-   *      will wait for them all to be resolved or one to be rejected before the controller is
-   *      instantiated.
-   *      If all the promises are resolved successfully, the values of the resolved promises are
-   *      injected and {@link ngRoute.$route#$routeChangeSuccess $routeChangeSuccess} event is
-   *      fired. If any of the promises are rejected the
-   *      {@link ngRoute.$route#$routeChangeError $routeChangeError} event is fired.
-   *      For easier access to the resolved dependencies from the template, the `resolve` map will
-   *      be available on the scope of the route, under `$resolve` (by default) or a custom name
-   *      specified by the `resolveAs` property (see below). This can be particularly useful, when
-   *      working with {@link angular.Module#component components} as route templates.<br />
-   *      <div class="alert alert-warning">
-   *        **Note:** If your scope already contains a property with this name, it will be hidden
-   *        or overwritten. Make sure, you specify an appropriate name for this property, that
-   *        does not collide with other properties on the scope.
-   *      </div>
-   *      The map object is:
-   *
-   *      - `key` – `{string}`: a name of a dependency to be injected into the controller.
-   *      - `factory` - `{string|Function}`: If `string` then it is an alias for a service.
-   *        Otherwise if function, then it is {@link auto.$injector#invoke injected}
-   *        and the return value is treated as the dependency. If the result is a promise, it is
-   *        resolved before its value is injected into the controller. Be aware that
-   *        `ngRoute.$routeParams` will still refer to the previous route within these resolve
-   *        functions.  Use `$route.current.params` to access the new route parameters, instead.
-   *
-   *    - `resolveAs` - `{string=}` - The name under which the `resolve` map will be available on
-   *      the scope of the route. If omitted, defaults to `$resolve`.
-   *
-   *    - `redirectTo` – `{(string|Function)=}` – value to update
-   *      {@link ng.$location $location} path with and trigger route redirection.
-   *
-   *      If `redirectTo` is a function, it will be called with the following parameters:
-   *
-   *      - `{Object.<string>}` - route parameters extracted from the current
-   *        `$location.path()` by applying the current route templateUrl.
-   *      - `{string}` - current `$location.path()`
-   *      - `{Object}` - current `$location.search()`
-   *
-   *      The custom `redirectTo` function is expected to return a string which will be used
-   *      to update `$location.url()`. If the function throws an error, no further processing will
-   *      take place and the {@link ngRoute.$route#$routeChangeError $routeChangeError} event will
-   *      be fired.
-   *
-   *      Routes that specify `redirectTo` will not have their controllers, template functions
-   *      or resolves called, the `$location` will be changed to the redirect url and route
-   *      processing will stop. The exception to this is if the `redirectTo` is a function that
-   *      returns `undefined`. In this case the route transition occurs as though there was no
-   *      redirection.
-   *
-   *    - `resolveRedirectTo` – `{Function=}` – a function that will (eventually) return the value
-   *      to update {@link ng.$location $location} URL with and trigger route redirection. In
-   *      contrast to `redirectTo`, dependencies can be injected into `resolveRedirectTo` and the
-   *      return value can be either a string or a promise that will be resolved to a string.
-   *
-   *      Similar to `redirectTo`, if the return value is `undefined` (or a promise that gets
-   *      resolved to `undefined`), no redirection takes place and the route transition occurs as
-   *      though there was no redirection.
-   *
-   *      If the function throws an error or the returned promise gets rejected, no further
-   *      processing will take place and the
-   *      {@link ngRoute.$route#$routeChangeError $routeChangeError} event will be fired.
-   *
-   *      `redirectTo` takes precedence over `resolveRedirectTo`, so specifying both on the same
-   *      route definition, will cause the latter to be ignored.
-   *
-   *    - `[reloadOnSearch=true]` - `{boolean=}` - reload route when only `$location.search()`
-   *      or `$location.hash()` changes.
-   *
-   *      If the option is set to `false` and url in the browser changes, then
-   *      `$routeUpdate` event is broadcasted on the root scope.
-   *
-   *    - `[caseInsensitiveMatch=false]` - `{boolean=}` - match routes without being case sensitive
-   *
-   *      If the option is set to `true`, then the particular route can be matched without being
-   *      case sensitive
-   *
-   * @returns {Object} self
-   *
-   * @description
-   * Adds a new route definition to the `$route` service.
-   */
-  this.when = function(path, route) {
-    //copy original route object to preserve params inherited from proto chain
-    var routeCopy = shallowCopy(route);
-    if (angular.isUndefined(routeCopy.reloadOnSearch)) {
-      routeCopy.reloadOnSearch = true;
-    }
-    if (angular.isUndefined(routeCopy.caseInsensitiveMatch)) {
-      routeCopy.caseInsensitiveMatch = this.caseInsensitiveMatch;
-    }
-    routes[path] = angular.extend(
-      routeCopy,
-      path && pathRegExp(path, routeCopy)
-    );
-
-    // create redirection for trailing slashes
-    if (path) {
-      var redirectPath = (path[path.length - 1] === '/')
-            ? path.substr(0, path.length - 1)
-            : path + '/';
-
-      routes[redirectPath] = angular.extend(
-        {redirectTo: path},
-        pathRegExp(redirectPath, routeCopy)
-      );
-    }
-
-    return this;
-  };
-
-  /**
-   * @ngdoc property
-   * @name $routeProvider#caseInsensitiveMatch
-   * @description
-   *
-   * A boolean property indicating if routes defined
-   * using this provider should be matched using a case insensitive
-   * algorithm. Defaults to `false`.
-   */
-  this.caseInsensitiveMatch = false;
-
-   /**
-    * @param path {string} path
-    * @param opts {Object} options
-    * @return {?Object}
-    *
-    * @description
-    * Normalizes the given path, returning a regular expression
-    * and the original path.
-    *
-    * Inspired by pathRexp in visionmedia/express/lib/utils.js.
-    */
-  function pathRegExp(path, opts) {
-    var insensitive = opts.caseInsensitiveMatch,
-        ret = {
-          originalPath: path,
-          regexp: path
-        },
-        keys = ret.keys = [];
-
-    path = path
-      .replace(/([().])/g, '\\$1')
-      .replace(/(\/)?:(\w+)(\*\?|[?*])?/g, function(_, slash, key, option) {
-        var optional = (option === '?' || option === '*?') ? '?' : null;
-        var star = (option === '*' || option === '*?') ? '*' : null;
-        keys.push({ name: key, optional: !!optional });
-        slash = slash || '';
-        return ''
-          + (optional ? '' : slash)
-          + '(?:'
-          + (optional ? slash : '')
-          + (star && '(.+?)' || '([^/]+)')
-          + (optional || '')
-          + ')'
-          + (optional || '');
-      })
-      .replace(/([/$*])/g, '\\$1');
-
-    ret.regexp = new RegExp('^' + path + '$', insensitive ? 'i' : '');
-    return ret;
-  }
-
-  /**
-   * @ngdoc method
-   * @name $routeProvider#otherwise
-   *
-   * @description
-   * Sets route definition that will be used on route change when no other route definition
-   * is matched.
-   *
-   * @param {Object|string} params Mapping information to be assigned to `$route.current`.
-   * If called with a string, the value maps to `redirectTo`.
-   * @returns {Object} self
-   */
-  this.otherwise = function(params) {
-    if (typeof params === 'string') {
-      params = {redirectTo: params};
-    }
-    this.when(null, params);
-    return this;
-  };
-
-  /**
-   * @ngdoc method
-   * @name $routeProvider#eagerInstantiationEnabled
-   * @kind function
-   *
-   * @description
-   * Call this method as a setter to enable/disable eager instantiation of the
-   * {@link ngRoute.$route $route} service upon application bootstrap. You can also call it as a
-   * getter (i.e. without any arguments) to get the current value of the
-   * `eagerInstantiationEnabled` flag.
-   *
-   * Instantiating `$route` early is necessary for capturing the initial
-   * {@link ng.$location#$locationChangeStart $locationChangeStart} event and navigating to the
-   * appropriate route. Usually, `$route` is instantiated in time by the
-   * {@link ngRoute.ngView ngView} directive. Yet, in cases where `ngView` is included in an
-   * asynchronously loaded template (e.g. in another directive's template), the directive factory
-   * might not be called soon enough for `$route` to be instantiated _before_ the initial
-   * `$locationChangeSuccess` event is fired. Eager instantiation ensures that `$route` is always
-   * instantiated in time, regardless of when `ngView` will be loaded.
-   *
-   * The default value is true.
-   *
-   * **Note**:<br />
-   * You may want to disable the default behavior when unit-testing modules that depend on
-   * `ngRoute`, in order to avoid an unexpected request for the default route's template.
-   *
-   * @param {boolean=} enabled - If provided, update the internal `eagerInstantiationEnabled` flag.
-   *
-   * @returns {*} The current value of the `eagerInstantiationEnabled` flag if used as a getter or
-   *     itself (for chaining) if used as a setter.
-   */
-  isEagerInstantiationEnabled = true;
-  this.eagerInstantiationEnabled = function eagerInstantiationEnabled(enabled) {
-    if (isDefined(enabled)) {
-      isEagerInstantiationEnabled = enabled;
-      return this;
-    }
-
-    return isEagerInstantiationEnabled;
-  };
-
-
-  this.$get = ['$rootScope',
-               '$location',
-               '$routeParams',
-               '$q',
-               '$injector',
-               '$templateRequest',
-               '$sce',
-               '$browser',
-      function($rootScope, $location, $routeParams, $q, $injector, $templateRequest, $sce, $browser) {
-
-    /**
-     * @ngdoc service
-     * @name $route
-     * @requires $location
-     * @requires $routeParams
-     *
-     * @property {Object} current Reference to the current route definition.
-     * The route definition contains:
-     *
-     *   - `controller`: The controller constructor as defined in the route definition.
-     *   - `locals`: A map of locals which is used by {@link ng.$controller $controller} service for
-     *     controller instantiation. The `locals` contain
-     *     the resolved values of the `resolve` map. Additionally the `locals` also contain:
-     *
-     *     - `$scope` - The current route scope.
-     *     - `$template` - The current route template HTML.
-     *
-     *     The `locals` will be assigned to the route scope's `$resolve` property. You can override
-     *     the property name, using `resolveAs` in the route definition. See
-     *     {@link ngRoute.$routeProvider $routeProvider} for more info.
-     *
-     * @property {Object} routes Object with all route configuration Objects as its properties.
-     *
-     * @description
-     * `$route` is used for deep-linking URLs to controllers and views (HTML partials).
-     * It watches `$location.url()` and tries to map the path to an existing route definition.
-     *
-     * Requires the {@link ngRoute `ngRoute`} module to be installed.
-     *
-     * You can define routes through {@link ngRoute.$routeProvider $routeProvider}'s API.
-     *
-     * The `$route` service is typically used in conjunction with the
-     * {@link ngRoute.directive:ngView `ngView`} directive and the
-     * {@link ngRoute.$routeParams `$routeParams`} service.
-     *
-     * @example
-     * This example shows how changing the URL hash causes the `$route` to match a route against the
-     * URL, and the `ngView` pulls in the partial.
-     *
-     * <example name="$route-service" module="ngRouteExample"
-     *          deps="angular-route.js" fixBase="true">
-     *   <file name="index.html">
-     *     <div ng-controller="MainController">
-     *       Choose:
-     *       <a href="Book/Moby">Moby</a> |
-     *       <a href="Book/Moby/ch/1">Moby: Ch1</a> |
-     *       <a href="Book/Gatsby">Gatsby</a> |
-     *       <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
-     *       <a href="Book/Scarlet">Scarlet Letter</a><br/>
-     *
-     *       <div ng-view></div>
-     *
-     *       <hr />
-     *
-     *       <pre>$location.path() = {{$location.path()}}</pre>
-     *       <pre>$route.current.templateUrl = {{$route.current.templateUrl}}</pre>
-     *       <pre>$route.current.params = {{$route.current.params}}</pre>
-     *       <pre>$route.current.scope.name = {{$route.current.scope.name}}</pre>
-     *       <pre>$routeParams = {{$routeParams}}</pre>
-     *     </div>
-     *   </file>
-     *
-     *   <file name="book.html">
-     *     controller: {{name}}<br />
-     *     Book Id: {{params.bookId}}<br />
-     *   </file>
-     *
-     *   <file name="chapter.html">
-     *     controller: {{name}}<br />
-     *     Book Id: {{params.bookId}}<br />
-     *     Chapter Id: {{params.chapterId}}
-     *   </file>
-     *
-     *   <file name="script.js">
-     *     angular.module('ngRouteExample', ['ngRoute'])
-     *
-     *      .controller('MainController', function($scope, $route, $routeParams, $location) {
-     *          $scope.$route = $route;
-     *          $scope.$location = $location;
-     *          $scope.$routeParams = $routeParams;
-     *      })
-     *
-     *      .controller('BookController', function($scope, $routeParams) {
-     *          $scope.name = 'BookController';
-     *          $scope.params = $routeParams;
-     *      })
-     *
-     *      .controller('ChapterController', function($scope, $routeParams) {
-     *          $scope.name = 'ChapterController';
-     *          $scope.params = $routeParams;
-     *      })
-     *
-     *     .config(function($routeProvider, $locationProvider) {
-     *       $routeProvider
-     *        .when('/Book/:bookId', {
-     *         templateUrl: 'book.html',
-     *         controller: 'BookController',
-     *         resolve: {
-     *           // I will cause a 1 second delay
-     *           delay: function($q, $timeout) {
-     *             var delay = $q.defer();
-     *             $timeout(delay.resolve, 1000);
-     *             return delay.promise;
-     *           }
-     *         }
-     *       })
-     *       .when('/Book/:bookId/ch/:chapterId', {
-     *         templateUrl: 'chapter.html',
-     *         controller: 'ChapterController'
-     *       });
-     *
-     *       // configure html5 to get links working on jsfiddle
-     *       $locationProvider.html5Mode(true);
-     *     });
-     *
-     *   </file>
-     *
-     *   <file name="protractor.js" type="protractor">
-     *     it('should load and compile correct template', function() {
-     *       element(by.linkText('Moby: Ch1')).click();
-     *       var content = element(by.css('[ng-view]')).getText();
-     *       expect(content).toMatch(/controller: ChapterController/);
-     *       expect(content).toMatch(/Book Id: Moby/);
-     *       expect(content).toMatch(/Chapter Id: 1/);
-     *
-     *       element(by.partialLinkText('Scarlet')).click();
-     *
-     *       content = element(by.css('[ng-view]')).getText();
-     *       expect(content).toMatch(/controller: BookController/);
-     *       expect(content).toMatch(/Book Id: Scarlet/);
-     *     });
-     *   </file>
-     * </example>
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeChangeStart
-     * @eventType broadcast on root scope
-     * @description
-     * Broadcasted before a route change. At this  point the route services starts
-     * resolving all of the dependencies needed for the route change to occur.
-     * Typically this involves fetching the view template as well as any dependencies
-     * defined in `resolve` route property. Once  all of the dependencies are resolved
-     * `$routeChangeSuccess` is fired.
-     *
-     * The route change (and the `$location` change that triggered it) can be prevented
-     * by calling `preventDefault` method of the event. See {@link ng.$rootScope.Scope#$on}
-     * for more details about event object.
-     *
-     * @param {Object} angularEvent Synthetic event object.
-     * @param {Route} next Future route information.
-     * @param {Route} current Current route information.
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeChangeSuccess
-     * @eventType broadcast on root scope
-     * @description
-     * Broadcasted after a route change has happened successfully.
-     * The `resolve` dependencies are now available in the `current.locals` property.
-     *
-     * {@link ngRoute.directive:ngView ngView} listens for the directive
-     * to instantiate the controller and render the view.
-     *
-     * @param {Object} angularEvent Synthetic event object.
-     * @param {Route} current Current route information.
-     * @param {Route|Undefined} previous Previous route information, or undefined if current is
-     * first route entered.
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeChangeError
-     * @eventType broadcast on root scope
-     * @description
-     * Broadcasted if a redirection function fails or any redirection or resolve promises are
-     * rejected.
-     *
-     * @param {Object} angularEvent Synthetic event object
-     * @param {Route} current Current route information.
-     * @param {Route} previous Previous route information.
-     * @param {Route} rejection The thrown error or the rejection reason of the promise. Usually
-     * the rejection reason is the error that caused the promise to get rejected.
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeUpdate
-     * @eventType broadcast on root scope
-     * @description
-     * The `reloadOnSearch` property has been set to false, and we are reusing the same
-     * instance of the Controller.
-     *
-     * @param {Object} angularEvent Synthetic event object
-     * @param {Route} current Current/previous route information.
-     */
-
-    var forceReload = false,
-        preparedRoute,
-        preparedRouteIsUpdateOnly,
-        $route = {
-          routes: routes,
-
-          /**
-           * @ngdoc method
-           * @name $route#reload
-           *
-           * @description
-           * Causes `$route` service to reload the current route even if
-           * {@link ng.$location $location} hasn't changed.
-           *
-           * As a result of that, {@link ngRoute.directive:ngView ngView}
-           * creates new scope and reinstantiates the controller.
-           */
-          reload: function() {
-            forceReload = true;
-
-            var fakeLocationEvent = {
-              defaultPrevented: false,
-              preventDefault: function fakePreventDefault() {
-                this.defaultPrevented = true;
-                forceReload = false;
-              }
-            };
-
-            $rootScope.$evalAsync(function() {
-              prepareRoute(fakeLocationEvent);
-              if (!fakeLocationEvent.defaultPrevented) commitRoute();
-            });
-          },
-
-          /**
-           * @ngdoc method
-           * @name $route#updateParams
-           *
-           * @description
-           * Causes `$route` service to update the current URL, replacing
-           * current route parameters with those specified in `newParams`.
-           * Provided property names that match the route's path segment
-           * definitions will be interpolated into the location's path, while
-           * remaining properties will be treated as query params.
-           *
-           * @param {!Object<string, string>} newParams mapping of URL parameter names to values
-           */
-          updateParams: function(newParams) {
-            if (this.current && this.current.$$route) {
-              newParams = angular.extend({}, this.current.params, newParams);
-              $location.path(interpolate(this.current.$$route.originalPath, newParams));
-              // interpolate modifies newParams, only query params are left
-              $location.search(newParams);
-            } else {
-              throw $routeMinErr('norout', 'Tried updating route when with no current route');
-            }
-          }
-        };
-
-    $rootScope.$on('$locationChangeStart', prepareRoute);
-    $rootScope.$on('$locationChangeSuccess', commitRoute);
-
-    return $route;
-
-    /////////////////////////////////////////////////////
-
-    /**
-     * @param on {string} current url
-     * @param route {Object} route regexp to match the url against
-     * @return {?Object}
-     *
-     * @description
-     * Check if the route matches the current url.
-     *
-     * Inspired by match in
-     * visionmedia/express/lib/router/router.js.
-     */
-    function switchRouteMatcher(on, route) {
-      var keys = route.keys,
-          params = {};
-
-      if (!route.regexp) return null;
-
-      var m = route.regexp.exec(on);
-      if (!m) return null;
-
-      for (var i = 1, len = m.length; i < len; ++i) {
-        var key = keys[i - 1];
-
-        var val = m[i];
-
-        if (key && val) {
-          params[key.name] = val;
-        }
-      }
-      return params;
-    }
-
-    function prepareRoute($locationEvent) {
-      var lastRoute = $route.current;
-
-      preparedRoute = parseRoute();
-      preparedRouteIsUpdateOnly = preparedRoute && lastRoute && preparedRoute.$$route === lastRoute.$$route
-          && angular.equals(preparedRoute.pathParams, lastRoute.pathParams)
-          && !preparedRoute.reloadOnSearch && !forceReload;
-
-      if (!preparedRouteIsUpdateOnly && (lastRoute || preparedRoute)) {
-        if ($rootScope.$broadcast('$routeChangeStart', preparedRoute, lastRoute).defaultPrevented) {
-          if ($locationEvent) {
-            $locationEvent.preventDefault();
-          }
-        }
-      }
-    }
-
-    function commitRoute() {
-      var lastRoute = $route.current;
-      var nextRoute = preparedRoute;
-
-      if (preparedRouteIsUpdateOnly) {
-        lastRoute.params = nextRoute.params;
-        angular.copy(lastRoute.params, $routeParams);
-        $rootScope.$broadcast('$routeUpdate', lastRoute);
-      } else if (nextRoute || lastRoute) {
-        forceReload = false;
-        $route.current = nextRoute;
-
-        var nextRoutePromise = $q.resolve(nextRoute);
-
-        $browser.$$incOutstandingRequestCount();
-
-        nextRoutePromise.
-          then(getRedirectionData).
-          then(handlePossibleRedirection).
-          then(function(keepProcessingRoute) {
-            return keepProcessingRoute && nextRoutePromise.
-              then(resolveLocals).
-              then(function(locals) {
-                // after route change
-                if (nextRoute === $route.current) {
-                  if (nextRoute) {
-                    nextRoute.locals = locals;
-                    angular.copy(nextRoute.params, $routeParams);
-                  }
-                  $rootScope.$broadcast('$routeChangeSuccess', nextRoute, lastRoute);
-                }
-              });
-          }).catch(function(error) {
-            if (nextRoute === $route.current) {
-              $rootScope.$broadcast('$routeChangeError', nextRoute, lastRoute, error);
-            }
-          }).finally(function() {
-            // Because `commitRoute()` is called from a `$rootScope.$evalAsync` block (see
-            // `$locationWatch`), this `$$completeOutstandingRequest()` call will not cause
-            // `outstandingRequestCount` to hit zero.  This is important in case we are redirecting
-            // to a new route which also requires some asynchronous work.
-
-            $browser.$$completeOutstandingRequest(noop);
-          });
-      }
-    }
-
-    function getRedirectionData(route) {
-      var data = {
-        route: route,
-        hasRedirection: false
-      };
-
-      if (route) {
-        if (route.redirectTo) {
-          if (angular.isString(route.redirectTo)) {
-            data.path = interpolate(route.redirectTo, route.params);
-            data.search = route.params;
-            data.hasRedirection = true;
-          } else {
-            var oldPath = $location.path();
-            var oldSearch = $location.search();
-            var newUrl = route.redirectTo(route.pathParams, oldPath, oldSearch);
-
-            if (angular.isDefined(newUrl)) {
-              data.url = newUrl;
-              data.hasRedirection = true;
-            }
-          }
-        } else if (route.resolveRedirectTo) {
-          return $q.
-            resolve($injector.invoke(route.resolveRedirectTo)).
-            then(function(newUrl) {
-              if (angular.isDefined(newUrl)) {
-                data.url = newUrl;
-                data.hasRedirection = true;
-              }
-
-              return data;
-            });
-        }
-      }
-
-      return data;
-    }
-
-    function handlePossibleRedirection(data) {
-      var keepProcessingRoute = true;
-
-      if (data.route !== $route.current) {
-        keepProcessingRoute = false;
-      } else if (data.hasRedirection) {
-        var oldUrl = $location.url();
-        var newUrl = data.url;
-
-        if (newUrl) {
-          $location.
-            url(newUrl).
-            replace();
-        } else {
-          newUrl = $location.
-            path(data.path).
-            search(data.search).
-            replace().
-            url();
-        }
-
-        if (newUrl !== oldUrl) {
-          // Exit out and don't process current next value,
-          // wait for next location change from redirect
-          keepProcessingRoute = false;
-        }
-      }
-
-      return keepProcessingRoute;
-    }
-
-    function resolveLocals(route) {
-      if (route) {
-        var locals = angular.extend({}, route.resolve);
-        angular.forEach(locals, function(value, key) {
-          locals[key] = angular.isString(value) ?
-              $injector.get(value) :
-              $injector.invoke(value, null, null, key);
-        });
-        var template = getTemplateFor(route);
-        if (angular.isDefined(template)) {
-          locals['$template'] = template;
-        }
-        return $q.all(locals);
-      }
-    }
-
-    function getTemplateFor(route) {
-      var template, templateUrl;
-      if (angular.isDefined(template = route.template)) {
-        if (angular.isFunction(template)) {
-          template = template(route.params);
-        }
-      } else if (angular.isDefined(templateUrl = route.templateUrl)) {
-        if (angular.isFunction(templateUrl)) {
-          templateUrl = templateUrl(route.params);
-        }
-        if (angular.isDefined(templateUrl)) {
-          route.loadedTemplateUrl = $sce.valueOf(templateUrl);
-          template = $templateRequest(templateUrl);
-        }
-      }
-      return template;
-    }
-
-    /**
-     * @returns {Object} the current active route, by matching it against the URL
-     */
-    function parseRoute() {
-      // Match a route
-      var params, match;
-      angular.forEach(routes, function(route, path) {
-        if (!match && (params = switchRouteMatcher($location.path(), route))) {
-          match = inherit(route, {
-            params: angular.extend({}, $location.search(), params),
-            pathParams: params});
-          match.$$route = route;
-        }
-      });
-      // No route matched; fallback to "otherwise" route
-      return match || routes[null] && inherit(routes[null], {params: {}, pathParams:{}});
-    }
-
-    /**
-     * @returns {string} interpolation of the redirect path with the parameters
-     */
-    function interpolate(string, params) {
-      var result = [];
-      angular.forEach((string || '').split(':'), function(segment, i) {
-        if (i === 0) {
-          result.push(segment);
-        } else {
-          var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
-          var key = segmentMatch[1];
-          result.push(params[key]);
-          result.push(segmentMatch[2] || '');
-          delete params[key];
-        }
-      });
-      return result.join('');
-    }
-  }];
-}
-
-instantiateRoute.$inject = ['$injector'];
-function instantiateRoute($injector) {
-  if (isEagerInstantiationEnabled) {
-    // Instantiate `$route`
-    $injector.get('$route');
-  }
-}
-
-ngRouteModule.provider('$routeParams', $RouteParamsProvider);
-
-
-/**
- * @ngdoc service
- * @name $routeParams
- * @requires $route
- * @this
- *
- * @description
- * The `$routeParams` service allows you to retrieve the current set of route parameters.
- *
- * Requires the {@link ngRoute `ngRoute`} module to be installed.
- *
- * The route parameters are a combination of {@link ng.$location `$location`}'s
- * {@link ng.$location#search `search()`} and {@link ng.$location#path `path()`}.
- * The `path` parameters are extracted when the {@link ngRoute.$route `$route`} path is matched.
- *
- * In case of parameter name collision, `path` params take precedence over `search` params.
- *
- * The service guarantees that the identity of the `$routeParams` object will remain unchanged
- * (but its properties will likely change) even when a route change occurs.
- *
- * Note that the `$routeParams` are only updated *after* a route change completes successfully.
- * This means that you cannot rely on `$routeParams` being correct in route resolve functions.
- * Instead you can use `$route.current.params` to access the new route's parameters.
- *
- * @example
- * ```js
- *  // Given:
- *  // URL: http://server.com/index.html#/Chapter/1/Section/2?search=moby
- *  // Route: /Chapter/:chapterId/Section/:sectionId
- *  //
- *  // Then
- *  $routeParams ==> {chapterId:'1', sectionId:'2', search:'moby'}
- * ```
- */
-function $RouteParamsProvider() {
-  this.$get = function() { return {}; };
-}
-
-ngRouteModule.directive('ngView', ngViewFactory);
-ngRouteModule.directive('ngView', ngViewFillContentFactory);
-
-
-/**
- * @ngdoc directive
- * @name ngView
- * @restrict ECA
- *
- * @description
- * `ngView` is a directive that complements the {@link ngRoute.$route $route} service by
- * including the rendered template of the current route into the main layout (`index.html`) file.
- * Every time the current route changes, the included view changes with it according to the
- * configuration of the `$route` service.
- *
- * Requires the {@link ngRoute `ngRoute`} module to be installed.
- *
- * @animations
- * | Animation                        | Occurs                              |
- * |----------------------------------|-------------------------------------|
- * | {@link ng.$animate#enter enter}  | when the new element is inserted to the DOM |
- * | {@link ng.$animate#leave leave}  | when the old element is removed from to the DOM  |
- *
- * The enter and leave animation occur concurrently.
- *
- * @scope
- * @priority 400
- * @param {string=} onload Expression to evaluate whenever the view updates.
- *
- * @param {string=} autoscroll Whether `ngView` should call {@link ng.$anchorScroll
- *                  $anchorScroll} to scroll the viewport after the view is updated.
- *
- *                  - If the attribute is not set, disable scrolling.
- *                  - If the attribute is set without value, enable scrolling.
- *                  - Otherwise enable scrolling only if the `autoscroll` attribute value evaluated
- *                    as an expression yields a truthy value.
- * @example
-    <example name="ngView-directive" module="ngViewExample"
-             deps="angular-route.js;angular-animate.js"
-             animations="true" fixBase="true">
-      <file name="index.html">
-        <div ng-controller="MainCtrl as main">
-          Choose:
-          <a href="Book/Moby">Moby</a> |
-          <a href="Book/Moby/ch/1">Moby: Ch1</a> |
-          <a href="Book/Gatsby">Gatsby</a> |
-          <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
-          <a href="Book/Scarlet">Scarlet Letter</a><br/>
-
-          <div class="view-animate-container">
-            <div ng-view class="view-animate"></div>
-          </div>
-          <hr />
-
-          <pre>$location.path() = {{main.$location.path()}}</pre>
-          <pre>$route.current.templateUrl = {{main.$route.current.templateUrl}}</pre>
-          <pre>$route.current.params = {{main.$route.current.params}}</pre>
-          <pre>$routeParams = {{main.$routeParams}}</pre>
-        </div>
-      </file>
-
-      <file name="book.html">
-        <div>
-          controller: {{book.name}}<br />
-          Book Id: {{book.params.bookId}}<br />
-        </div>
-      </file>
-
-      <file name="chapter.html">
-        <div>
-          controller: {{chapter.name}}<br />
-          Book Id: {{chapter.params.bookId}}<br />
-          Chapter Id: {{chapter.params.chapterId}}
-        </div>
-      </file>
-
-      <file name="animations.css">
-        .view-animate-container {
-          position:relative;
-          height:100px!important;
-          background:white;
-          border:1px solid black;
-          height:40px;
-          overflow:hidden;
-        }
-
-        .view-animate {
-          padding:10px;
-        }
-
-        .view-animate.ng-enter, .view-animate.ng-leave {
-          transition:all cubic-bezier(0.250, 0.460, 0.450, 0.940) 1.5s;
-
-          display:block;
-          width:100%;
-          border-left:1px solid black;
-
-          position:absolute;
-          top:0;
-          left:0;
-          right:0;
-          bottom:0;
-          padding:10px;
-        }
-
-        .view-animate.ng-enter {
-          left:100%;
-        }
-        .view-animate.ng-enter.ng-enter-active {
-          left:0;
-        }
-        .view-animate.ng-leave.ng-leave-active {
-          left:-100%;
-        }
-      </file>
-
-      <file name="script.js">
-        angular.module('ngViewExample', ['ngRoute', 'ngAnimate'])
-          .config(['$routeProvider', '$locationProvider',
-            function($routeProvider, $locationProvider) {
-              $routeProvider
-                .when('/Book/:bookId', {
-                  templateUrl: 'book.html',
-                  controller: 'BookCtrl',
-                  controllerAs: 'book'
-                })
-                .when('/Book/:bookId/ch/:chapterId', {
-                  templateUrl: 'chapter.html',
-                  controller: 'ChapterCtrl',
-                  controllerAs: 'chapter'
-                });
-
-              $locationProvider.html5Mode(true);
-          }])
-          .controller('MainCtrl', ['$route', '$routeParams', '$location',
-            function MainCtrl($route, $routeParams, $location) {
-              this.$route = $route;
-              this.$location = $location;
-              this.$routeParams = $routeParams;
-          }])
-          .controller('BookCtrl', ['$routeParams', function BookCtrl($routeParams) {
-            this.name = 'BookCtrl';
-            this.params = $routeParams;
-          }])
-          .controller('ChapterCtrl', ['$routeParams', function ChapterCtrl($routeParams) {
-            this.name = 'ChapterCtrl';
-            this.params = $routeParams;
-          }]);
-
-      </file>
-
-      <file name="protractor.js" type="protractor">
-        it('should load and compile correct template', function() {
-          element(by.linkText('Moby: Ch1')).click();
-          var content = element(by.css('[ng-view]')).getText();
-          expect(content).toMatch(/controller: ChapterCtrl/);
-          expect(content).toMatch(/Book Id: Moby/);
-          expect(content).toMatch(/Chapter Id: 1/);
-
-          element(by.partialLinkText('Scarlet')).click();
-
-          content = element(by.css('[ng-view]')).getText();
-          expect(content).toMatch(/controller: BookCtrl/);
-          expect(content).toMatch(/Book Id: Scarlet/);
-        });
-      </file>
-    </example>
- */
-
-
-/**
- * @ngdoc event
- * @name ngView#$viewContentLoaded
- * @eventType emit on the current ngView scope
- * @description
- * Emitted every time the ngView content is reloaded.
- */
-ngViewFactory.$inject = ['$route', '$anchorScroll', '$animate'];
-function ngViewFactory($route, $anchorScroll, $animate) {
-  return {
-    restrict: 'ECA',
-    terminal: true,
-    priority: 400,
-    transclude: 'element',
-    link: function(scope, $element, attr, ctrl, $transclude) {
-        var currentScope,
-            currentElement,
-            previousLeaveAnimation,
-            autoScrollExp = attr.autoscroll,
-            onloadExp = attr.onload || '';
-
-        scope.$on('$routeChangeSuccess', update);
-        update();
-
-        function cleanupLastView() {
-          if (previousLeaveAnimation) {
-            $animate.cancel(previousLeaveAnimation);
-            previousLeaveAnimation = null;
-          }
-
-          if (currentScope) {
-            currentScope.$destroy();
-            currentScope = null;
-          }
-          if (currentElement) {
-            previousLeaveAnimation = $animate.leave(currentElement);
-            previousLeaveAnimation.done(function(response) {
-              if (response !== false) previousLeaveAnimation = null;
-            });
-            currentElement = null;
-          }
-        }
-
-        function update() {
-          var locals = $route.current && $route.current.locals,
-              template = locals && locals.$template;
-
-          if (angular.isDefined(template)) {
-            var newScope = scope.$new();
-            var current = $route.current;
-
-            // Note: This will also link all children of ng-view that were contained in the original
-            // html. If that content contains controllers, ... they could pollute/change the scope.
-            // However, using ng-view on an element with additional content does not make sense...
-            // Note: We can't remove them in the cloneAttchFn of $transclude as that
-            // function is called before linking the content, which would apply child
-            // directives to non existing elements.
-            var clone = $transclude(newScope, function(clone) {
-              $animate.enter(clone, null, currentElement || $element).done(function onNgViewEnter(response) {
-                if (response !== false && angular.isDefined(autoScrollExp)
-                  && (!autoScrollExp || scope.$eval(autoScrollExp))) {
-                  $anchorScroll();
-                }
-              });
-              cleanupLastView();
-            });
-
-            currentElement = clone;
-            currentScope = current.scope = newScope;
-            currentScope.$emit('$viewContentLoaded');
-            currentScope.$eval(onloadExp);
-          } else {
-            cleanupLastView();
-          }
-        }
-    }
-  };
-}
-
-// This directive is called during the $transclude call of the first `ngView` directive.
-// It will replace and compile the content of the element with the loaded template.
-// We need this directive so that the element content is already filled when
-// the link function of another directive on the same element as ngView
-// is called.
-ngViewFillContentFactory.$inject = ['$compile', '$controller', '$route'];
-function ngViewFillContentFactory($compile, $controller, $route) {
-  return {
-    restrict: 'ECA',
-    priority: -400,
-    link: function(scope, $element) {
-      var current = $route.current,
-          locals = current.locals;
-
-      $element.html(locals.$template);
-
-      var link = $compile($element.contents());
-
-      if (current.controller) {
-        locals.$scope = scope;
-        var controller = $controller(current.controller, locals);
-        if (current.controllerAs) {
-          scope[current.controllerAs] = controller;
-        }
-        $element.data('$ngControllerController', controller);
-        $element.children().data('$ngControllerController', controller);
-      }
-      scope[current.resolveAs || '$resolve'] = locals;
-
-      link(scope);
-    }
-  };
-}
-
-
-})(window, window.angular);
-
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var moduleName = __webpack_require__(28);
-
-module.exports = moduleName;
-
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = angular.module('ui.utils.masks', [
-	__webpack_require__(29),
-	__webpack_require__(63),
-	__webpack_require__(73),
-	__webpack_require__(75),
-	__webpack_require__(77)
-]).name;
-
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var m = angular.module('ui.utils.masks.global', [])
-	.directive('uiCreditCardMask', __webpack_require__(30))
-	.directive('uiDateMask', __webpack_require__(31))
-	.directive('uiMoneyMask', __webpack_require__(58))
-	.directive('uiNumberMask', __webpack_require__(59))
-	.directive('uiPercentageMask', __webpack_require__(60))
-	.directive('uiScientificNotationMask', __webpack_require__(61))
-	.directive('uiTimeMask', __webpack_require__(62));
-
-module.exports = m.name;
-
-
-/***/ }),
-/* 30 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var maskFactory = __webpack_require__(2);
-
-var ccSize = 16;
-
-var ccMask = new StringMask('0000 0000 0000 0000');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, ccSize);
-	},
-	format: function(cleanValue) {
-		var formatedValue;
-
-		formatedValue = ccMask.apply(cleanValue) || '';
-
-		return formatedValue.trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		creditCard: function(value) {
-			var valueLength = value && value.toString().length;
-			return valueLength === ccSize;
-		}
-	}
-});
-
-
-/***/ }),
-/* 31 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var formatDate = __webpack_require__(32);
-var parseDate = __webpack_require__(48);
-var isValidDate = __webpack_require__(9);
-var StringMask = __webpack_require__(0);
-
-function isISODateString(date) {
-	return /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}([-+][0-9]{2}:[0-9]{2}|Z)$/
-		.test(date.toString());
-}
-
-function DateMaskDirective($locale) {
-	var dateFormatMapByLocale = {
-		'pt-br': 'DD/MM/YYYY',
-		'ru': 'DD.MM.YYYY'
-	};
-
-	var dateFormat = dateFormatMapByLocale[$locale.id] || 'YYYY-MM-DD';
-
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			attrs.parse = attrs.parse || 'true';
-
-			dateFormat = attrs.uiDateMask || dateFormat;
-
-			var dateMask = new StringMask(dateFormat.replace(/[YMD]/g,'0'));
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return null;
-				}
-
-				var cleanValue = value;
-				if (typeof value === 'object' || isISODateString(value)) {
-					cleanValue = formatDate(value, dateFormat);
-				}
-
-				cleanValue = cleanValue.replace(/[^0-9]/g, '');
-				var formatedValue = dateMask.apply(cleanValue) || '';
-
-				return formatedValue.trim().replace(/[^0-9]$/, '');
-			}
-
-			ctrl.$formatters.push(formatter);
-
-			ctrl.$parsers.push(function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var formatedValue = formatter(value);
-
-				if (ctrl.$viewValue !== formatedValue) {
-					ctrl.$setViewValue(formatedValue);
-					ctrl.$render();
-				}
-
-				return attrs.parse === 'false'
-					? formatedValue
-					: parseDate(formatedValue, dateFormat, new Date());
-			});
-
-			ctrl.$validators.date =	function validator(modelValue, viewValue) {
-				if (ctrl.$isEmpty(modelValue)) {
-					return true;
-				}
-
-				return isValidDate(parseDate(viewValue, dateFormat, new Date())) && viewValue.length === dateFormat.length;
-			};
-		}
-	};
-}
-DateMaskDirective.$inject = ['$locale'];
-
-module.exports = DateMaskDirective;
-
-
-/***/ }),
-/* 32 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = format;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(9);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(10);
-
-var _index6 = _interopRequireDefault(_index5);
-
-var _index7 = __webpack_require__(45);
-
-var _index8 = _interopRequireDefault(_index7);
-
-var _index9 = __webpack_require__(13);
-
-var _index10 = _interopRequireDefault(_index9);
-
-var _index11 = __webpack_require__(47);
-
-var _index12 = _interopRequireDefault(_index11);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var longFormattingTokensRegExp = /(\[[^[]*])|(\\)?(LTS|LT|LLLL|LLL|LL|L|llll|lll|ll|l)/g;
-var defaultFormattingTokensRegExp = /(\[[^[]*])|(\\)?(x|ss|s|mm|m|hh|h|do|dddd|ddd|dd|d|aa|a|ZZ|Z|YYYY|YY|X|Wo|WW|W|SSS|SS|S|Qo|Q|Mo|MMMM|MMM|MM|M|HH|H|GGGG|GG|E|Do|DDDo|DDDD|DDD|DD|D|A|.)/g;
-
-/**
- * @name format
- * @category Common Helpers
- * @summary Format the date.
- *
- * @description
- * Return the formatted date string in the given format.
- *
- * Accepted tokens:
- * | Unit                    | Token | Result examples                  |
- * |-------------------------|-------|----------------------------------|
- * | Month                   | M     | 1, 2, ..., 12                    |
- * |                         | Mo    | 1st, 2nd, ..., 12th              |
- * |                         | MM    | 01, 02, ..., 12                  |
- * |                         | MMM   | Jan, Feb, ..., Dec               |
- * |                         | MMMM  | January, February, ..., December |
- * | Quarter                 | Q     | 1, 2, 3, 4                       |
- * |                         | Qo    | 1st, 2nd, 3rd, 4th               |
- * | Day of month            | D     | 1, 2, ..., 31                    |
- * |                         | Do    | 1st, 2nd, ..., 31st              |
- * |                         | DD    | 01, 02, ..., 31                  |
- * | Day of year             | DDD   | 1, 2, ..., 366                   |
- * |                         | DDDo  | 1st, 2nd, ..., 366th             |
- * |                         | DDDD  | 001, 002, ..., 366               |
- * | Day of week             | d     | 0, 1, ..., 6                     |
- * |                         | do    | 0th, 1st, ..., 6th               |
- * |                         | dd    | Su, Mo, ..., Sa                  |
- * |                         | ddd   | Sun, Mon, ..., Sat               |
- * |                         | dddd  | Sunday, Monday, ..., Saturday    |
- * | Day of ISO week         | E     | 1, 2, ..., 7                     |
- * | ISO week                | W     | 1, 2, ..., 53                    |
- * |                         | Wo    | 1st, 2nd, ..., 53rd              |
- * |                         | WW    | 01, 02, ..., 53                  |
- * | Year                    | YY    | 00, 01, ..., 99                  |
- * |                         | YYYY  | 1900, 1901, ..., 2099            |
- * | ISO week-numbering year | GG    | 00, 01, ..., 99                  |
- * |                         | GGGG  | 1900, 1901, ..., 2099            |
- * | AM/PM                   | A     | AM, PM                           |
- * |                         | a     | am, pm                           |
- * |                         | aa    | a.m., p.m.                       |
- * | Hour                    | H     | 0, 1, ... 23                     |
- * |                         | HH    | 00, 01, ... 23                   |
- * |                         | h     | 1, 2, ..., 12                    |
- * |                         | hh    | 01, 02, ..., 12                  |
- * | Minute                  | m     | 0, 1, ..., 59                    |
- * |                         | mm    | 00, 01, ..., 59                  |
- * | Second                  | s     | 0, 1, ..., 59                    |
- * |                         | ss    | 00, 01, ..., 59                  |
- * | 1/10 of second          | S     | 0, 1, ..., 9                     |
- * | 1/100 of second         | SS    | 00, 01, ..., 99                  |
- * | Millisecond             | SSS   | 000, 001, ..., 999               |
- * | Timezone                | Z     | -01:00, +00:00, ... +12:00       |
- * |                         | ZZ    | -0100, +0000, ..., +1200         |
- * | Seconds timestamp       | X     | 512969520                        |
- * | Milliseconds timestamp  | x     | 512969520900                     |
- * | Long format             | LT    | 05:30 a.m.                       |
- * |                         | LTS   | 05:30:15 a.m.                    |
- * |                         | L     | 07/02/1995                       |
- * |                         | l     | 7/2/1995                         |
- * |                         | LL    | July 2 1995                      |
- * |                         | ll    | Jul 2 1995                       |
- * |                         | LLL   | July 2 1995 05:30 a.m.           |
- * |                         | lll   | Jul 2 1995 05:30 a.m.            |
- * |                         | LLLL  | Sunday, July 2 1995 05:30 a.m.   |
- * |                         | llll  | Sun, Jul 2 1995 05:30 a.m.       |
- *
- * The characters wrapped in square brackets are escaped.
- *
- * The result may vary by locale.
- *
- * @param {Date|String|Number} date - the original date
- * @param {String} format - the string of tokens
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - passed to `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
- * @returns {String} the formatted date string
- * @throws {TypeError} 2 arguments required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- * @throws {RangeError} `options.locale` must contain `localize` property
- * @throws {RangeError} `options.locale` must contain `formatLong` property
- *
- * @example
- * // Represent 11 February 2014 in middle-endian format:
- * var result = format(
- *   new Date(2014, 1, 11),
- *   'MM/DD/YYYY'
- * )
- * //=> '02/11/2014'
- *
- * @example
- * // Represent 2 July 2014 in Esperanto:
- * import { eoLocale } from 'date-fns/locale/eo'
- * var result = format(
- *   new Date(2014, 6, 2),
- *   'Do [de] MMMM YYYY',
- *   {locale: eoLocale}
- * )
- * //=> '2-a de julio 2014'
- */
-function format(dirtyDate, dirtyFormatStr, dirtyOptions) {
-  if (arguments.length < 2) {
-    throw new TypeError('2 arguments required, but only ' + arguments.length + ' present');
-  }
-
-  var formatStr = String(dirtyFormatStr);
-  var options = dirtyOptions || {};
-
-  var locale = options.locale || _index6.default;
-
-  if (!locale.localize) {
-    throw new RangeError('locale must contain localize property');
-  }
-
-  if (!locale.formatLong) {
-    throw new RangeError('locale must contain formatLong property');
-  }
-
-  var localeFormatters = locale.formatters || {};
-  var formattingTokensRegExp = locale.formattingTokensRegExp || defaultFormattingTokensRegExp;
-  var formatLong = locale.formatLong;
-
-  var originalDate = (0, _index2.default)(dirtyDate, options);
-
-  if (!(0, _index4.default)(originalDate, options)) {
-    return 'Invalid Date';
-  }
-
-  // Convert the date in system timezone to the same date in UTC+00:00 timezone.
-  // This ensures that when UTC functions will be implemented, locales will be compatible with them.
-  // See an issue about UTC functions: https://github.com/date-fns/date-fns/issues/376
-  var timezoneOffset = originalDate.getTimezoneOffset();
-  var utcDate = (0, _index12.default)(originalDate, -timezoneOffset, options);
-
-  var formatterOptions = (0, _index10.default)(options);
-  formatterOptions.locale = locale;
-  formatterOptions.formatters = _index8.default;
-
-  // When UTC functions will be implemented, options._originalDate will likely be a part of public API.
-  // Right now, please don't use it in locales. If you have to use an original date,
-  // please restore it from `date`, adding a timezone offset to it.
-  formatterOptions._originalDate = originalDate;
-
-  var result = formatStr.replace(longFormattingTokensRegExp, function (substring) {
-    if (substring[0] === '[') {
-      return substring;
-    }
-
-    if (substring[0] === '\\') {
-      return cleanEscapedString(substring);
-    }
-
-    return formatLong(substring);
-  }).replace(formattingTokensRegExp, function (substring) {
-    var formatter = localeFormatters[substring] || _index8.default[substring];
-
-    if (formatter) {
-      return formatter(utcDate, formatterOptions);
-    } else {
-      return cleanEscapedString(substring);
-    }
-  });
-
-  return result;
-}
-
-function cleanEscapedString(input) {
-  if (input.match(/\[[\s\S]/)) {
-    return input.replace(/^\[|]$/g, '');
-  }
-  return input.replace(/\\/g, '');
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 33 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = formatDistance;
-var formatDistanceLocale = {
-  lessThanXSeconds: {
-    one: 'less than a second',
-    other: 'less than {{count}} seconds'
-  },
-
-  xSeconds: {
-    one: '1 second',
-    other: '{{count}} seconds'
-  },
-
-  halfAMinute: 'half a minute',
-
-  lessThanXMinutes: {
-    one: 'less than a minute',
-    other: 'less than {{count}} minutes'
-  },
-
-  xMinutes: {
-    one: '1 minute',
-    other: '{{count}} minutes'
-  },
-
-  aboutXHours: {
-    one: 'about 1 hour',
-    other: 'about {{count}} hours'
-  },
-
-  xHours: {
-    one: '1 hour',
-    other: '{{count}} hours'
-  },
-
-  xDays: {
-    one: '1 day',
-    other: '{{count}} days'
-  },
-
-  aboutXMonths: {
-    one: 'about 1 month',
-    other: 'about {{count}} months'
-  },
-
-  xMonths: {
-    one: '1 month',
-    other: '{{count}} months'
-  },
-
-  aboutXYears: {
-    one: 'about 1 year',
-    other: 'about {{count}} years'
-  },
-
-  xYears: {
-    one: '1 year',
-    other: '{{count}} years'
-  },
-
-  overXYears: {
-    one: 'over 1 year',
-    other: 'over {{count}} years'
-  },
-
-  almostXYears: {
-    one: 'almost 1 year',
-    other: 'almost {{count}} years'
-  }
-};
-
-function formatDistance(token, count, options) {
-  options = options || {};
-
-  var result;
-  if (typeof formatDistanceLocale[token] === 'string') {
-    result = formatDistanceLocale[token];
-  } else if (count === 1) {
-    result = formatDistanceLocale[token].one;
-  } else {
-    result = formatDistanceLocale[token].other.replace('{{count}}', count);
-  }
-
-  if (options.addSuffix) {
-    if (options.comparison > 0) {
-      return 'in ' + result;
-    } else {
-      return result + ' ago';
-    }
-  }
-
-  return result;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 34 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _index = __webpack_require__(35);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var formatLong = (0, _index2.default)({
-  LT: 'h:mm aa',
-  LTS: 'h:mm:ss aa',
-  L: 'MM/DD/YYYY',
-  LL: 'MMMM D YYYY',
-  LLL: 'MMMM D YYYY h:mm aa',
-  LLLL: 'dddd, MMMM D YYYY h:mm aa'
-});
-
-exports.default = formatLong;
-module.exports = exports['default'];
-
-/***/ }),
-/* 35 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = buildFormatLongFn;
-var tokensToBeShortedPattern = /MMMM|MM|DD|dddd/g;
-
-function buildShortLongFormat(format) {
-  return format.replace(tokensToBeShortedPattern, function (token) {
-    return token.slice(1);
-  });
-}
-
-/**
- * @name buildFormatLongFn
- * @category Locale Helpers
- * @summary Build `formatLong` property for locale used by `format`, `formatRelative` and `parse` functions.
- *
- * @description
- * Build `formatLong` property for locale used by `format`, `formatRelative` and `parse` functions.
- * Returns a function which takes one of the following tokens as the argument:
- * `'LTS'`, `'LT'`, `'L'`, `'LL'`, `'LLL'`, `'l'`, `'ll'`, `'lll'`, `'llll'`
- * and returns a long format string written as `format` token strings.
- * See [format]{@link https://date-fns.org/docs/format}
- *
- * `'l'`, `'ll'`, `'lll'` and `'llll'` formats are built automatically
- * by shortening some of the tokens from corresponding unshortened formats
- * (e.g., if `LL` is `'MMMM DD YYYY'` then `ll` will be `MMM D YYYY`)
- *
- * @param {Object} obj - the object with long formats written as `format` token strings
- * @param {String} obj.LT - time format: hours and minutes
- * @param {String} obj.LTS - time format: hours, minutes and seconds
- * @param {String} obj.L - short date format: numeric day, month and year
- * @param {String} [obj.l] - short date format: numeric day, month and year (shortened)
- * @param {String} obj.LL - long date format: day, month in words, and year
- * @param {String} [obj.ll] - long date format: day, month in words, and year (shortened)
- * @param {String} obj.LLL - long date and time format
- * @param {String} [obj.lll] - long date and time format (shortened)
- * @param {String} obj.LLLL - long date, time and weekday format
- * @param {String} [obj.llll] - long date, time and weekday format (shortened)
- * @returns {Function} `formatLong` property of the locale
- *
- * @example
- * // For `en-US` locale:
- * locale.formatLong = buildFormatLongFn({
- *   LT: 'h:mm aa',
- *   LTS: 'h:mm:ss aa',
- *   L: 'MM/DD/YYYY',
- *   LL: 'MMMM D YYYY',
- *   LLL: 'MMMM D YYYY h:mm aa',
- *   LLLL: 'dddd, MMMM D YYYY h:mm aa'
- * })
- */
-function buildFormatLongFn(obj) {
-  var formatLongLocale = {
-    LTS: obj.LTS,
-    LT: obj.LT,
-    L: obj.L,
-    LL: obj.LL,
-    LLL: obj.LLL,
-    LLLL: obj.LLLL,
-    l: obj.l || buildShortLongFormat(obj.L),
-    ll: obj.ll || buildShortLongFormat(obj.LL),
-    lll: obj.lll || buildShortLongFormat(obj.LLL),
-    llll: obj.llll || buildShortLongFormat(obj.LLLL)
-  };
-
-  return function (token) {
-    return formatLongLocale[token];
-  };
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 36 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = formatRelative;
-var formatRelativeLocale = {
-  lastWeek: '[last] dddd [at] LT',
-  yesterday: '[yesterday at] LT',
-  today: '[today at] LT',
-  tomorrow: '[tomorrow at] LT',
-  nextWeek: 'dddd [at] LT',
-  other: 'L'
-};
-
-function formatRelative(token, date, baseDate, options) {
-  return formatRelativeLocale[token];
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 37 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _index = __webpack_require__(38);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(39);
-
-var _index4 = _interopRequireDefault(_index3);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// Note: in English, the names of days of the week and months are capitalized.
-// If you are making a new locale based on this one, check if the same is true for the language you're working on.
-// Generally, formatted dates should look like they are in the middle of a sentence,
-// e.g. in Spanish language the weekdays and months should be in the lowercase.
-var weekdayValues = {
-  narrow: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
-  short: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-  long: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-};
-
-var monthValues = {
-  short: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-  long: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-};
-
-// `timeOfDay` is used to designate which part of the day it is, when used with 12-hour clock.
-// Use the system which is used the most commonly in the locale.
-// For example, if the country doesn't use a.m./p.m., you can use `night`/`morning`/`afternoon`/`evening`:
-//
-//   var timeOfDayValues = {
-//     any: ['in the night', 'in the morning', 'in the afternoon', 'in the evening']
-//   }
-//
-// And later:
-//
-//   var localize = {
-//     // The callback takes the hours as the argument and returns the array index
-//     timeOfDay: buildLocalizeFn(timeOfDayValues, 'any', function (hours) {
-//       if (hours >= 17) {
-//         return 3
-//       } else if (hours >= 12) {
-//         return 2
-//       } else if (hours >= 4) {
-//         return 1
-//       } else {
-//         return 0
-//       }
-//     }),
-//     timesOfDay: buildLocalizeArrayFn(timeOfDayValues, 'any')
-//   }
-var timeOfDayValues = {
-  uppercase: ['AM', 'PM'],
-  lowercase: ['am', 'pm'],
-  long: ['a.m.', 'p.m.']
-};
-
-function ordinalNumber(dirtyNumber, dirtyOptions) {
-  var number = Number(dirtyNumber);
-
-  // If ordinal numbers depend on context, for example,
-  // if they are different for different grammatical genders,
-  // use `options.unit`:
-  //
-  //   var options = dirtyOptions || {}
-  //   var unit = String(options.unit)
-  //
-  // where `unit` can be 'month', 'quarter', 'week', 'isoWeek', 'dayOfYear',
-  // 'dayOfMonth' or 'dayOfWeek'
-
-  var rem100 = number % 100;
-  if (rem100 > 20 || rem100 < 10) {
-    switch (rem100 % 10) {
-      case 1:
-        return number + 'st';
-      case 2:
-        return number + 'nd';
-      case 3:
-        return number + 'rd';
-    }
-  }
-  return number + 'th';
-}
-
-var localize = {
-  ordinalNumber: ordinalNumber,
-  weekday: (0, _index2.default)(weekdayValues, 'long'),
-  weekdays: (0, _index4.default)(weekdayValues, 'long'),
-  month: (0, _index2.default)(monthValues, 'long'),
-  months: (0, _index4.default)(monthValues, 'long'),
-  timeOfDay: (0, _index2.default)(timeOfDayValues, 'long', function (hours) {
-    return hours / 12 >= 1 ? 1 : 0;
-  }),
-  timesOfDay: (0, _index4.default)(timeOfDayValues, 'long')
-};
-
-exports.default = localize;
-module.exports = exports['default'];
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = buildLocalizeFn;
-/**
- * @name buildLocalizeFn
- * @category Locale Helpers
- * @summary Build `localize.weekday`, `localize.month` and `localize.timeOfDay` properties for the locale.
- *
- * @description
- * Build `localize.weekday`, `localize.month` and `localize.timeOfDay` properties for the locale
- * used by `format` function.
- * If no `type` is supplied to the options of the resulting function, `defaultType` will be used (see example).
- *
- * `localize.weekday` function takes the weekday index as argument (0 - Sunday).
- * `localize.month` takes the month index (0 - January).
- * `localize.timeOfDay` takes the hours. Use `indexCallback` to convert them to an array index (see example).
- *
- * @param {Object} values - the object with arrays of values
- * @param {String} defaultType - the default type for the localize function
- * @param {Function} [indexCallback] - the callback which takes the resulting function argument
- *   and converts it into value array index
- * @returns {Function} the resulting function
- *
- * @example
- * var timeOfDayValues = {
- *   uppercase: ['AM', 'PM'],
- *   lowercase: ['am', 'pm'],
- *   long: ['a.m.', 'p.m.']
- * }
- * locale.localize.timeOfDay = buildLocalizeFn(timeOfDayValues, 'long', function (hours) {
- *   // 0 is a.m. array index, 1 is p.m. array index
- *   return (hours / 12) >= 1 ? 1 : 0
- * })
- * locale.localize.timeOfDay(16, {type: 'uppercase'}) //=> 'PM'
- * locale.localize.timeOfDay(5) //=> 'a.m.'
- */
-function buildLocalizeFn(values, defaultType, indexCallback) {
-  return function (dirtyIndex, dirtyOptions) {
-    var options = dirtyOptions || {};
-    var type = options.type ? String(options.type) : defaultType;
-    var valuesArray = values[type] || values[defaultType];
-    var index = indexCallback ? indexCallback(Number(dirtyIndex)) : Number(dirtyIndex);
-    return valuesArray[index];
-  };
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 39 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = buildLocalizeArrayFn;
-/**
- * @name buildLocalizeArrayFn
- * @category Locale Helpers
- * @summary Build `localize.weekdays`, `localize.months` and `localize.timesOfDay` properties for the locale.
- *
- * @description
- * Build `localize.weekdays`, `localize.months` and `localize.timesOfDay` properties for the locale.
- * If no `type` is supplied to the options of the resulting function, `defaultType` will be used (see example).
- *
- * @param {Object} values - the object with arrays of values
- * @param {String} defaultType - the default type for the localize function
- * @returns {Function} the resulting function
- *
- * @example
- * var weekdayValues = {
- *   narrow: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
- *   short: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
- *   long: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
- * }
- * locale.localize.weekdays = buildLocalizeArrayFn(weekdayValues, 'long')
- * locale.localize.weekdays({type: 'narrow'}) //=> ['Su', 'Mo', ...]
- * locale.localize.weekdays() //=> ['Sunday', 'Monday', ...]
- */
-function buildLocalizeArrayFn(values, defaultType) {
-  return function (dirtyOptions) {
-    var options = dirtyOptions || {};
-    var type = options.type ? String(options.type) : defaultType;
-    return values[type] || values[defaultType];
-  };
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 40 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _index = __webpack_require__(41);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(42);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(43);
-
-var _index6 = _interopRequireDefault(_index5);
-
-var _index7 = __webpack_require__(44);
-
-var _index8 = _interopRequireDefault(_index7);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var matchOrdinalNumbersPattern = /^(\d+)(th|st|nd|rd)?/i;
-
-var matchWeekdaysPatterns = {
-  narrow: /^(su|mo|tu|we|th|fr|sa)/i,
-  short: /^(sun|mon|tue|wed|thu|fri|sat)/i,
-  long: /^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)/i
-};
-
-var parseWeekdayPatterns = {
-  any: [/^su/i, /^m/i, /^tu/i, /^w/i, /^th/i, /^f/i, /^sa/i]
-};
-
-var matchMonthsPatterns = {
-  short: /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
-  long: /^(january|february|march|april|may|june|july|august|september|october|november|december)/i
-};
-
-var parseMonthPatterns = {
-  any: [/^ja/i, /^f/i, /^mar/i, /^ap/i, /^may/i, /^jun/i, /^jul/i, /^au/i, /^s/i, /^o/i, /^n/i, /^d/i]
-};
-
-// `timeOfDay` is used to designate which part of the day it is, when used with 12-hour clock.
-// Use the system which is used the most commonly in the locale.
-// For example, if the country doesn't use a.m./p.m., you can use `night`/`morning`/`afternoon`/`evening`:
-//
-//   var matchTimesOfDayPatterns = {
-//     long: /^((in the)? (night|morning|afternoon|evening?))/i
-//   }
-//
-//   var parseTimeOfDayPatterns = {
-//     any: [/(night|morning)/i, /(afternoon|evening)/i]
-//   }
-var matchTimesOfDayPatterns = {
-  short: /^(am|pm)/i,
-  long: /^([ap]\.?\s?m\.?)/i
-};
-
-var parseTimeOfDayPatterns = {
-  any: [/^a/i, /^p/i]
-};
-
-var match = {
-  ordinalNumbers: (0, _index6.default)(matchOrdinalNumbersPattern),
-  ordinalNumber: _index8.default,
-  weekdays: (0, _index2.default)(matchWeekdaysPatterns, 'long'),
-  weekday: (0, _index4.default)(parseWeekdayPatterns, 'any'),
-  months: (0, _index2.default)(matchMonthsPatterns, 'long'),
-  month: (0, _index4.default)(parseMonthPatterns, 'any'),
-  timesOfDay: (0, _index2.default)(matchTimesOfDayPatterns, 'long'),
-  timeOfDay: (0, _index4.default)(parseTimeOfDayPatterns, 'any')
-};
-
-exports.default = match;
-module.exports = exports['default'];
-
-/***/ }),
-/* 41 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = buildMatchFn;
-/**
- * @name buildMatchFn
- * @category Locale Helpers
- * @summary Build `match.weekdays`, `match.months` and `match.timesOfDay` properties for the locale.
- *
- * @description
- * Build `match.weekdays`, `match.months` and `match.timesOfDay` properties for the locale used by `parse` function.
- * If no `type` is supplied to the options of the resulting function, `defaultType` will be used (see example).
- * The result of the match function will be passed into corresponding parser function
- * (`match.weekday`, `match.month` or `match.timeOfDay` respectively. See `buildParseFn`).
- *
- * @param {Object} values - the object with RegExps
- * @param {String} defaultType - the default type for the match function
- * @returns {Function} the resulting function
- *
- * @example
- * var matchWeekdaysPatterns = {
- *   narrow: /^(su|mo|tu|we|th|fr|sa)/i,
- *   short: /^(sun|mon|tue|wed|thu|fri|sat)/i,
- *   long: /^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)/i
- * }
- * locale.match.weekdays = buildMatchFn(matchWeekdaysPatterns, 'long')
- * locale.match.weekdays('Sunday', {type: 'narrow'}) //=> ['Su', 'Su', ...]
- * locale.match.weekdays('Sunday') //=> ['Sunday', 'Sunday', ...]
- */
-function buildMatchFn(patterns, defaultType) {
-  return function (dirtyString, dirtyOptions) {
-    var options = dirtyOptions || {};
-    var type = options.type ? String(options.type) : defaultType;
-    var pattern = patterns[type] || patterns[defaultType];
-    var string = String(dirtyString);
-    return string.match(pattern);
-  };
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 42 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = buildParseFn;
-/**
- * @name buildParseFn
- * @category Locale Helpers
- * @summary Build `match.weekday`, `match.month` and `match.timeOfDay` properties for the locale.
- *
- * @description
- * Build `match.weekday`, `match.month` and `match.timeOfDay` properties for the locale used by `parse` function.
- * The argument of the resulting function is the result of the corresponding match function
- * (`match.weekdays`, `match.months` or `match.timesOfDay` respectively. See `buildMatchFn`).
- *
- * @param {Object} values - the object with arrays of RegExps
- * @param {String} defaultType - the default type for the parser function
- * @returns {Function} the resulting function
- *
- * @example
- * var parseWeekdayPatterns = {
- *   any: [/^su/i, /^m/i, /^tu/i, /^w/i, /^th/i, /^f/i, /^sa/i]
- * }
- * locale.match.weekday = buildParseFn(matchWeekdaysPatterns, 'long')
- * var matchResult = locale.match.weekdays('Friday')
- * locale.match.weekday(matchResult) //=> 5
- */
-function buildParseFn(patterns, defaultType) {
-  return function (matchResult, dirtyOptions) {
-    var options = dirtyOptions || {};
-    var type = options.type ? String(options.type) : defaultType;
-    var patternsArray = patterns[type] || patterns[defaultType];
-    var string = matchResult[1];
-
-    return patternsArray.findIndex(function (pattern) {
-      return pattern.test(string);
-    });
-  };
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 43 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = buildMatchPatternFn;
-/**
- * @name buildMatchPatternFn
- * @category Locale Helpers
- * @summary Build match function from a single RegExp.
- *
- * @description
- * Build match function from a single RegExp.
- * Usually used for building `match.ordinalNumbers` property of the locale.
- *
- * @param {Object} pattern - the RegExp
- * @returns {Function} the resulting function
- *
- * @example
- * locale.match.ordinalNumbers = buildMatchPatternFn(/^(\d+)(th|st|nd|rd)?/i)
- * locale.match.ordinalNumbers('3rd') //=> ['3rd', '3', 'rd', ...]
- */
-function buildMatchPatternFn(pattern) {
-  return function (dirtyString) {
-    var string = String(dirtyString);
-    return string.match(pattern);
-  };
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = parseDecimal;
-/**
- * @name parseDecimal
- * @category Locale Helpers
- * @summary Parses the match result into decimal number.
- *
- * @description
- * Parses the match result into decimal number.
- * Uses the string matched with the first set of parentheses of match RegExp.
- *
- * @param {Array} matchResult - the object returned by matching function
- * @returns {Number} the parsed value
- *
- * @example
- * locale.match = {
- *   ordinalNumbers: (dirtyString) {
- *     return String(dirtyString).match(/^(\d+)(th|st|nd|rd)?/i)
- *   },
- *   ordinalNumber: parseDecimal
- * }
- */
-function parseDecimal(matchResult) {
-  return parseInt(matchResult[1], 10);
-}
-module.exports = exports["default"];
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _index = __webpack_require__(46);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(11);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(12);
-
-var _index6 = _interopRequireDefault(_index5);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var formatters = {
-  // Month: 1, 2, ..., 12
-  'M': function M(date) {
-    return date.getUTCMonth() + 1;
-  },
-
-  // Month: 1st, 2nd, ..., 12th
-  'Mo': function Mo(date, options) {
-    var month = date.getUTCMonth() + 1;
-    return options.locale.localize.ordinalNumber(month, { unit: 'month' });
-  },
-
-  // Month: 01, 02, ..., 12
-  'MM': function MM(date) {
-    return addLeadingZeros(date.getUTCMonth() + 1, 2);
-  },
-
-  // Month: Jan, Feb, ..., Dec
-  'MMM': function MMM(date, options) {
-    return options.locale.localize.month(date.getUTCMonth(), { type: 'short' });
-  },
-
-  // Month: January, February, ..., December
-  'MMMM': function MMMM(date, options) {
-    return options.locale.localize.month(date.getUTCMonth(), { type: 'long' });
-  },
-
-  // Quarter: 1, 2, 3, 4
-  'Q': function Q(date) {
-    return Math.ceil((date.getUTCMonth() + 1) / 3);
-  },
-
-  // Quarter: 1st, 2nd, 3rd, 4th
-  'Qo': function Qo(date, options) {
-    var quarter = Math.ceil((date.getUTCMonth() + 1) / 3);
-    return options.locale.localize.ordinalNumber(quarter, { unit: 'quarter' });
-  },
-
-  // Day of month: 1, 2, ..., 31
-  'D': function D(date) {
-    return date.getUTCDate();
-  },
-
-  // Day of month: 1st, 2nd, ..., 31st
-  'Do': function Do(date, options) {
-    return options.locale.localize.ordinalNumber(date.getUTCDate(), { unit: 'dayOfMonth' });
-  },
-
-  // Day of month: 01, 02, ..., 31
-  'DD': function DD(date) {
-    return addLeadingZeros(date.getUTCDate(), 2);
-  },
-
-  // Day of year: 1, 2, ..., 366
-  'DDD': function DDD(date) {
-    return (0, _index2.default)(date);
-  },
-
-  // Day of year: 1st, 2nd, ..., 366th
-  'DDDo': function DDDo(date, options) {
-    return options.locale.localize.ordinalNumber((0, _index2.default)(date), { unit: 'dayOfYear' });
-  },
-
-  // Day of year: 001, 002, ..., 366
-  'DDDD': function DDDD(date) {
-    return addLeadingZeros((0, _index2.default)(date), 3);
-  },
-
-  // Day of week: Su, Mo, ..., Sa
-  'dd': function dd(date, options) {
-    return options.locale.localize.weekday(date.getUTCDay(), { type: 'narrow' });
-  },
-
-  // Day of week: Sun, Mon, ..., Sat
-  'ddd': function ddd(date, options) {
-    return options.locale.localize.weekday(date.getUTCDay(), { type: 'short' });
-  },
-
-  // Day of week: Sunday, Monday, ..., Saturday
-  'dddd': function dddd(date, options) {
-    return options.locale.localize.weekday(date.getUTCDay(), { type: 'long' });
-  },
-
-  // Day of week: 0, 1, ..., 6
-  'd': function d(date) {
-    return date.getUTCDay();
-  },
-
-  // Day of week: 0th, 1st, 2nd, ..., 6th
-  'do': function _do(date, options) {
-    return options.locale.localize.ordinalNumber(date.getUTCDay(), { unit: 'dayOfWeek' });
-  },
-
-  // Day of ISO week: 1, 2, ..., 7
-  'E': function E(date) {
-    return date.getUTCDay() || 7;
-  },
-
-  // ISO week: 1, 2, ..., 53
-  'W': function W(date) {
-    return (0, _index4.default)(date);
-  },
-
-  // ISO week: 1st, 2nd, ..., 53th
-  'Wo': function Wo(date, options) {
-    return options.locale.localize.ordinalNumber((0, _index4.default)(date), { unit: 'isoWeek' });
-  },
-
-  // ISO week: 01, 02, ..., 53
-  'WW': function WW(date) {
-    return addLeadingZeros((0, _index4.default)(date), 2);
-  },
-
-  // Year: 00, 01, ..., 99
-  'YY': function YY(date) {
-    return addLeadingZeros(date.getUTCFullYear(), 4).substr(2);
-  },
-
-  // Year: 1900, 1901, ..., 2099
-  'YYYY': function YYYY(date) {
-    return addLeadingZeros(date.getUTCFullYear(), 4);
-  },
-
-  // ISO week-numbering year: 00, 01, ..., 99
-  'GG': function GG(date) {
-    return String((0, _index6.default)(date)).substr(2);
-  },
-
-  // ISO week-numbering year: 1900, 1901, ..., 2099
-  'GGGG': function GGGG(date) {
-    return (0, _index6.default)(date);
-  },
-
-  // Hour: 0, 1, ... 23
-  'H': function H(date) {
-    return date.getUTCHours();
-  },
-
-  // Hour: 00, 01, ..., 23
-  'HH': function HH(date) {
-    return addLeadingZeros(date.getUTCHours(), 2);
-  },
-
-  // Hour: 1, 2, ..., 12
-  'h': function h(date) {
-    var hours = date.getUTCHours();
-    if (hours === 0) {
-      return 12;
-    } else if (hours > 12) {
-      return hours % 12;
-    } else {
-      return hours;
-    }
-  },
-
-  // Hour: 01, 02, ..., 12
-  'hh': function hh(date) {
-    return addLeadingZeros(formatters['h'](date), 2);
-  },
-
-  // Minute: 0, 1, ..., 59
-  'm': function m(date) {
-    return date.getUTCMinutes();
-  },
-
-  // Minute: 00, 01, ..., 59
-  'mm': function mm(date) {
-    return addLeadingZeros(date.getUTCMinutes(), 2);
-  },
-
-  // Second: 0, 1, ..., 59
-  's': function s(date) {
-    return date.getUTCSeconds();
-  },
-
-  // Second: 00, 01, ..., 59
-  'ss': function ss(date) {
-    return addLeadingZeros(date.getUTCSeconds(), 2);
-  },
-
-  // 1/10 of second: 0, 1, ..., 9
-  'S': function S(date) {
-    return Math.floor(date.getUTCMilliseconds() / 100);
-  },
-
-  // 1/100 of second: 00, 01, ..., 99
-  'SS': function SS(date) {
-    return addLeadingZeros(Math.floor(date.getUTCMilliseconds() / 10), 2);
-  },
-
-  // Millisecond: 000, 001, ..., 999
-  'SSS': function SSS(date) {
-    return addLeadingZeros(date.getUTCMilliseconds(), 3);
-  },
-
-  // Timezone: -01:00, +00:00, ... +12:00
-  'Z': function Z(date, options) {
-    var originalDate = options._originalDate || date;
-    return formatTimezone(originalDate.getTimezoneOffset(), ':');
-  },
-
-  // Timezone: -0100, +0000, ... +1200
-  'ZZ': function ZZ(date, options) {
-    var originalDate = options._originalDate || date;
-    return formatTimezone(originalDate.getTimezoneOffset());
-  },
-
-  // Seconds timestamp: 512969520
-  'X': function X(date, options) {
-    var originalDate = options._originalDate || date;
-    return Math.floor(originalDate.getTime() / 1000);
-  },
-
-  // Milliseconds timestamp: 512969520900
-  'x': function x(date, options) {
-    var originalDate = options._originalDate || date;
-    return originalDate.getTime();
-  },
-
-  // AM, PM
-  'A': function A(date, options) {
-    return options.locale.localize.timeOfDay(date.getUTCHours(), { type: 'uppercase' });
-  },
-
-  // am, pm
-  'a': function a(date, options) {
-    return options.locale.localize.timeOfDay(date.getUTCHours(), { type: 'lowercase' });
-  },
-
-  // a.m., p.m.
-  'aa': function aa(date, options) {
-    return options.locale.localize.timeOfDay(date.getUTCHours(), { type: 'long' });
-  }
-};
-
-function formatTimezone(offset, delimeter) {
-  delimeter = delimeter || '';
-  var sign = offset > 0 ? '-' : '+';
-  var absOffset = Math.abs(offset);
-  var hours = Math.floor(absOffset / 60);
-  var minutes = absOffset % 60;
-  return sign + addLeadingZeros(hours, 2) + delimeter + addLeadingZeros(minutes, 2);
-}
-
-function addLeadingZeros(number, targetLength) {
-  var output = Math.abs(number).toString();
-  while (output.length < targetLength) {
-    output = '0' + output;
-  }
-  return output;
-}
-
-exports.default = formatters;
-module.exports = exports['default'];
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = getUTCDayOfYear;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var MILLISECONDS_IN_DAY = 86400000;
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function getUTCDayOfYear(dirtyDate, dirtyOptions) {
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var timestamp = date.getTime();
-  date.setUTCMonth(0, 1);
-  date.setUTCHours(0, 0, 0, 0);
-  var startOfYearTimestamp = date.getTime();
-  var difference = timestamp - startOfYearTimestamp;
-  return Math.floor(difference / MILLISECONDS_IN_DAY) + 1;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 47 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = addUTCMinutes;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function addUTCMinutes(dirtyDate, dirtyAmount, dirtyOptions) {
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var amount = Number(dirtyAmount);
-  date.setUTCMinutes(date.getUTCMinutes() + amount);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 48 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = parse;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(49);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(10);
-
-var _index6 = _interopRequireDefault(_index5);
-
-var _index7 = __webpack_require__(52);
-
-var _index8 = _interopRequireDefault(_index7);
-
-var _index9 = __webpack_require__(53);
-
-var _index10 = _interopRequireDefault(_index9);
-
-var _index11 = __webpack_require__(13);
-
-var _index12 = _interopRequireDefault(_index11);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var TIMEZONE_UNIT_PRIORITY = 110;
-var MILLISECONDS_IN_MINUTE = 60000;
-
-var longFormattingTokensRegExp = /(\[[^[]*])|(\\)?(LTS|LT|LLLL|LLL|LL|L|llll|lll|ll|l)/g;
-var defaultParsingTokensRegExp = /(\[[^[]*])|(\\)?(x|ss|s|mm|m|hh|h|do|dddd|ddd|dd|d|aa|a|ZZ|Z|YYYY|YY|X|Wo|WW|W|SSS|SS|S|Qo|Q|Mo|MMMM|MMM|MM|M|HH|H|GGGG|GG|E|Do|DDDo|DDDD|DDD|DD|D|A|.)/g;
-
-/**
- * @name parse
- * @category Common Helpers
- * @summary Parse the date.
- *
- * @description
- * Return the date parsed from string using the given format.
- *
- * Accepted format tokens:
- * | Unit                    | Priority | Token | Input examples                   |
- * |-------------------------|----------|-------|----------------------------------|
- * | Year                    | 10       | YY    | 00, 01, ..., 99                  |
- * |                         |          | YYYY  | 1900, 1901, ..., 2099            |
- * | ISO week-numbering year | 10       | GG    | 00, 01, ..., 99                  |
- * |                         |          | GGGG  | 1900, 1901, ..., 2099            |
- * | Quarter                 | 20       | Q     | 1, 2, 3, 4                       |
- * |                         |          | Qo    | 1st, 2nd, 3rd, 4th               |
- * | Month                   | 30       | M     | 1, 2, ..., 12                    |
- * |                         |          | Mo    | 1st, 2nd, ..., 12th              |
- * |                         |          | MM    | 01, 02, ..., 12                  |
- * |                         |          | MMM   | Jan, Feb, ..., Dec               |
- * |                         |          | MMMM  | January, February, ..., December |
- * | ISO week                | 40       | W     | 1, 2, ..., 53                    |
- * |                         |          | Wo    | 1st, 2nd, ..., 53rd              |
- * |                         |          | WW    | 01, 02, ..., 53                  |
- * | Day of week             | 50       | d     | 0, 1, ..., 6                     |
- * |                         |          | do    | 0th, 1st, ..., 6th               |
- * |                         |          | dd    | Su, Mo, ..., Sa                  |
- * |                         |          | ddd   | Sun, Mon, ..., Sat               |
- * |                         |          | dddd  | Sunday, Monday, ..., Saturday    |
- * | Day of ISO week         | 50       | E     | 1, 2, ..., 7                     |
- * | Day of month            | 50       | D     | 1, 2, ..., 31                    |
- * |                         |          | Do    | 1st, 2nd, ..., 31st              |
- * |                         |          | DD    | 01, 02, ..., 31                  |
- * | Day of year             | 50       | DDD   | 1, 2, ..., 366                   |
- * |                         |          | DDDo  | 1st, 2nd, ..., 366th             |
- * |                         |          | DDDD  | 001, 002, ..., 366               |
- * | Time of day             | 60       | A     | AM, PM                           |
- * |                         |          | a     | am, pm                           |
- * |                         |          | aa    | a.m., p.m.                       |
- * | Hour                    | 70       | H     | 0, 1, ... 23                     |
- * |                         |          | HH    | 00, 01, ... 23                   |
- * | Time of day hour        | 70       | h     | 1, 2, ..., 12                    |
- * |                         |          | hh    | 01, 02, ..., 12                  |
- * | Minute                  | 80       | m     | 0, 1, ..., 59                    |
- * |                         |          | mm    | 00, 01, ..., 59                  |
- * | Second                  | 90       | s     | 0, 1, ..., 59                    |
- * |                         |          | ss    | 00, 01, ..., 59                  |
- * | 1/10 of second          | 100      | S     | 0, 1, ..., 9                     |
- * | 1/100 of second         | 100      | SS    | 00, 01, ..., 99                  |
- * | Millisecond             | 100      | SSS   | 000, 001, ..., 999               |
- * | Timezone                | 110      | Z     | -01:00, +00:00, ... +12:00       |
- * |                         |          | ZZ    | -0100, +0000, ..., +1200         |
- * | Seconds timestamp       | 120      | X     | 512969520                        |
- * | Milliseconds timestamp  | 120      | x     | 512969520900                     |
- *
- * Values will be assigned to the date in the ascending order of its unit's priority.
- * Units of an equal priority overwrite each other in the order of appearance.
- *
- * If no values of higher priority are parsed (e.g. when parsing string 'January 1st' without a year),
- * the values will be taken from 3rd argument `baseDate` which works as a context of parsing.
- *
- * `baseDate` must be passed for correct work of the function.
- * If you're not sure which `baseDate` to supply, create a new instance of Date:
- * `parse('02/11/2014', 'MM/DD/YYYY', new Date())`
- * In this case parsing will be done in the context of the current date.
- * If `baseDate` is `Invalid Date` or a value not convertible to valid `Date`,
- * then `Invalid Date` will be returned.
- *
- * Also, `parse` unfolds long formats like those in [format]{@link https://date-fns.org/docs/format}:
- * | Token | Input examples                 |
- * |-------|--------------------------------|
- * | LT    | 05:30 a.m.                     |
- * | LTS   | 05:30:15 a.m.                  |
- * | L     | 07/02/1995                     |
- * | l     | 7/2/1995                       |
- * | LL    | July 2 1995                    |
- * | ll    | Jul 2 1995                     |
- * | LLL   | July 2 1995 05:30 a.m.         |
- * | lll   | Jul 2 1995 05:30 a.m.          |
- * | LLLL  | Sunday, July 2 1995 05:30 a.m. |
- * | llll  | Sun, Jul 2 1995 05:30 a.m.     |
- *
- * The characters wrapped in square brackets in the format string are escaped.
- *
- * The result may vary by locale.
- *
- * If `formatString` matches with `dateString` but does not provides tokens, `baseDate` will be returned.
- *
- * If parsing failed, `Invalid Date` will be returned.
- * Invalid Date is a Date, whose time value is NaN.
- * Time value of Date: http://es5.github.io/#x15.9.1.1
- *
- * @param {String} dateString - the string to parse
- * @param {String} formatString - the string of tokens
- * @param {Date|String|Number} baseDate - the date to took the missing higher priority values from
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - passed to `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
- * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
- * @returns {Date} the parsed date
- * @throws {TypeError} 3 arguments required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
- * @throws {RangeError} `options.locale` must contain `match` property
- * @throws {RangeError} `options.locale` must contain `formatLong` property
- *
- * @example
- * // Parse 11 February 2014 from middle-endian format:
- * var result = parse(
- *   '02/11/2014',
- *   'MM/DD/YYYY',
- *   new Date()
- * )
- * //=> Tue Feb 11 2014 00:00:00
- *
- * @example
- * // Parse 28th of February in English locale in the context of 2010 year:
- * import eoLocale from 'date-fns/locale/eo'
- * var result = parse(
- *   '28-a de februaro',
- *   'Do [de] MMMM',
- *   new Date(2010, 0, 1)
- *   {locale: eoLocale}
- * )
- * //=> Sun Feb 28 2010 00:00:00
- */
-function parse(dirtyDateString, dirtyFormatString, dirtyBaseDate, dirtyOptions) {
-  if (arguments.length < 3) {
-    throw new TypeError('3 arguments required, but only ' + arguments.length + ' present');
-  }
-
-  var dateString = String(dirtyDateString);
-  var options = dirtyOptions || {};
-
-  var weekStartsOn = options.weekStartsOn === undefined ? 0 : Number(options.weekStartsOn);
-
-  // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
-  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
-    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
-  }
-
-  var locale = options.locale || _index6.default;
-  var localeParsers = locale.parsers || {};
-  var localeUnits = locale.units || {};
-
-  if (!locale.match) {
-    throw new RangeError('locale must contain match property');
-  }
-
-  if (!locale.formatLong) {
-    throw new RangeError('locale must contain formatLong property');
-  }
-
-  var formatString = String(dirtyFormatString).replace(longFormattingTokensRegExp, function (substring) {
-    if (substring[0] === '[') {
-      return substring;
-    }
-
-    if (substring[0] === '\\') {
-      return cleanEscapedString(substring);
-    }
-
-    return locale.formatLong(substring);
-  });
-
-  if (formatString === '') {
-    if (dateString === '') {
-      return (0, _index2.default)(dirtyBaseDate, options);
-    } else {
-      return new Date(NaN);
-    }
-  }
-
-  var subFnOptions = (0, _index12.default)(options);
-  subFnOptions.locale = locale;
-
-  var tokens = formatString.match(locale.parsingTokensRegExp || defaultParsingTokensRegExp);
-  var tokensLength = tokens.length;
-
-  // If timezone isn't specified, it will be set to the system timezone
-  var setters = [{
-    priority: TIMEZONE_UNIT_PRIORITY,
-    set: dateToSystemTimezone,
-    index: 0
-  }];
-
-  var i;
-  for (i = 0; i < tokensLength; i++) {
-    var token = tokens[i];
-    var parser = localeParsers[token] || _index8.default[token];
-    if (parser) {
-      var matchResult;
-
-      if (parser.match instanceof RegExp) {
-        matchResult = parser.match.exec(dateString);
-      } else {
-        matchResult = parser.match(dateString, subFnOptions);
-      }
-
-      if (!matchResult) {
-        return new Date(NaN);
-      }
-
-      var unitName = parser.unit;
-      var unit = localeUnits[unitName] || _index10.default[unitName];
-
-      setters.push({
-        priority: unit.priority,
-        set: unit.set,
-        value: parser.parse(matchResult, subFnOptions),
-        index: setters.length
-      });
-
-      var substring = matchResult[0];
-      dateString = dateString.slice(substring.length);
-    } else {
-      var head = tokens[i].match(/^\[.*]$/) ? tokens[i].replace(/^\[|]$/g, '') : tokens[i];
-      if (dateString.indexOf(head) === 0) {
-        dateString = dateString.slice(head.length);
-      } else {
-        return new Date(NaN);
-      }
-    }
-  }
-
-  var uniquePrioritySetters = setters.map(function (setter) {
-    return setter.priority;
-  }).sort(function (a, b) {
-    return a - b;
-  }).filter(function (priority, index, array) {
-    return array.indexOf(priority) === index;
-  }).map(function (priority) {
-    return setters.filter(function (setter) {
-      return setter.priority === priority;
-    }).reverse();
-  }).map(function (setterArray) {
-    return setterArray[0];
-  });
-
-  var date = (0, _index2.default)(dirtyBaseDate, options);
-
-  if (isNaN(date)) {
-    return new Date(NaN);
-  }
-
-  // Convert the date in system timezone to the same date in UTC+00:00 timezone.
-  // This ensures that when UTC functions will be implemented, locales will be compatible with them.
-  // See an issue about UTC functions: https://github.com/date-fns/date-fns/issues/37
-  var utcDate = (0, _index4.default)(date, date.getTimezoneOffset());
-
-  var dateValues = { date: utcDate };
-
-  var settersLength = uniquePrioritySetters.length;
-  for (i = 0; i < settersLength; i++) {
-    var setter = uniquePrioritySetters[i];
-    dateValues = setter.set(dateValues, setter.value, subFnOptions);
-  }
-
-  return dateValues.date;
-}
-
-function dateToSystemTimezone(dateValues) {
-  var date = dateValues.date;
-  var time = date.getTime();
-
-  // Get the system timezone offset at (moment of time - offset)
-  var offset = date.getTimezoneOffset();
-
-  // Get the system timezone offset at the exact moment of time
-  offset = new Date(time + offset * MILLISECONDS_IN_MINUTE).getTimezoneOffset();
-
-  // Convert date in timezone "UTC+00:00" to the system timezone
-  dateValues.date = new Date(time + offset * MILLISECONDS_IN_MINUTE);
-
-  return dateValues;
-}
-
-function cleanEscapedString(input) {
-  if (input.match(/\[[\s\S]/)) {
-    return input.replace(/^\[|]$/g, '');
-  }
-  return input.replace(/\\/g, '');
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 49 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = subMinutes;
-
-var _index = __webpack_require__(50);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * @name subMinutes
- * @category Minute Helpers
- * @summary Subtract the specified number of minutes from the given date.
- *
- * @description
- * Subtract the specified number of minutes from the given date.
- *
- * @param {Date|String|Number} date - the date to be changed
- * @param {Number} amount - the amount of minutes to be subtracted
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - passed to `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * @returns {Date} the new date with the mintues subtracted
- * @throws {TypeError} 2 arguments required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- *
- * @example
- * // Subtract 30 minutes from 10 July 2014 12:00:00:
- * var result = subMinutes(new Date(2014, 6, 10, 12, 0), 30)
- * //=> Thu Jul 10 2014 11:30:00
- */
-function subMinutes(dirtyDate, dirtyAmount, dirtyOptions) {
-  if (arguments.length < 2) {
-    throw new TypeError('2 arguments required, but only ' + arguments.length + ' present');
-  }
-
-  var amount = Number(dirtyAmount);
-  return (0, _index2.default)(dirtyDate, -amount, dirtyOptions);
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 50 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = addMinutes;
-
-var _index = __webpack_require__(51);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var MILLISECONDS_IN_MINUTE = 60000;
-
-/**
- * @name addMinutes
- * @category Minute Helpers
- * @summary Add the specified number of minutes to the given date.
- *
- * @description
- * Add the specified number of minutes to the given date.
- *
- * @param {Date|String|Number} date - the date to be changed
- * @param {Number} amount - the amount of minutes to be added
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - passed to `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * @returns {Date} the new date with the minutes added
- * @throws {TypeError} 2 arguments required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- *
- * @example
- * // Add 30 minutes to 10 July 2014 12:00:00:
- * var result = addMinutes(new Date(2014, 6, 10, 12, 0), 30)
- * //=> Thu Jul 10 2014 12:30:00
- */
-function addMinutes(dirtyDate, dirtyAmount, dirtyOptions) {
-  if (arguments.length < 2) {
-    throw new TypeError('2 arguments required, but only ' + arguments.length + ' present');
-  }
-
-  var amount = Number(dirtyAmount);
-  return (0, _index2.default)(dirtyDate, amount * MILLISECONDS_IN_MINUTE, dirtyOptions);
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 51 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = addMilliseconds;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * @name addMilliseconds
- * @category Millisecond Helpers
- * @summary Add the specified number of milliseconds to the given date.
- *
- * @description
- * Add the specified number of milliseconds to the given date.
- *
- * @param {Date|String|Number} date - the date to be changed
- * @param {Number} amount - the amount of milliseconds to be added
- * @param {Options} [options] - the object with options. See [Options]{@link https://date-fns.org/docs/Options}
- * @param {0|1|2} [options.additionalDigits=2] - passed to `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
- * @returns {Date} the new date with the milliseconds added
- * @throws {TypeError} 2 arguments required
- * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
- *
- * @example
- * // Add 750 milliseconds to 10 July 2014 12:45:30.000:
- * var result = addMilliseconds(new Date(2014, 6, 10, 12, 45, 30, 0), 750)
- * //=> Thu Jul 10 2014 12:45:30.750
- */
-function addMilliseconds(dirtyDate, dirtyAmount, dirtyOptions) {
-  if (arguments.length < 2) {
-    throw new TypeError('2 arguments required, but only ' + arguments.length + ' present');
-  }
-
-  var timestamp = (0, _index2.default)(dirtyDate, dirtyOptions).getTime();
-  var amount = Number(dirtyAmount);
-  return new Date(timestamp + amount);
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 52 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var patterns = {
-  'M': /^(1[0-2]|0?\d)/, // 0 to 12
-  'D': /^(3[0-1]|[0-2]?\d)/, // 0 to 31
-  'DDD': /^(36[0-6]|3[0-5]\d|[0-2]?\d?\d)/, // 0 to 366
-  'W': /^(5[0-3]|[0-4]?\d)/, // 0 to 53
-  'YYYY': /^(\d{1,4})/, // 0 to 9999
-  'H': /^(2[0-3]|[0-1]?\d)/, // 0 to 23
-  'm': /^([0-5]?\d)/, // 0 to 59
-  'Z': /^([+-])(\d{2}):(\d{2})/,
-  'ZZ': /^([+-])(\d{2})(\d{2})/,
-  singleDigit: /^(\d)/,
-  twoDigits: /^(\d{2})/,
-  threeDigits: /^(\d{3})/,
-  fourDigits: /^(\d{4})/,
-  anyDigits: /^(\d+)/
-};
-
-function parseDecimal(matchResult) {
-  return parseInt(matchResult[1], 10);
-}
-
-var parsers = {
-  // Year: 00, 01, ..., 99
-  'YY': {
-    unit: 'twoDigitYear',
-    match: patterns.twoDigits,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult);
-    }
-  },
-
-  // Year: 1900, 1901, ..., 2099
-  'YYYY': {
-    unit: 'year',
-    match: patterns.YYYY,
-    parse: parseDecimal
-  },
-
-  // ISO week-numbering year: 00, 01, ..., 99
-  'GG': {
-    unit: 'isoYear',
-    match: patterns.twoDigits,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult) + 1900;
-    }
-  },
-
-  // ISO week-numbering year: 1900, 1901, ..., 2099
-  'GGGG': {
-    unit: 'isoYear',
-    match: patterns.YYYY,
-    parse: parseDecimal
-  },
-
-  // Quarter: 1, 2, 3, 4
-  'Q': {
-    unit: 'quarter',
-    match: patterns.singleDigit,
-    parse: parseDecimal
-  },
-
-  // Ordinal quarter
-  'Qo': {
-    unit: 'quarter',
-    match: function match(string, options) {
-      return options.locale.match.ordinalNumbers(string, { unit: 'quarter' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.ordinalNumber(matchResult, { unit: 'quarter' });
-    }
-  },
-
-  // Month: 1, 2, ..., 12
-  'M': {
-    unit: 'month',
-    match: patterns.M,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult) - 1;
-    }
-  },
-
-  // Ordinal month
-  'Mo': {
-    unit: 'month',
-    match: function match(string, options) {
-      return options.locale.match.ordinalNumbers(string, { unit: 'month' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.ordinalNumber(matchResult, { unit: 'month' }) - 1;
-    }
-  },
-
-  // Month: 01, 02, ..., 12
-  'MM': {
-    unit: 'month',
-    match: patterns.twoDigits,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult) - 1;
-    }
-  },
-
-  // Month: Jan, Feb, ..., Dec
-  'MMM': {
-    unit: 'month',
-    match: function match(string, options) {
-      return options.locale.match.months(string, { type: 'short' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.month(matchResult, { type: 'short' });
-    }
-  },
-
-  // Month: January, February, ..., December
-  'MMMM': {
-    unit: 'month',
-    match: function match(string, options) {
-      return options.locale.match.months(string, { type: 'long' }) || options.locale.match.months(string, { type: 'short' });
-    },
-    parse: function parse(matchResult, options) {
-      var parseResult = options.locale.match.month(matchResult, { type: 'long' });
-
-      if (parseResult == null) {
-        parseResult = options.locale.match.month(matchResult, { type: 'short' });
-      }
-
-      return parseResult;
-    }
-  },
-
-  // ISO week: 1, 2, ..., 53
-  'W': {
-    unit: 'isoWeek',
-    match: patterns.W,
-    parse: parseDecimal
-  },
-
-  // Ordinal ISO week
-  'Wo': {
-    unit: 'isoWeek',
-    match: function match(string, options) {
-      return options.locale.match.ordinalNumbers(string, { unit: 'isoWeek' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.ordinalNumber(matchResult, { unit: 'isoWeek' });
-    }
-  },
-
-  // ISO week: 01, 02, ..., 53
-  'WW': {
-    unit: 'isoWeek',
-    match: patterns.twoDigits,
-    parse: parseDecimal
-  },
-
-  // Day of week: 0, 1, ..., 6
-  'd': {
-    unit: 'dayOfWeek',
-    match: patterns.singleDigit,
-    parse: parseDecimal
-  },
-
-  // Ordinal day of week
-  'do': {
-    unit: 'dayOfWeek',
-    match: function match(string, options) {
-      return options.locale.match.ordinalNumbers(string, { unit: 'dayOfWeek' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.ordinalNumber(matchResult, { unit: 'dayOfWeek' });
-    }
-  },
-
-  // Day of week: Su, Mo, ..., Sa
-  'dd': {
-    unit: 'dayOfWeek',
-    match: function match(string, options) {
-      return options.locale.match.weekdays(string, { type: 'narrow' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.weekday(matchResult, { type: 'narrow' });
-    }
-  },
-
-  // Day of week: Sun, Mon, ..., Sat
-  'ddd': {
-    unit: 'dayOfWeek',
-    match: function match(string, options) {
-      return options.locale.match.weekdays(string, { type: 'short' }) || options.locale.match.weekdays(string, { type: 'narrow' });
-    },
-    parse: function parse(matchResult, options) {
-      var parseResult = options.locale.match.weekday(matchResult, { type: 'short' });
-
-      if (parseResult == null) {
-        parseResult = options.locale.match.weekday(matchResult, { type: 'narrow' });
-      }
-
-      return parseResult;
-    }
-  },
-
-  // Day of week: Sunday, Monday, ..., Saturday
-  'dddd': {
-    unit: 'dayOfWeek',
-    match: function match(string, options) {
-      return options.locale.match.weekdays(string, { type: 'long' }) || options.locale.match.weekdays(string, { type: 'short' }) || options.locale.match.weekdays(string, { type: 'narrow' });
-    },
-    parse: function parse(matchResult, options) {
-      var parseResult = options.locale.match.weekday(matchResult, { type: 'long' });
-
-      if (parseResult == null) {
-        parseResult = options.locale.match.weekday(matchResult, { type: 'short' });
-
-        if (parseResult == null) {
-          parseResult = options.locale.match.weekday(matchResult, { type: 'narrow' });
-        }
-      }
-
-      return parseResult;
-    }
-  },
-
-  // Day of ISO week: 1, 2, ..., 7
-  'E': {
-    unit: 'dayOfISOWeek',
-    match: patterns.singleDigit,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult);
-    }
-  },
-
-  // Day of month: 1, 2, ..., 31
-  'D': {
-    unit: 'dayOfMonth',
-    match: patterns.D,
-    parse: parseDecimal
-  },
-
-  // Ordinal day of month
-  'Do': {
-    unit: 'dayOfMonth',
-    match: function match(string, options) {
-      return options.locale.match.ordinalNumbers(string, { unit: 'dayOfMonth' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.ordinalNumber(matchResult, { unit: 'dayOfMonth' });
-    }
-  },
-
-  // Day of month: 01, 02, ..., 31
-  'DD': {
-    unit: 'dayOfMonth',
-    match: patterns.twoDigits,
-    parse: parseDecimal
-  },
-
-  // Day of year: 1, 2, ..., 366
-  'DDD': {
-    unit: 'dayOfYear',
-    match: patterns.DDD,
-    parse: parseDecimal
-  },
-
-  // Ordinal day of year
-  'DDDo': {
-    unit: 'dayOfYear',
-    match: function match(string, options) {
-      return options.locale.match.ordinalNumbers(string, { unit: 'dayOfYear' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.ordinalNumber(matchResult, { unit: 'dayOfYear' });
-    }
-  },
-
-  // Day of year: 001, 002, ..., 366
-  'DDDD': {
-    unit: 'dayOfYear',
-    match: patterns.threeDigits,
-    parse: parseDecimal
-  },
-
-  // AM, PM
-  'A': {
-    unit: 'timeOfDay',
-    match: function match(string, options) {
-      return options.locale.match.timesOfDay(string, { type: 'short' });
-    },
-    parse: function parse(matchResult, options) {
-      return options.locale.match.timeOfDay(matchResult, { type: 'short' });
-    }
-  },
-
-  // a.m., p.m.
-  'aa': {
-    unit: 'timeOfDay',
-    match: function match(string, options) {
-      return options.locale.match.timesOfDay(string, { type: 'long' }) || options.locale.match.timesOfDay(string, { type: 'short' });
-    },
-    parse: function parse(matchResult, options) {
-      var parseResult = options.locale.match.timeOfDay(matchResult, { type: 'long' });
-
-      if (parseResult == null) {
-        parseResult = options.locale.match.timeOfDay(matchResult, { type: 'short' });
-      }
-
-      return parseResult;
-    }
-  },
-
-  // Hour: 0, 1, ... 23
-  'H': {
-    unit: 'hours',
-    match: patterns.H,
-    parse: parseDecimal
-  },
-
-  // Hour: 00, 01, ..., 23
-  'HH': {
-    unit: 'hours',
-    match: patterns.twoDigits,
-    parse: parseDecimal
-  },
-
-  // Hour: 1, 2, ..., 12
-  'h': {
-    unit: 'timeOfDayHours',
-    match: patterns.M,
-    parse: parseDecimal
-  },
-
-  // Hour: 01, 02, ..., 12
-  'hh': {
-    unit: 'timeOfDayHours',
-    match: patterns.twoDigits,
-    parse: parseDecimal
-  },
-
-  // Minute: 0, 1, ..., 59
-  'm': {
-    unit: 'minutes',
-    match: patterns.m,
-    parse: parseDecimal
-  },
-
-  // Minute: 00, 01, ..., 59
-  'mm': {
-    unit: 'minutes',
-    match: patterns.twoDigits,
-    parse: parseDecimal
-  },
-
-  // Second: 0, 1, ..., 59
-  's': {
-    unit: 'seconds',
-    match: patterns.m,
-    parse: parseDecimal
-  },
-
-  // Second: 00, 01, ..., 59
-  'ss': {
-    unit: 'seconds',
-    match: patterns.twoDigits,
-    parse: parseDecimal
-  },
-
-  // 1/10 of second: 0, 1, ..., 9
-  'S': {
-    unit: 'milliseconds',
-    match: patterns.singleDigit,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult) * 100;
-    }
-  },
-
-  // 1/100 of second: 00, 01, ..., 99
-  'SS': {
-    unit: 'milliseconds',
-    match: patterns.twoDigits,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult) * 10;
-    }
-  },
-
-  // Millisecond: 000, 001, ..., 999
-  'SSS': {
-    unit: 'milliseconds',
-    match: patterns.threeDigits,
-    parse: parseDecimal
-  },
-
-  // Timezone: -01:00, +00:00, ... +12:00
-  'Z': {
-    unit: 'timezone',
-    match: patterns.Z,
-    parse: function parse(matchResult) {
-      var sign = matchResult[1];
-      var hours = parseInt(matchResult[2], 10);
-      var minutes = parseInt(matchResult[3], 10);
-      var absoluteOffset = hours * 60 + minutes;
-      return sign === '+' ? absoluteOffset : -absoluteOffset;
-    }
-  },
-
-  // Timezone: -0100, +0000, ... +1200
-  'ZZ': {
-    unit: 'timezone',
-    match: patterns.ZZ,
-    parse: function parse(matchResult) {
-      var sign = matchResult[1];
-      var hours = parseInt(matchResult[2], 10);
-      var minutes = parseInt(matchResult[3], 10);
-      var absoluteOffset = hours * 60 + minutes;
-      return sign === '+' ? absoluteOffset : -absoluteOffset;
-    }
-  },
-
-  // Seconds timestamp: 512969520
-  'X': {
-    unit: 'timestamp',
-    match: patterns.anyDigits,
-    parse: function parse(matchResult) {
-      return parseDecimal(matchResult) * 1000;
-    }
-  },
-
-  // Milliseconds timestamp: 512969520900
-  'x': {
-    unit: 'timestamp',
-    match: patterns.anyDigits,
-    parse: parseDecimal
-  }
-};
-
-parsers['a'] = parsers['A'];
-
-exports.default = parsers;
-module.exports = exports['default'];
-
-/***/ }),
-/* 53 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _index = __webpack_require__(54);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(55);
-
-var _index4 = _interopRequireDefault(_index3);
-
-var _index5 = __webpack_require__(56);
-
-var _index6 = _interopRequireDefault(_index5);
-
-var _index7 = __webpack_require__(57);
-
-var _index8 = _interopRequireDefault(_index7);
-
-var _index9 = __webpack_require__(3);
-
-var _index10 = _interopRequireDefault(_index9);
-
-var _index11 = __webpack_require__(5);
-
-var _index12 = _interopRequireDefault(_index11);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var MILLISECONDS_IN_MINUTE = 60000;
-
-function setTimeOfDay(hours, timeOfDay) {
-  var isAM = timeOfDay === 0;
-
-  if (isAM) {
-    if (hours === 12) {
-      return 0;
-    }
-  } else {
-    if (hours !== 12) {
-      return 12 + hours;
-    }
-  }
-
-  return hours;
-}
-
-var units = {
-  twoDigitYear: {
-    priority: 10,
-    set: function set(dateValues, value) {
-      var century = Math.floor(dateValues.date.getUTCFullYear() / 100);
-      var year = century * 100 + value;
-      dateValues.date.setUTCFullYear(year, 0, 1);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  year: {
-    priority: 10,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCFullYear(value, 0, 1);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  isoYear: {
-    priority: 10,
-    set: function set(dateValues, value, options) {
-      dateValues.date = (0, _index12.default)((0, _index8.default)(dateValues.date, value, options), options);
-      return dateValues;
-    }
-  },
-
-  quarter: {
-    priority: 20,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCMonth((value - 1) * 3, 1);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  month: {
-    priority: 30,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCMonth(value, 1);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  isoWeek: {
-    priority: 40,
-    set: function set(dateValues, value, options) {
-      dateValues.date = (0, _index10.default)((0, _index6.default)(dateValues.date, value, options), options);
-      return dateValues;
-    }
-  },
-
-  dayOfWeek: {
-    priority: 50,
-    set: function set(dateValues, value, options) {
-      dateValues.date = (0, _index2.default)(dateValues.date, value, options);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  dayOfISOWeek: {
-    priority: 50,
-    set: function set(dateValues, value, options) {
-      dateValues.date = (0, _index4.default)(dateValues.date, value, options);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  dayOfMonth: {
-    priority: 50,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCDate(value);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  dayOfYear: {
-    priority: 50,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCMonth(0, value);
-      dateValues.date.setUTCHours(0, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  timeOfDay: {
-    priority: 60,
-    set: function set(dateValues, value, options) {
-      dateValues.timeOfDay = value;
-      return dateValues;
-    }
-  },
-
-  hours: {
-    priority: 70,
-    set: function set(dateValues, value, options) {
-      dateValues.date.setUTCHours(value, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  timeOfDayHours: {
-    priority: 70,
-    set: function set(dateValues, value, options) {
-      var timeOfDay = dateValues.timeOfDay;
-      if (timeOfDay != null) {
-        value = setTimeOfDay(value, timeOfDay);
-      }
-      dateValues.date.setUTCHours(value, 0, 0, 0);
-      return dateValues;
-    }
-  },
-
-  minutes: {
-    priority: 80,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCMinutes(value, 0, 0);
-      return dateValues;
-    }
-  },
-
-  seconds: {
-    priority: 90,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCSeconds(value, 0);
-      return dateValues;
-    }
-  },
-
-  milliseconds: {
-    priority: 100,
-    set: function set(dateValues, value) {
-      dateValues.date.setUTCMilliseconds(value);
-      return dateValues;
-    }
-  },
-
-  timezone: {
-    priority: 110,
-    set: function set(dateValues, value) {
-      dateValues.date = new Date(dateValues.date.getTime() - value * MILLISECONDS_IN_MINUTE);
-      return dateValues;
-    }
-  },
-
-  timestamp: {
-    priority: 120,
-    set: function set(dateValues, value) {
-      dateValues.date = new Date(value);
-      return dateValues;
-    }
-  }
-};
-
-exports.default = units;
-module.exports = exports['default'];
-
-/***/ }),
-/* 54 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = setUTCDay;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function setUTCDay(dirtyDate, dirtyDay, dirtyOptions) {
-  var options = dirtyOptions || {};
-  var locale = options.locale;
-  var localeWeekStartsOn = locale && locale.options && locale.options.weekStartsOn;
-  var defaultWeekStartsOn = localeWeekStartsOn === undefined ? 0 : Number(localeWeekStartsOn);
-  var weekStartsOn = options.weekStartsOn === undefined ? defaultWeekStartsOn : Number(options.weekStartsOn);
-
-  // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
-  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
-    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
-  }
-
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var day = Number(dirtyDay);
-
-  var currentDay = date.getUTCDay();
-
-  var remainder = day % 7;
-  var dayIndex = (remainder + 7) % 7;
-
-  var diff = (dayIndex < weekStartsOn ? 7 : 0) + day - currentDay;
-
-  date.setUTCDate(date.getUTCDate() + diff);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 55 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = setUTCISODay;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function setUTCISODay(dirtyDate, dirtyDay, dirtyOptions) {
-  var day = Number(dirtyDay);
-
-  if (day % 7 === 0) {
-    day = day - 7;
-  }
-
-  var weekStartsOn = 1;
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var currentDay = date.getUTCDay();
-
-  var remainder = day % 7;
-  var dayIndex = (remainder + 7) % 7;
-
-  var diff = (dayIndex < weekStartsOn ? 7 : 0) + day - currentDay;
-
-  date.setUTCDate(date.getUTCDate() + diff);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 56 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = setUTCISOWeek;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(11);
-
-var _index4 = _interopRequireDefault(_index3);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function setUTCISOWeek(dirtyDate, dirtyISOWeek, dirtyOptions) {
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var isoWeek = Number(dirtyISOWeek);
-  var diff = (0, _index4.default)(date, dirtyOptions) - isoWeek;
-  date.setUTCDate(date.getUTCDate() - diff * 7);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 57 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = setUTCISOWeekYear;
-
-var _index = __webpack_require__(1);
-
-var _index2 = _interopRequireDefault(_index);
-
-var _index3 = __webpack_require__(5);
-
-var _index4 = _interopRequireDefault(_index3);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var MILLISECONDS_IN_DAY = 86400000;
-
-// This function will be a part of public API when UTC function will be implemented.
-// See issue: https://github.com/date-fns/date-fns/issues/376
-function setUTCISOWeekYear(dirtyDate, dirtyISOYear, dirtyOptions) {
-  var date = (0, _index2.default)(dirtyDate, dirtyOptions);
-  var isoYear = Number(dirtyISOYear);
-  var dateStartOfYear = (0, _index4.default)(date, dirtyOptions);
-  var diff = Math.floor((date.getTime() - dateStartOfYear.getTime()) / MILLISECONDS_IN_DAY);
-  var fourthOfJanuary = new Date(0);
-  fourthOfJanuary.setUTCFullYear(isoYear, 0, 4);
-  fourthOfJanuary.setUTCHours(0, 0, 0, 0);
-  date = (0, _index4.default)(fourthOfJanuary, dirtyOptions);
-  date.setUTCDate(date.getUTCDate() + diff);
-  return date;
-}
-module.exports = exports['default'];
-
-/***/ }),
-/* 58 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var validators = __webpack_require__(6);
-var PreFormatters = __webpack_require__(7);
-
-function MoneyMaskDirective($locale, $parse) {
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
-				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
-				currencySym = $locale.NUMBER_FORMATS.CURRENCY_SYM,
-				symbolSeparation = ' ',
-				decimals = $parse(attrs.uiMoneyMask)(scope),
-				backspacePressed = false;
-
-			element.bind('keydown keypress', function(event) {
-				backspacePressed = event.which === 8;
-			});
-
-			function maskFactory(decimals) {
-				var decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
-				var maskPattern =  '#' + thousandsDelimiter + '##0' + decimalsPattern;
-				if (angular.isDefined(attrs.uiCurrencyAfter)) {
-					maskPattern += symbolSeparation;
-				} else {
-					maskPattern =  symbolSeparation + maskPattern;
-				}
-				return new StringMask(maskPattern, {reverse: true});
-			}
-
-			if (angular.isDefined(attrs.uiDecimalDelimiter)) {
-				decimalDelimiter = attrs.uiDecimalDelimiter;
-			}
-
-			if (angular.isDefined(attrs.uiThousandsDelimiter)) {
-				thousandsDelimiter = attrs.uiThousandsDelimiter;
-			}
-
-			if (angular.isDefined(attrs.uiHideGroupSep)) {
-				thousandsDelimiter = '';
-			}
-
-			if (angular.isDefined(attrs.uiHideSpace)) {
-				symbolSeparation = '';
-			}
-
-			if (angular.isDefined(attrs.currencySymbol)) {
-				currencySym = attrs.currencySymbol;
-				if (attrs.currencySymbol.length === 0) {
-					symbolSeparation = '';
-				}
-			}
-
-			if (isNaN(decimals)) {
-				decimals = 2;
-			}
-			decimals = parseInt(decimals);
-			var moneyMask = maskFactory(decimals);
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-				if (angular.isDefined(attrs.uiIntegerModel)) {
-						value = value / Math.pow(10, decimals);
-				}
-				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value < 0) ? '-' : '';
-				var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
-				if (angular.isDefined(attrs.uiCurrencyAfter)) {
-					return prefix + moneyMask.apply(valueToFormat) + currencySym;
-				}
-				return prefix + currencySym + moneyMask.apply(valueToFormat);
-			}
-
-			function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return null;
-				}
-
-				var actualNumber = value.replace(/[^\d]+/g,''), formatedValue;
-				actualNumber = actualNumber.replace(/^[0]+([1-9])/,'$1');
-				actualNumber = actualNumber || '0';
-
-				if (backspacePressed && angular.isDefined(attrs.uiCurrencyAfter) && actualNumber !== 0) {
-					actualNumber = actualNumber.substring(0, actualNumber.length - 1);
-					backspacePressed = false;
-				}
-
-				if (angular.isDefined(attrs.uiCurrencyAfter)) {
-					formatedValue = moneyMask.apply(actualNumber) + currencySym;
-				} else {
-					formatedValue = currencySym + moneyMask.apply(actualNumber);
-				}
-
-				if (angular.isDefined(attrs.uiNegativeNumber)) {
-					var isNegative = (value[0] === '-'),
-						needsToInvertSign = (value.slice(-1) === '-');
-
-					//only apply the minus sign if it is negative or(exclusive)
-					//needs to be negative and the number is different from zero
-					if (needsToInvertSign ^ isNegative && !!actualNumber) {
-						actualNumber *= -1;
-						formatedValue = '-' + formatedValue;
-					}
-				}
-
-				if (value !== formatedValue) {
-					ctrl.$setViewValue(formatedValue);
-					ctrl.$render();
-				}
-
-				var retValue = parseInt(formatedValue.replace(/[^\d\-]+/g,''));
-				if (!isNaN(retValue)) {
-						if (!angular.isDefined(attrs.uiIntegerModel)) {
-								retValue = retValue / Math.pow(10, decimals);
-						}
-						return retValue;
-				} else {
-						return null;
-				}
-			}
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
-
-			if (attrs.uiMoneyMask) {
-				scope.$watch(attrs.uiMoneyMask, function(_decimals) {
-					decimals = isNaN(_decimals) ? 2 : _decimals;
-					decimals = parseInt(decimals);
-					moneyMask = maskFactory(decimals);
-
-					parser(ctrl.$viewValue);
-				});
-			}
-
-			if (attrs.currency) {
-				scope.$watch(attrs.currency, function(_currency) {
-					currencySym = _currency;
-					moneyMask = maskFactory(decimals);
-					parser(ctrl.$viewValue);
-				});
-			}
-
-			if (attrs.min) {
-				var minVal;
-
-				ctrl.$validators.min = function(modelValue) {
-					return validators.minNumber(ctrl, modelValue, minVal);
-				};
-
-				scope.$watch(attrs.min, function(value) {
-					minVal = value;
-					ctrl.$validate();
-				});
-			}
-
-			if (attrs.max) {
-				var maxVal;
-
-				ctrl.$validators.max = function(modelValue) {
-					return validators.maxNumber(ctrl, modelValue, maxVal);
-				};
-
-				scope.$watch(attrs.max, function(value) {
-					maxVal = value;
-					ctrl.$validate();
-				});
-			}
-		}
-	};
-}
-MoneyMaskDirective.$inject = ['$locale', '$parse'];
-
-module.exports = MoneyMaskDirective;
-
-
-/***/ }),
-/* 59 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var validators = __webpack_require__(6);
-var NumberMasks = __webpack_require__(14);
-var PreFormatters = __webpack_require__(7);
-
-function NumberMaskDirective($locale, $parse) {
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
-				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
-				decimals = $parse(attrs.uiNumberMask)(scope);
-
-			if (angular.isDefined(attrs.uiHideGroupSep)) {
-				thousandsDelimiter = '';
-			}
-
-			if (isNaN(decimals)) {
-				decimals = 2;
-			}
-
-			var viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter),
-				modelMask = NumberMasks.modelMask(decimals);
-
-			function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return null;
-				}
-
-				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
-				var formatedValue = viewMask.apply(valueToFormat);
-				var actualNumber = parseFloat(modelMask.apply(valueToFormat));
-
-				if (angular.isDefined(attrs.uiNegativeNumber)) {
-					var isNegative = (value[0] === '-'),
-						needsToInvertSign = (value.slice(-1) === '-');
-
-					//only apply the minus sign if it is negative or(exclusive) or the first character
-					//needs to be negative and the number is different from zero
-					if ((needsToInvertSign ^ isNegative) || value === '-') {
-						actualNumber *= -1;
-						formatedValue = '-' + ((actualNumber !== 0) ? formatedValue : '');
-					}
-				}
-
-				if (ctrl.$viewValue !== formatedValue) {
-					ctrl.$setViewValue(formatedValue);
-					ctrl.$render();
-				}
-
-				return actualNumber;
-			}
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value < 0) ? '-' : '';
-				var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
-				return prefix + viewMask.apply(valueToFormat);
-			}
-
-			function clearViewValueIfMinusSign() {
-				if (ctrl.$viewValue === '-') {
-					ctrl.$setViewValue('');
-					ctrl.$render();
-				}
-			}
-
-			element.on('blur', clearViewValueIfMinusSign);
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
-
-			if (attrs.uiNumberMask) {
-				scope.$watch(attrs.uiNumberMask, function(_decimals) {
-					decimals = isNaN(_decimals) ? 2 : _decimals;
-					viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter);
-					modelMask = NumberMasks.modelMask(decimals);
-
-					parser(ctrl.$viewValue);
-				});
-			}
-
-			if (attrs.min) {
-				var minVal;
-
-				ctrl.$validators.min = function(modelValue) {
-					return validators.minNumber(ctrl, modelValue, minVal);
-				};
-
-				scope.$watch(attrs.min, function(value) {
-					minVal = value;
-					ctrl.$validate();
-				});
-			}
-
-			if (attrs.max) {
-				var maxVal;
-
-				ctrl.$validators.max = function(modelValue) {
-					return validators.maxNumber(ctrl, modelValue, maxVal);
-				};
-
-				scope.$watch(attrs.max, function(value) {
-					maxVal = value;
-					ctrl.$validate();
-				});
-			}
-		}
-	};
-}
-NumberMaskDirective.$inject = ['$locale', '$parse'];
-
-module.exports = NumberMaskDirective;
-
-
-/***/ }),
-/* 60 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var validators = __webpack_require__(6);
-var NumberMasks = __webpack_require__(14);
-var PreFormatters = __webpack_require__(7);
-
-function preparePercentageToFormatter(value, decimals, modelMultiplier) {
-	return PreFormatters.clearDelimitersAndLeadingZeros((parseFloat(value)*modelMultiplier).toFixed(decimals));
-}
-
-function PercentageMaskDirective($locale) {
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP;
-
-			var backspacePressed = false;
-			element.bind('keydown keypress', function(event) {
-				backspacePressed = event.which === 8;
-			});
-
-			var thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP;
-			if (angular.isDefined(attrs.uiHideGroupSep)) {
-				thousandsDelimiter = '';
-			}
-
-			var percentageSymbol = ' %';
-			if (angular.isDefined(attrs.uiHidePercentageSign)) {
-				percentageSymbol = '';
-			} else if (angular.isDefined(attrs.uiHideSpace)) {
-				percentageSymbol = '%';
-			}
-
-			var decimals = parseInt(attrs.uiPercentageMask);
-			if (isNaN(decimals)) {
-				decimals = 2;
-			}
-
-			var modelValue = {
-				multiplier : 100,
-				decimalMask: 2
-			};
-			if (angular.isDefined(attrs.uiPercentageValue)) {
-				modelValue.multiplier  = 1;
-				modelValue.decimalMask = 0;
-			}
-
-			var numberDecimals = decimals + modelValue.decimalMask;
-			var viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter),
-				modelMask = NumberMasks.modelMask(numberDecimals);
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value < 0) ? '-' : '';
-				var valueToFormat = preparePercentageToFormatter(value, decimals, modelValue.multiplier);
-				var formatedValue = prefix + viewMask.apply(valueToFormat) + percentageSymbol;
-
-				return formatedValue;
-			}
-
-			function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return null;
-				}
-
-				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
-				if (percentageSymbol !== '' && value.length > 1 && value.indexOf('%') === -1) {
-					valueToFormat = valueToFormat.slice(0, valueToFormat.length - 1);
-				}
-
-				if (backspacePressed && value.length === 1 && value !== '%') {
-					valueToFormat = '0';
-				}
-
-				var formatedValue = viewMask.apply(valueToFormat) + percentageSymbol;
-				var actualNumber = parseFloat(modelMask.apply(valueToFormat));
-
-				if (angular.isDefined(attrs.uiNegativeNumber)) {
-					var isNegative = (value[0] === '-'),
-						needsToInvertSign = (value.slice(-1) === '-');
-
-					//only apply the minus sign if it is negative or(exclusive) or the first character
-					//needs to be negative and the number is different from zero
-					if ((needsToInvertSign ^ isNegative) || value === '-') {
-						actualNumber *= -1;
-						formatedValue = '-' + ((actualNumber !== 0) ? formatedValue : '');
-					}
-				}
-
-				if (ctrl.$viewValue !== formatedValue) {
-					ctrl.$setViewValue(formatedValue);
-					ctrl.$render();
-				}
-
-				return actualNumber;
-			}
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
-
-			if (attrs.uiPercentageMask) {
-				scope.$watch(attrs.uiPercentageMask, function(_decimals) {
-					decimals = isNaN(_decimals) ? 2 : _decimals;
-
-					numberDecimals = decimals + modelValue.decimalMask;
-					viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter);
-					modelMask = NumberMasks.modelMask(numberDecimals);
-
-					parser(formatter(ctrl.$modelValue));
-				});
-			}
-
-			if (attrs.min) {
-				var minVal;
-
-				ctrl.$validators.min = function(modelValue) {
-					return validators.minNumber(ctrl, modelValue, minVal);
-				};
-
-				scope.$watch(attrs.min, function(value) {
-					minVal = value;
-					ctrl.$validate();
-				});
-			}
-
-			if (attrs.max) {
-				var maxVal;
-
-				ctrl.$validators.max = function(modelValue) {
-					return validators.maxNumber(ctrl, modelValue, maxVal);
-				};
-
-				scope.$watch(attrs.max, function(value) {
-					maxVal = value;
-					ctrl.$validate();
-				});
-			}
-		}
-	};
-}
-PercentageMaskDirective.$inject = ['$locale'];
-
-module.exports = PercentageMaskDirective;
-
-
-/***/ }),
-/* 61 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-
-function ScientificNotationMaskDirective($locale, $parse) {
-	var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
-		defaultPrecision = 2;
-
-	function significandMaskBuilder(decimals) {
-		var mask = '0';
-
-		if (decimals > 0) {
-			mask += decimalDelimiter;
-			for (var i = 0; i < decimals; i++) {
-				mask += '0';
-			}
-		}
-
-		return new StringMask(mask, {
-			reverse: true
-		});
-	}
-
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			var decimals = $parse(attrs.uiScientificNotationMask)(scope);
-
-			if (isNaN(decimals)) {
-				decimals = defaultPrecision;
-			}
-
-			var significandMask = significandMaskBuilder(decimals);
-
-			function splitNumber(value) {
-				var stringValue = value.toString(),
-					splittedNumber = stringValue.match(/(-?[0-9]*)[\.]?([0-9]*)?[Ee]?([\+-]?[0-9]*)?/);
-
-				return {
-					integerPartOfSignificand: splittedNumber[1],
-					decimalPartOfSignificand: splittedNumber[2],
-					exponent: splittedNumber[3] | 0
-				};
-			}
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				if (typeof value === 'number') {
-					value = value.toExponential(decimals);
-				} else {
-					value = value.toString().replace(decimalDelimiter, '.');
-				}
-
-				var formattedValue, exponent;
-				var splittedNumber = splitNumber(value);
-
-				var integerPartOfSignificand = splittedNumber.integerPartOfSignificand || 0;
-				var numberToFormat = integerPartOfSignificand.toString();
-				if (angular.isDefined(splittedNumber.decimalPartOfSignificand)) {
-					numberToFormat += splittedNumber.decimalPartOfSignificand;
-				}
-
-				var needsNormalization =
-					(integerPartOfSignificand >= 1 || integerPartOfSignificand <= -1) &&
-					(
-						(angular.isDefined(splittedNumber.decimalPartOfSignificand) &&
-						splittedNumber.decimalPartOfSignificand.length > decimals) ||
-						(decimals === 0 && numberToFormat.length >= 2)
-					);
-
-				if (needsNormalization) {
-					exponent = numberToFormat.slice(decimals + 1, numberToFormat.length);
-					numberToFormat = numberToFormat.slice(0, decimals + 1);
-				}
-
-				formattedValue = significandMask.apply(numberToFormat);
-
-				if (splittedNumber.exponent !== 0) {
-					exponent = splittedNumber.exponent;
-				}
-
-				if (angular.isDefined(exponent)) {
-					formattedValue += 'e' + exponent;
-				}
-
-				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value[0] === '-') ? '-' : '';
-
-				return prefix + formattedValue;
-			}
-
-			function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var isExponentNegative = /e-/.test(value);
-				var cleanValue = value.replace('e-', 'e');
-				var viewValue = formatter(cleanValue);
-
-				var needsToInvertSign = (value.slice(-1) === '-');
-
-				if (needsToInvertSign ^ isExponentNegative) {
-					viewValue = viewValue.replace(/(e[-]?)/, 'e-');
-				}
-
-				if (needsToInvertSign && isExponentNegative) {
-					viewValue = viewValue[0] !== '-' ? ('-' + viewValue) : viewValue.replace(/^(-)/,'');
-				}
-
-				var modelValue = parseFloat(viewValue.replace(decimalDelimiter, '.'));
-
-				if (ctrl.$viewValue !== viewValue) {
-					ctrl.$setViewValue(viewValue);
-					ctrl.$render();
-				}
-
-				return modelValue;
-			}
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
-
-			ctrl.$validators.max = function validator(value) {
-				return ctrl.$isEmpty(value) || value < Number.MAX_VALUE;
-			};
-		}
-	};
-}
-ScientificNotationMaskDirective.$inject = ['$locale', '$parse'];
-
-module.exports = ScientificNotationMaskDirective;
-
-
-/***/ }),
-/* 62 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-
-module.exports = function TimeMaskDirective() {
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			var timeFormat = '00:00:00';
-
-			if (angular.isDefined(attrs.uiTimeMask) && attrs.uiTimeMask === 'short') {
-				timeFormat = '00:00';
-			}
-
-			var formattedValueLength = timeFormat.length;
-			var unformattedValueLength = timeFormat.replace(':', '').length;
-			var timeMask = new StringMask(timeFormat);
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var cleanValue = value.replace(/[^0-9]/g, '').slice(0, unformattedValueLength) || '';
-				return (timeMask.apply(cleanValue) || '').replace(/[^0-9]$/, '');
-			}
-
-			ctrl.$formatters.push(formatter);
-
-			ctrl.$parsers.push(function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var viewValue = formatter(value);
-				var modelValue = viewValue;
-
-				if (ctrl.$viewValue !== viewValue) {
-					ctrl.$setViewValue(viewValue);
-					ctrl.$render();
-				}
-
-				return modelValue;
-			});
-
-			ctrl.$validators.time = function(modelValue) {
-				if (ctrl.$isEmpty(modelValue)) {
-					return true;
-				}
-
-				var splittedValue = modelValue.toString().split(/:/).filter(function(v) {
-					return !!v;
-				});
-
-				var hours = parseInt(splittedValue[0]),
-					minutes = parseInt(splittedValue[1]),
-					seconds = parseInt(splittedValue[2] || 0);
-
-				return modelValue.toString().length === formattedValueLength &&
-					hours < 24 && minutes < 60 && seconds < 60;
-			};
-		}
-	};
-};
-
-
-/***/ }),
-/* 63 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var m = angular.module('ui.utils.masks.br', [])
-	.directive('uiBrBoletoBancarioMask', __webpack_require__(64))
-	.directive('uiBrCarPlateMask', __webpack_require__(65))
-	.directive('uiBrCepMask', __webpack_require__(66))
-	.directive('uiBrCnpjMask', __webpack_require__(67))
-	.directive('uiBrCpfMask', __webpack_require__(68))
-	.directive('uiBrCpfcnpjMask', __webpack_require__(69))
-	.directive('uiBrIeMask', __webpack_require__(70))
-	.directive('uiNfeAccessKeyMask', __webpack_require__(71))
-	.directive('uiBrPhoneNumberMask', __webpack_require__(72));
-
-module.exports = m.name;
-
-
-/***/ }),
-/* 64 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var maskFactory = __webpack_require__(2);
-
-var boletoBancarioMask = new StringMask('00000.00000 00000.000000 00000.000000 0 00000000000000');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^0-9]/g, '').slice(0, 47);
-	},
-	format: function(cleanValue) {
-		if (cleanValue.length === 0) {
-			return cleanValue;
-		}
-
-		return boletoBancarioMask.apply(cleanValue).replace(/[^0-9]$/, '');
-	},
-	validations: {
-		brBoletoBancario: function(value) {
-			return value.length === 47;
-		}
-	}
-});
-
-
-/***/ }),
-/* 65 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var maskFactory = __webpack_require__(2);
-
-var carPlateMask = new StringMask('UUU-0000');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^a-zA-Z0-9]/g, '').slice(0, 7);
-	},
-	format: function(cleanValue) {
-		return (carPlateMask.apply(cleanValue) || '').replace(/[^a-zA-Z0-9]$/, '');
-	},
-	validations: {
-		carPlate: function(value) {
-			return value.length === 7;
-		}
-	}
-});
-
-
-/***/ }),
-/* 66 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var maskFactory = __webpack_require__(2);
-
-var cepMask = new StringMask('00000-000');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 8);
-	},
-	format: function(cleanValue) {
-		return (cepMask.apply(cleanValue) || '').replace(/[^0-9]$/, '');
-	},
-	validations: {
-		cep: function(value) {
-			return value.toString().trim().length === 8;
-		}
-	}
-});
-
-
-/***/ }),
-/* 67 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var BrV = __webpack_require__(4);
-
-var maskFactory = __webpack_require__(2);
-
-var cnpjPattern = new StringMask('00.000.000\/0000-00');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^\d]/g, '').slice(0, 14);
-	},
-	format: function(cleanValue) {
-		return (cnpjPattern.apply(cleanValue) || '').trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		cnpj: function(value) {
-			return BrV.cnpj.validate(value);
-		}
-	}
-});
-
-
-/***/ }),
-/* 68 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var BrV = __webpack_require__(4);
-
-var maskFactory = __webpack_require__(2);
-
-var cpfPattern = new StringMask('000.000.000-00');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^\d]/g, '').slice(0, 11);
-	},
-	format: function(cleanValue) {
-		return (cpfPattern.apply(cleanValue) || '').trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		cpf: function(value) {
-			return BrV.cpf.validate(value);
-		}
-	}
-});
-
-
-/***/ }),
-/* 69 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var BrV = __webpack_require__(4);
-var maskFactory = __webpack_require__(2);
-
-var cnpjPattern = new StringMask('00.000.000\/0000-00');
-var cpfPattern = new StringMask('000.000.000-00');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^\d]/g, '').slice(0, 14);
-	},
-	format: function(cleanValue) {
-		var formatedValue;
-
-		if (cleanValue.length > 11) {
-			formatedValue = cnpjPattern.apply(cleanValue);
-		} else {
-			formatedValue = cpfPattern.apply(cleanValue) || '';
-		}
-
-		return formatedValue.trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		cpf: function(value) {
-			return value.length > 11 || BrV.cpf.validate(value);
-		},
-		cnpj: function(value) {
-			return value.length <= 11 || BrV.cnpj.validate(value);
-		}
-	}
-});
-
-
-/***/ }),
-/* 70 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var BrV = __webpack_require__(4);
-
-var ieMasks = {
-	'AC': [{mask: new StringMask('00.000.000/000-00')}],
-	'AL': [{mask: new StringMask('000000000')}],
-	'AM': [{mask: new StringMask('00.000.000-0')}],
-	'AP': [{mask: new StringMask('000000000')}],
-	'BA': [{chars: 8, mask: new StringMask('000000-00')}, {mask: new StringMask('0000000-00')}],
-	'CE': [{mask: new StringMask('00000000-0')}],
-	'DF': [{mask: new StringMask('00000000000-00')}],
-	'ES': [{mask: new StringMask('00000000-0')}],
-	'GO': [{mask: new StringMask('00.000.000-0')}],
-	'MA': [{mask: new StringMask('000000000')}],
-	'MG': [{mask: new StringMask('000.000.000/0000')}],
-	'MS': [{mask: new StringMask('000000000')}],
-	'MT': [{mask: new StringMask('0000000000-0')}],
-	'PA': [{mask: new StringMask('00-000000-0')}],
-	'PB': [{mask: new StringMask('00000000-0')}],
-	'PE': [{chars: 9, mask: new StringMask('0000000-00')}, {mask: new StringMask('00.0.000.0000000-0')}],
-	'PI': [{mask: new StringMask('000000000')}],
-	'PR': [{mask: new StringMask('000.00000-00')}],
-	'RJ': [{mask: new StringMask('00.000.00-0')}],
-	'RN': [{chars: 9, mask: new StringMask('00.000.000-0')}, {mask: new StringMask('00.0.000.000-0')}],
-	'RO': [{mask: new StringMask('0000000000000-0')}],
-	'RR': [{mask: new StringMask('00000000-0')}],
-	'RS': [{mask: new StringMask('000/0000000')}],
-	'SC': [{mask: new StringMask('000.000.000')}],
-	'SE': [{mask: new StringMask('00000000-0')}],
-	'SP': [{mask: new StringMask('000.000.000.000')}, {mask: new StringMask('-00000000.0/000')}],
-	'TO': [{mask: new StringMask('00000000000')}]
-};
-
-function BrIeMaskDirective($parse) {
-	function clearValue(value) {
-		if (!value) {
-			return value;
-		}
-
-		return value.replace(/[^0-9]/g, '');
-	}
-
-	function getMask(uf, value) {
-		if (!uf || !ieMasks[uf]) {
-			return;
-		}
-
-		if (uf === 'SP' && /^P/i.test(value)) {
-			return ieMasks.SP[1].mask;
-		}
-
-		var masks = ieMasks[uf];
-		var i = 0;
-		while (masks[i].chars && masks[i].chars < clearValue(value).length && i < masks.length - 1) {
-			i++;
-		}
-
-		return masks[i].mask;
-	}
-
-	function applyIEMask(value, uf) {
-		var mask = getMask(uf, value);
-
-		if (!mask) {
-			return value;
-		}
-
-		var processed = mask.process(clearValue(value));
-		var formatedValue = processed.result || '';
-		formatedValue = formatedValue.trim().replace(/[^0-9]$/, '');
-
-		if (uf === 'SP' && /^p/i.test(value)) {
-			return 'P' + formatedValue;
-		}
-
-		return formatedValue;
-	}
-
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function(scope, element, attrs, ctrl) {
-			var state = ($parse(attrs.uiBrIeMask)(scope) || '').toUpperCase();
-
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				return applyIEMask(value, state);
-			}
-
-			function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var formatedValue = applyIEMask(value, state);
-				var actualValue = clearValue(formatedValue);
-
-				if (ctrl.$viewValue !== formatedValue) {
-					ctrl.$setViewValue(formatedValue);
-					ctrl.$render();
-				}
-
-				if (state && state.toUpperCase() === 'SP' && /^p/i.test(value)) {
-					return 'P' + actualValue;
-				}
-
-				return actualValue;
-			}
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
-
-			ctrl.$validators.ie = function validator(modelValue) {
-				return ctrl.$isEmpty(modelValue) || BrV.ie(state).validate(modelValue);
-			};
-
-			scope.$watch(attrs.uiBrIeMask, function(newState) {
-				state = (newState || '').toUpperCase();
-
-				parser(ctrl.$viewValue);
-				ctrl.$validate();
-			});
-		}
-	};
-}
-BrIeMaskDirective.$inject = ['$parse'];
-
-module.exports = BrIeMaskDirective;
-
-
-/***/ }),
-/* 71 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-
-var maskFactory = __webpack_require__(2);
-
-var nfeAccessKeyMask = new StringMask('0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^0-9]/g, '').slice(0, 44);
-	},
-	format: function(cleanValue) {
-		return (nfeAccessKeyMask.apply(cleanValue) || '').replace(/[^0-9]$/, '');
-	},
-	validations: {
-		nfeAccessKey: function(value) {
-			return value.length === 44;
-		}
-	}
-});
-
-
-/***/ }),
-/* 72 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-
-var maskFactory = __webpack_require__(2);
-
-/**
- * FIXME: all numbers will have 9 digits after 2016.
- * see http://portal.embratel.com.br/embratel/9-digito/
- */
-var phoneMask8D = {
-		countryCode : new StringMask('+00 (00) 0000-0000'),   //with country code
-		areaCode    : new StringMask('(00) 0000-0000'),       //with area code
-		simple      : new StringMask('0000-0000')             //without area code
-	}, phoneMask9D = {
-		countryCode : new StringMask('+00 (00) 00000-0000'), //with country code
-		areaCode    : new StringMask('(00) 00000-0000'),     //with area code
-		simple      : new StringMask('00000-0000')           //without area code
-	}, phoneMask0800 = {
-		countryCode : null,                                   //N/A
-		areaCode    : null,                                   //N/A
-		simple      : new StringMask('0000-000-0000')         //N/A, so it's "simple"
-	};
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 13);
-	},
-	format: function(cleanValue) {
-		var formattedValue;
-
-		if (cleanValue.indexOf('0800') === 0) {
-			formattedValue = phoneMask0800.simple.apply(cleanValue);
-		} else if (cleanValue.length < 9) {
-			formattedValue = phoneMask8D.simple.apply(cleanValue) || '';
-		} else if (cleanValue.length < 10) {
-			formattedValue = phoneMask9D.simple.apply(cleanValue);
-		} else if (cleanValue.length < 11) {
-			formattedValue = phoneMask8D.areaCode.apply(cleanValue);
-		} else if (cleanValue.length < 12) {
-			formattedValue = phoneMask9D.areaCode.apply(cleanValue);
-		} else if (cleanValue.length < 13) {
-			formattedValue = phoneMask8D.countryCode.apply(cleanValue);
-		} else {
-			formattedValue = phoneMask9D.countryCode.apply(cleanValue);
-		}
-
-		return formattedValue.trim().replace(/[^0-9]$/, '');
-	},
-	getModelValue: function(formattedValue, originalModelType) {
-		var cleanValue = this.clearValue(formattedValue);
-		return originalModelType === 'number' ? parseInt(cleanValue) : cleanValue;
-	},
-	validations: {
-		brPhoneNumber: function(value) {
-			var valueLength = value && value.toString().length;
-
-			//8- 8D without AC
-			//9- 9D without AC
-			//10- 8D with AC
-			//11- 9D with AC and 0800
-			//12- 8D with AC plus CC
-			//13- 9D with AC plus CC
-			return valueLength >= 8 && valueLength <= 13;
-		}
-	}
-});
-
-
-/***/ }),
-/* 73 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var m = angular.module('ui.utils.masks.ch', [])
-	.directive('uiChPhoneNumberMask', __webpack_require__(74));
-
-module.exports = m.name;
-
-
-/***/ }),
-/* 74 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-
-var maskFactory = __webpack_require__(2);
-
-var phoneMask = new StringMask('+00 00 000 00 00');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 11);
-	},
-	format: function(cleanValue) {
-		var formatedValue;
-
-		formatedValue = phoneMask.apply(cleanValue) || '';
-
-		return formatedValue.trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		chPhoneNumber: function(value) {
-			var valueLength = value && value.toString().length;
-			return valueLength === 11;
-		}
-	}
-});
-
-
-/***/ }),
-/* 75 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var m = angular.module('ui.utils.masks.fr', [])
-	.directive('uiFrPhoneNumberMask', __webpack_require__(76));
-
-module.exports = m.name;
-
-
-/***/ }),
-/* 76 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var maskFactory = __webpack_require__(2);
-
-var phoneMaskFR = new StringMask('00 00 00 00 00');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 10);
-	},
-	format: function(cleanValue) {
-		var formattedValue;
-
-		formattedValue = phoneMaskFR.apply(cleanValue) || '';
-
-		return formattedValue.trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		frPhoneNumber: function(value) {
-			var valueLength = value && value.toString().length;
-			return valueLength === 10;
-		}
-	}
-});
-
-
-/***/ }),
-/* 77 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var m = angular.module('ui.utils.masks.us', [])
-	.directive('uiUsPhoneNumberMask', __webpack_require__(78));
-
-module.exports = m.name;
-
-
-/***/ }),
-/* 78 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var StringMask = __webpack_require__(0);
-var maskFactory = __webpack_require__(2);
-
-var phoneMaskUS = new StringMask('(000) 000-0000'),
-	phoneMaskINTL = new StringMask('+00-00-000-000000');
-
-module.exports = maskFactory({
-	clearValue: function(rawValue) {
-		return rawValue.toString().replace(/[^0-9]/g, '');
-	},
-	format: function(cleanValue) {
-		var formattedValue;
-
-		if (cleanValue.length < 11) {
-			formattedValue = phoneMaskUS.apply(cleanValue) || '';
-		} else {
-			formattedValue = phoneMaskINTL.apply(cleanValue);
-		}
-
-		return formattedValue.trim().replace(/[^0-9]$/, '');
-	},
-	validations: {
-		usPhoneNumber: function(value) {
-			return value && value.toString().length > 9;
-		}
-	}
-});
-
-
-/***/ }),
-/* 79 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(80);
-module.exports = 'ngMessages';
-
-
-/***/ }),
-/* 80 */
-/***/ (function(module, exports) {
-
-/**
- * @license AngularJS v1.6.8
- * (c) 2010-2017 Google, Inc. http://angularjs.org
- * License: MIT
- */
-(function(window, angular) {'use strict';
-
-var forEach;
-var isArray;
-var isString;
-var jqLite;
-
-/**
- * @ngdoc module
- * @name ngMessages
- * @description
- *
- * The `ngMessages` module provides enhanced support for displaying messages within templates
- * (typically within forms or when rendering message objects that return key/value data).
- * Instead of relying on JavaScript code and/or complex ng-if statements within your form template to
- * show and hide error messages specific to the state of an input field, the `ngMessages` and
- * `ngMessage` directives are designed to handle the complexity, inheritance and priority
- * sequencing based on the order of how the messages are defined in the template.
- *
- * Currently, the ngMessages module only contains the code for the `ngMessages`, `ngMessagesInclude`
- * `ngMessage` and `ngMessageExp` directives.
- *
- * ## Usage
- * The `ngMessages` directive allows keys in a key/value collection to be associated with a child element
- * (or 'message') that will show or hide based on the truthiness of that key's value in the collection. A common use
- * case for `ngMessages` is to display error messages for inputs using the `$error` object exposed by the
- * {@link ngModel ngModel} directive.
- *
- * The child elements of the `ngMessages` directive are matched to the collection keys by a `ngMessage` or
- * `ngMessageExp` directive. The value of these attributes must match a key in the collection that is provided by
- * the `ngMessages` directive.
- *
- * Consider the following example, which illustrates a typical use case of `ngMessages`. Within the form `myForm` we
- * have a text input named `myField` which is bound to the scope variable `field` using the {@link ngModel ngModel}
- * directive.
- *
- * The `myField` field is a required input of type `email` with a maximum length of 15 characters.
- *
- * ```html
- * <form name="myForm">
- *   <label>
- *     Enter text:
- *     <input type="email" ng-model="field" name="myField" required maxlength="15" />
- *   </label>
- *   <div ng-messages="myForm.myField.$error" role="alert">
- *     <div ng-message="required">Please enter a value for this field.</div>
- *     <div ng-message="email">This field must be a valid email address.</div>
- *     <div ng-message="maxlength">This field can be at most 15 characters long.</div>
- *   </div>
- * </form>
- * ```
- *
- * In order to show error messages corresponding to `myField` we first create an element with an `ngMessages` attribute
- * set to the `$error` object owned by the `myField` input in our `myForm` form.
- *
- * Within this element we then create separate elements for each of the possible errors that `myField` could have.
- * The `ngMessage` attribute is used to declare which element(s) will appear for which error - for example,
- * setting `ng-message="required"` specifies that this particular element should be displayed when there
- * is no value present for the required field `myField` (because the key `required` will be `true` in the object
- * `myForm.myField.$error`).
- *
- * ### Message order
- *
- * By default, `ngMessages` will only display one message for a particular key/value collection at any time. If more
- * than one message (or error) key is currently true, then which message is shown is determined by the order of messages
- * in the HTML template code (messages declared first are prioritised). This mechanism means the developer does not have
- * to prioritize messages using custom JavaScript code.
- *
- * Given the following error object for our example (which informs us that the field `myField` currently has both the
- * `required` and `email` errors):
- *
- * ```javascript
- * <!-- keep in mind that ngModel automatically sets these error flags -->
- * myField.$error = { required : true, email: true, maxlength: false };
- * ```
- * The `required` message will be displayed to the user since it appears before the `email` message in the DOM.
- * Once the user types a single character, the `required` message will disappear (since the field now has a value)
- * but the `email` message will be visible because it is still applicable.
- *
- * ### Displaying multiple messages at the same time
- *
- * While `ngMessages` will by default only display one error element at a time, the `ng-messages-multiple` attribute can
- * be applied to the `ngMessages` container element to cause it to display all applicable error messages at once:
- *
- * ```html
- * <!-- attribute-style usage -->
- * <div ng-messages="myForm.myField.$error" ng-messages-multiple>...</div>
- *
- * <!-- element-style usage -->
- * <ng-messages for="myForm.myField.$error" multiple>...</ng-messages>
- * ```
- *
- * ## Reusing and Overriding Messages
- * In addition to prioritization, ngMessages also allows for including messages from a remote or an inline
- * template. This allows for generic collection of messages to be reused across multiple parts of an
- * application.
- *
- * ```html
- * <script type="text/ng-template" id="error-messages">
- *   <div ng-message="required">This field is required</div>
- *   <div ng-message="minlength">This field is too short</div>
- * </script>
- *
- * <div ng-messages="myForm.myField.$error" role="alert">
- *   <div ng-messages-include="error-messages"></div>
- * </div>
- * ```
- *
- * However, including generic messages may not be useful enough to match all input fields, therefore,
- * `ngMessages` provides the ability to override messages defined in the remote template by redefining
- * them within the directive container.
- *
- * ```html
- * <!-- a generic template of error messages known as "my-custom-messages" -->
- * <script type="text/ng-template" id="my-custom-messages">
- *   <div ng-message="required">This field is required</div>
- *   <div ng-message="minlength">This field is too short</div>
- * </script>
- *
- * <form name="myForm">
- *   <label>
- *     Email address
- *     <input type="email"
- *            id="email"
- *            name="myEmail"
- *            ng-model="email"
- *            minlength="5"
- *            required />
- *   </label>
- *   <!-- any ng-message elements that appear BEFORE the ng-messages-include will
- *        override the messages present in the ng-messages-include template -->
- *   <div ng-messages="myForm.myEmail.$error" role="alert">
- *     <!-- this required message has overridden the template message -->
- *     <div ng-message="required">You did not enter your email address</div>
- *
- *     <!-- this is a brand new message and will appear last in the prioritization -->
- *     <div ng-message="email">Your email address is invalid</div>
- *
- *     <!-- and here are the generic error messages -->
- *     <div ng-messages-include="my-custom-messages"></div>
- *   </div>
- * </form>
- * ```
- *
- * In the example HTML code above the message that is set on required will override the corresponding
- * required message defined within the remote template. Therefore, with particular input fields (such
- * email addresses, date fields, autocomplete inputs, etc...), specialized error messages can be applied
- * while more generic messages can be used to handle other, more general input errors.
- *
- * ## Dynamic Messaging
- * ngMessages also supports using expressions to dynamically change key values. Using arrays and
- * repeaters to list messages is also supported. This means that the code below will be able to
- * fully adapt itself and display the appropriate message when any of the expression data changes:
- *
- * ```html
- * <form name="myForm">
- *   <label>
- *     Email address
- *     <input type="email"
- *            name="myEmail"
- *            ng-model="email"
- *            minlength="5"
- *            required />
- *   </label>
- *   <div ng-messages="myForm.myEmail.$error" role="alert">
- *     <div ng-message="required">You did not enter your email address</div>
- *     <div ng-repeat="errorMessage in errorMessages">
- *       <!-- use ng-message-exp for a message whose key is given by an expression -->
- *       <div ng-message-exp="errorMessage.type">{{ errorMessage.text }}</div>
- *     </div>
- *   </div>
- * </form>
- * ```
- *
- * The `errorMessage.type` expression can be a string value or it can be an array so
- * that multiple errors can be associated with a single error message:
- *
- * ```html
- *   <label>
- *     Email address
- *     <input type="email"
- *            ng-model="data.email"
- *            name="myEmail"
- *            ng-minlength="5"
- *            ng-maxlength="100"
- *            required />
- *   </label>
- *   <div ng-messages="myForm.myEmail.$error" role="alert">
- *     <div ng-message-exp="'required'">You did not enter your email address</div>
- *     <div ng-message-exp="['minlength', 'maxlength']">
- *       Your email must be between 5 and 100 characters long
- *     </div>
- *   </div>
- * ```
- *
- * Feel free to use other structural directives such as ng-if and ng-switch to further control
- * what messages are active and when. Be careful, if you place ng-message on the same element
- * as these structural directives, Angular may not be able to determine if a message is active
- * or not. Therefore it is best to place the ng-message on a child element of the structural
- * directive.
- *
- * ```html
- * <div ng-messages="myForm.myEmail.$error" role="alert">
- *   <div ng-if="showRequiredError">
- *     <div ng-message="required">Please enter something</div>
- *   </div>
- * </div>
- * ```
- *
- * ## Animations
- * If the `ngAnimate` module is active within the application then the `ngMessages`, `ngMessage` and
- * `ngMessageExp` directives will trigger animations whenever any messages are added and removed from
- * the DOM by the `ngMessages` directive.
- *
- * Whenever the `ngMessages` directive contains one or more visible messages then the `.ng-active` CSS
- * class will be added to the element. The `.ng-inactive` CSS class will be applied when there are no
- * messages present. Therefore, CSS transitions and keyframes as well as JavaScript animations can
- * hook into the animations whenever these classes are added/removed.
- *
- * Let's say that our HTML code for our messages container looks like so:
- *
- * ```html
- * <div ng-messages="myMessages" class="my-messages" role="alert">
- *   <div ng-message="alert" class="some-message">...</div>
- *   <div ng-message="fail" class="some-message">...</div>
- * </div>
- * ```
- *
- * Then the CSS animation code for the message container looks like so:
- *
- * ```css
- * .my-messages {
- *   transition:1s linear all;
- * }
- * .my-messages.ng-active {
- *   // messages are visible
- * }
- * .my-messages.ng-inactive {
- *   // messages are hidden
- * }
- * ```
- *
- * Whenever an inner message is attached (becomes visible) or removed (becomes hidden) then the enter
- * and leave animation is triggered for each particular element bound to the `ngMessage` directive.
- *
- * Therefore, the CSS code for the inner messages looks like so:
- *
- * ```css
- * .some-message {
- *   transition:1s linear all;
- * }
- *
- * .some-message.ng-enter {}
- * .some-message.ng-enter.ng-enter-active {}
- *
- * .some-message.ng-leave {}
- * .some-message.ng-leave.ng-leave-active {}
- * ```
- *
- * {@link ngAnimate Click here} to learn how to use JavaScript animations or to learn more about ngAnimate.
- */
-angular.module('ngMessages', [], function initAngularHelpers() {
-  // Access helpers from angular core.
-  // Do it inside a `config` block to ensure `window.angular` is available.
-  forEach = angular.forEach;
-  isArray = angular.isArray;
-  isString = angular.isString;
-  jqLite = angular.element;
-})
-  .info({ angularVersion: '1.6.8' })
-
-  /**
-   * @ngdoc directive
-   * @module ngMessages
-   * @name ngMessages
-   * @restrict AE
-   *
-   * @description
-   * `ngMessages` is a directive that is designed to show and hide messages based on the state
-   * of a key/value object that it listens on. The directive itself complements error message
-   * reporting with the `ngModel` $error object (which stores a key/value state of validation errors).
-   *
-   * `ngMessages` manages the state of internal messages within its container element. The internal
-   * messages use the `ngMessage` directive and will be inserted/removed from the page depending
-   * on if they're present within the key/value object. By default, only one message will be displayed
-   * at a time and this depends on the prioritization of the messages within the template. (This can
-   * be changed by using the `ng-messages-multiple` or `multiple` attribute on the directive container.)
-   *
-   * A remote template can also be used to promote message reusability and messages can also be
-   * overridden.
-   *
-   * {@link module:ngMessages Click here} to learn more about `ngMessages` and `ngMessage`.
-   *
-   * @usage
-   * ```html
-   * <!-- using attribute directives -->
-   * <ANY ng-messages="expression" role="alert">
-   *   <ANY ng-message="stringValue">...</ANY>
-   *   <ANY ng-message="stringValue1, stringValue2, ...">...</ANY>
-   *   <ANY ng-message-exp="expressionValue">...</ANY>
-   * </ANY>
-   *
-   * <!-- or by using element directives -->
-   * <ng-messages for="expression" role="alert">
-   *   <ng-message when="stringValue">...</ng-message>
-   *   <ng-message when="stringValue1, stringValue2, ...">...</ng-message>
-   *   <ng-message when-exp="expressionValue">...</ng-message>
-   * </ng-messages>
-   * ```
-   *
-   * @param {string} ngMessages an angular expression evaluating to a key/value object
-   *                 (this is typically the $error object on an ngModel instance).
-   * @param {string=} ngMessagesMultiple|multiple when set, all messages will be displayed with true
-   *
-   * @example
-   * <example name="ngMessages-directive" module="ngMessagesExample"
-   *          deps="angular-messages.js"
-   *          animations="true" fixBase="true">
-   *   <file name="index.html">
-   *     <form name="myForm">
-   *       <label>
-   *         Enter your name:
-   *         <input type="text"
-   *                name="myName"
-   *                ng-model="name"
-   *                ng-minlength="5"
-   *                ng-maxlength="20"
-   *                required />
-   *       </label>
-   *       <pre>myForm.myName.$error = {{ myForm.myName.$error | json }}</pre>
-   *
-   *       <div ng-messages="myForm.myName.$error" style="color:maroon" role="alert">
-   *         <div ng-message="required">You did not enter a field</div>
-   *         <div ng-message="minlength">Your field is too short</div>
-   *         <div ng-message="maxlength">Your field is too long</div>
-   *       </div>
-   *     </form>
-   *   </file>
-   *   <file name="script.js">
-   *     angular.module('ngMessagesExample', ['ngMessages']);
-   *   </file>
-   * </example>
-   */
-  .directive('ngMessages', ['$animate', function($animate) {
-    var ACTIVE_CLASS = 'ng-active';
-    var INACTIVE_CLASS = 'ng-inactive';
-
-    return {
-      require: 'ngMessages',
-      restrict: 'AE',
-      controller: ['$element', '$scope', '$attrs', function NgMessagesCtrl($element, $scope, $attrs) {
-        var ctrl = this;
-        var latestKey = 0;
-        var nextAttachId = 0;
-
-        this.getAttachId = function getAttachId() { return nextAttachId++; };
-
-        var messages = this.messages = {};
-        var renderLater, cachedCollection;
-
-        this.render = function(collection) {
-          collection = collection || {};
-
-          renderLater = false;
-          cachedCollection = collection;
-
-          // this is true if the attribute is empty or if the attribute value is truthy
-          var multiple = isAttrTruthy($scope, $attrs.ngMessagesMultiple) ||
-                         isAttrTruthy($scope, $attrs.multiple);
-
-          var unmatchedMessages = [];
-          var matchedKeys = {};
-          var messageItem = ctrl.head;
-          var messageFound = false;
-          var totalMessages = 0;
-
-          // we use != instead of !== to allow for both undefined and null values
-          while (messageItem != null) {
-            totalMessages++;
-            var messageCtrl = messageItem.message;
-
-            var messageUsed = false;
-            if (!messageFound) {
-              forEach(collection, function(value, key) {
-                if (!messageUsed && truthy(value) && messageCtrl.test(key)) {
-                  // this is to prevent the same error name from showing up twice
-                  if (matchedKeys[key]) return;
-                  matchedKeys[key] = true;
-
-                  messageUsed = true;
-                  messageCtrl.attach();
-                }
-              });
-            }
-
-            if (messageUsed) {
-              // unless we want to display multiple messages then we should
-              // set a flag here to avoid displaying the next message in the list
-              messageFound = !multiple;
-            } else {
-              unmatchedMessages.push(messageCtrl);
-            }
-
-            messageItem = messageItem.next;
-          }
-
-          forEach(unmatchedMessages, function(messageCtrl) {
-            messageCtrl.detach();
-          });
-
-          if (unmatchedMessages.length !== totalMessages) {
-            $animate.setClass($element, ACTIVE_CLASS, INACTIVE_CLASS);
-          } else {
-            $animate.setClass($element, INACTIVE_CLASS, ACTIVE_CLASS);
-          }
-        };
-
-        $scope.$watchCollection($attrs.ngMessages || $attrs['for'], ctrl.render);
-
-        // If the element is destroyed, proactively destroy all the currently visible messages
-        $element.on('$destroy', function() {
-          forEach(messages, function(item) {
-            item.message.detach();
-          });
-        });
-
-        this.reRender = function() {
-          if (!renderLater) {
-            renderLater = true;
-            $scope.$evalAsync(function() {
-              if (renderLater && cachedCollection) {
-                ctrl.render(cachedCollection);
-              }
-            });
-          }
-        };
-
-        this.register = function(comment, messageCtrl) {
-          var nextKey = latestKey.toString();
-          messages[nextKey] = {
-            message: messageCtrl
-          };
-          insertMessageNode($element[0], comment, nextKey);
-          comment.$$ngMessageNode = nextKey;
-          latestKey++;
-
-          ctrl.reRender();
-        };
-
-        this.deregister = function(comment) {
-          var key = comment.$$ngMessageNode;
-          delete comment.$$ngMessageNode;
-          removeMessageNode($element[0], comment, key);
-          delete messages[key];
-          ctrl.reRender();
-        };
-
-        function findPreviousMessage(parent, comment) {
-          var prevNode = comment;
-          var parentLookup = [];
-
-          while (prevNode && prevNode !== parent) {
-            var prevKey = prevNode.$$ngMessageNode;
-            if (prevKey && prevKey.length) {
-              return messages[prevKey];
-            }
-
-            // dive deeper into the DOM and examine its children for any ngMessage
-            // comments that may be in an element that appears deeper in the list
-            if (prevNode.childNodes.length && parentLookup.indexOf(prevNode) === -1) {
-              parentLookup.push(prevNode);
-              prevNode = prevNode.childNodes[prevNode.childNodes.length - 1];
-            } else if (prevNode.previousSibling) {
-              prevNode = prevNode.previousSibling;
-            } else {
-              prevNode = prevNode.parentNode;
-              parentLookup.push(prevNode);
-            }
-          }
-        }
-
-        function insertMessageNode(parent, comment, key) {
-          var messageNode = messages[key];
-          if (!ctrl.head) {
-            ctrl.head = messageNode;
-          } else {
-            var match = findPreviousMessage(parent, comment);
-            if (match) {
-              messageNode.next = match.next;
-              match.next = messageNode;
-            } else {
-              messageNode.next = ctrl.head;
-              ctrl.head = messageNode;
-            }
-          }
-        }
-
-        function removeMessageNode(parent, comment, key) {
-          var messageNode = messages[key];
-
-          var match = findPreviousMessage(parent, comment);
-          if (match) {
-            match.next = messageNode.next;
-          } else {
-            ctrl.head = messageNode.next;
-          }
-        }
-      }]
-    };
-
-    function isAttrTruthy(scope, attr) {
-     return (isString(attr) && attr.length === 0) || //empty attribute
-            truthy(scope.$eval(attr));
-    }
-
-    function truthy(val) {
-      return isString(val) ? val.length : !!val;
-    }
-  }])
-
-  /**
-   * @ngdoc directive
-   * @name ngMessagesInclude
-   * @restrict AE
-   * @scope
-   *
-   * @description
-   * `ngMessagesInclude` is a directive with the purpose to import existing ngMessage template
-   * code from a remote template and place the downloaded template code into the exact spot
-   * that the ngMessagesInclude directive is placed within the ngMessages container. This allows
-   * for a series of pre-defined messages to be reused and also allows for the developer to
-   * determine what messages are overridden due to the placement of the ngMessagesInclude directive.
-   *
-   * @usage
-   * ```html
-   * <!-- using attribute directives -->
-   * <ANY ng-messages="expression" role="alert">
-   *   <ANY ng-messages-include="remoteTplString">...</ANY>
-   * </ANY>
-   *
-   * <!-- or by using element directives -->
-   * <ng-messages for="expression" role="alert">
-   *   <ng-messages-include src="expressionValue1">...</ng-messages-include>
-   * </ng-messages>
-   * ```
-   *
-   * {@link module:ngMessages Click here} to learn more about `ngMessages` and `ngMessage`.
-   *
-   * @param {string} ngMessagesInclude|src a string value corresponding to the remote template.
-   */
-  .directive('ngMessagesInclude',
-    ['$templateRequest', '$document', '$compile', function($templateRequest, $document, $compile) {
-
-    return {
-      restrict: 'AE',
-      require: '^^ngMessages', // we only require this for validation sake
-      link: function($scope, element, attrs) {
-        var src = attrs.ngMessagesInclude || attrs.src;
-        $templateRequest(src).then(function(html) {
-          if ($scope.$$destroyed) return;
-
-          if (isString(html) && !html.trim()) {
-            // Empty template - nothing to compile
-            replaceElementWithMarker(element, src);
-          } else {
-            // Non-empty template - compile and link
-            $compile(html)($scope, function(contents) {
-              element.after(contents);
-              replaceElementWithMarker(element, src);
-            });
-          }
-        });
-      }
-    };
-
-    // Helpers
-    function replaceElementWithMarker(element, src) {
-      // A comment marker is placed for debugging purposes
-      var comment = $compile.$$createComment ?
-          $compile.$$createComment('ngMessagesInclude', src) :
-          $document[0].createComment(' ngMessagesInclude: ' + src + ' ');
-      var marker = jqLite(comment);
-      element.after(marker);
-
-      // Don't pollute the DOM anymore by keeping an empty directive element
-      element.remove();
-    }
-  }])
-
-  /**
-   * @ngdoc directive
-   * @name ngMessage
-   * @restrict AE
-   * @scope
-   * @priority 1
-   *
-   * @description
-   * `ngMessage` is a directive with the purpose to show and hide a particular message.
-   * For `ngMessage` to operate, a parent `ngMessages` directive on a parent DOM element
-   * must be situated since it determines which messages are visible based on the state
-   * of the provided key/value map that `ngMessages` listens on.
-   *
-   * More information about using `ngMessage` can be found in the
-   * {@link module:ngMessages `ngMessages` module documentation}.
-   *
-   * @usage
-   * ```html
-   * <!-- using attribute directives -->
-   * <ANY ng-messages="expression" role="alert">
-   *   <ANY ng-message="stringValue">...</ANY>
-   *   <ANY ng-message="stringValue1, stringValue2, ...">...</ANY>
-   * </ANY>
-   *
-   * <!-- or by using element directives -->
-   * <ng-messages for="expression" role="alert">
-   *   <ng-message when="stringValue">...</ng-message>
-   *   <ng-message when="stringValue1, stringValue2, ...">...</ng-message>
-   * </ng-messages>
-   * ```
-   *
-   * @param {expression} ngMessage|when a string value corresponding to the message key.
-   */
-  .directive('ngMessage', ngMessageDirectiveFactory())
-
-
-  /**
-   * @ngdoc directive
-   * @name ngMessageExp
-   * @restrict AE
-   * @priority 1
-   * @scope
-   *
-   * @description
-   * `ngMessageExp` is the same as {@link directive:ngMessage `ngMessage`}, but instead of a static
-   * value, it accepts an expression to be evaluated for the message key.
-   *
-   * @usage
-   * ```html
-   * <!-- using attribute directives -->
-   * <ANY ng-messages="expression">
-   *   <ANY ng-message-exp="expressionValue">...</ANY>
-   * </ANY>
-   *
-   * <!-- or by using element directives -->
-   * <ng-messages for="expression">
-   *   <ng-message when-exp="expressionValue">...</ng-message>
-   * </ng-messages>
-   * ```
-   *
-   * {@link module:ngMessages Click here} to learn more about `ngMessages` and `ngMessage`.
-   *
-   * @param {expression} ngMessageExp|whenExp an expression value corresponding to the message key.
-   */
-  .directive('ngMessageExp', ngMessageDirectiveFactory());
-
-function ngMessageDirectiveFactory() {
-  return ['$animate', function($animate) {
-    return {
-      restrict: 'AE',
-      transclude: 'element',
-      priority: 1, // must run before ngBind, otherwise the text is set on the comment
-      terminal: true,
-      require: '^^ngMessages',
-      link: function(scope, element, attrs, ngMessagesCtrl, $transclude) {
-        var commentNode = element[0];
-
-        var records;
-        var staticExp = attrs.ngMessage || attrs.when;
-        var dynamicExp = attrs.ngMessageExp || attrs.whenExp;
-        var assignRecords = function(items) {
-          records = items
-              ? (isArray(items)
-                  ? items
-                  : items.split(/[\s,]+/))
-              : null;
-          ngMessagesCtrl.reRender();
-        };
-
-        if (dynamicExp) {
-          assignRecords(scope.$eval(dynamicExp));
-          scope.$watchCollection(dynamicExp, assignRecords);
-        } else {
-          assignRecords(staticExp);
-        }
-
-        var currentElement, messageCtrl;
-        ngMessagesCtrl.register(commentNode, messageCtrl = {
-          test: function(name) {
-            return contains(records, name);
-          },
-          attach: function() {
-            if (!currentElement) {
-              $transclude(function(elm, newScope) {
-                $animate.enter(elm, null, element);
-                currentElement = elm;
-
-                // Each time we attach this node to a message we get a new id that we can match
-                // when we are destroying the node later.
-                var $$attachId = currentElement.$$attachId = ngMessagesCtrl.getAttachId();
-
-                // in the event that the element or a parent element is destroyed
-                // by another structural directive then it's time
-                // to deregister the message from the controller
-                currentElement.on('$destroy', function() {
-                  if (currentElement && currentElement.$$attachId === $$attachId) {
-                    ngMessagesCtrl.deregister(commentNode);
-                    messageCtrl.detach();
-                  }
-                  newScope.$destroy();
-                });
-              });
-            }
-          },
-          detach: function() {
-            if (currentElement) {
-              var elm = currentElement;
-              currentElement = null;
-              $animate.leave(elm);
-            }
-          }
-        });
-      }
-    };
-  }];
-
-  function contains(collection, key) {
-    if (collection) {
-      return isArray(collection)
-          ? collection.indexOf(key) >= 0
-          : collection.hasOwnProperty(key);
-    }
-  }
-}
-
-
-})(window, window.angular);
-
-
-/***/ }),
-/* 81 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(82);
-if(typeof content === 'string') content = [[module.i, content, '']];
-// Prepare cssTransformation
-var transform;
-
-var options = {"hmr":true}
-options.transform = transform
-// add the styles to the DOM
-var update = __webpack_require__(84)(content, options);
-if(content.locals) module.exports = content.locals;
-// Hot Module Replacement
-if(false) {
-	// When the styles change, update the <style> tags
-	if(!content.locals) {
-		module.hot.accept("!!../css-loader/index.js!./angular-material.css", function() {
-			var newContent = require("!!../css-loader/index.js!./angular-material.css");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-	}
-	// When the module is disposed, remove the <style> tags
-	module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 82 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(83)(false);
-// imports
-
-
-// module
-exports.push([module.i, "/*!\n * AngularJS Material Design\n * https://github.com/angular/material\n * @license MIT\n * v1.1.6\n */\nhtml, body {\n  height: 100%;\n  position: relative; }\n\nbody {\n  margin: 0;\n  padding: 0; }\n\n[tabindex='-1']:focus {\n  outline: none; }\n\n.inset {\n  padding: 10px; }\n\na.md-no-style,\nbutton.md-no-style {\n  font-weight: normal;\n  background-color: inherit;\n  text-align: left;\n  border: none;\n  padding: 0;\n  margin: 0; }\n\nselect,\nbutton,\ntextarea,\ninput {\n  vertical-align: baseline; }\n\ninput[type=\"reset\"],\ninput[type=\"submit\"],\nhtml input[type=\"button\"],\nbutton {\n  cursor: pointer;\n  -webkit-appearance: button; }\n  input[type=\"reset\"][disabled],\n  input[type=\"submit\"][disabled],\n  html input[type=\"button\"][disabled],\n  button[disabled] {\n    cursor: default; }\n\ntextarea {\n  vertical-align: top;\n  overflow: auto; }\n\ninput[type=\"search\"] {\n  -webkit-appearance: textfield;\n  box-sizing: content-box;\n  -webkit-box-sizing: content-box; }\n  input[type=\"search\"]::-webkit-search-decoration, input[type=\"search\"]::-webkit-search-cancel-button {\n    -webkit-appearance: none; }\n\ninput:-webkit-autofill {\n  text-shadow: none; }\n\n.md-visually-hidden {\n  border: 0;\n  clip: rect(0 0 0 0);\n  height: 1px;\n  margin: -1px;\n  overflow: hidden;\n  padding: 0;\n  position: absolute;\n  text-transform: none;\n  width: 1px; }\n\n.md-shadow {\n  position: absolute;\n  top: 0;\n  left: 0;\n  bottom: 0;\n  right: 0;\n  border-radius: inherit;\n  pointer-events: none; }\n\n.md-shadow-bottom-z-1 {\n  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26); }\n\n.md-shadow-bottom-z-2 {\n  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.4); }\n\n.md-shadow-animated.md-shadow {\n  -webkit-transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);\n  transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1); }\n\n/*\n * A container inside of a rippling element (eg a button),\n * which contains all of the individual ripples\n */\n.md-ripple-container {\n  pointer-events: none;\n  position: absolute;\n  overflow: hidden;\n  left: 0;\n  top: 0;\n  width: 100%;\n  height: 100%;\n  -webkit-transition: all 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: all 0.55s cubic-bezier(0.25, 0.8, 0.25, 1); }\n\n.md-ripple {\n  position: absolute;\n  -webkit-transform: translate(-50%, -50%) scale(0);\n          transform: translate(-50%, -50%) scale(0);\n  -webkit-transform-origin: 50% 50%;\n          transform-origin: 50% 50%;\n  opacity: 0;\n  border-radius: 50%; }\n  .md-ripple.md-ripple-placed {\n    -webkit-transition: margin 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), border 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.9s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: margin 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), border 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.9s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: margin 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), border 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.9s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: margin 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), border 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.9s cubic-bezier(0.25, 0.8, 0.25, 1); }\n  .md-ripple.md-ripple-scaled {\n    -webkit-transform: translate(-50%, -50%) scale(1);\n            transform: translate(-50%, -50%) scale(1); }\n  .md-ripple.md-ripple-active, .md-ripple.md-ripple-full, .md-ripple.md-ripple-visible {\n    opacity: 0.20; }\n  .md-ripple.md-ripple-remove {\n    -webkit-animation: md-remove-ripple 0.9s cubic-bezier(0.25, 0.8, 0.25, 1);\n            animation: md-remove-ripple 0.9s cubic-bezier(0.25, 0.8, 0.25, 1); }\n\n@-webkit-keyframes md-remove-ripple {\n  0% {\n    opacity: .15; }\n  100% {\n    opacity: 0; } }\n\n@keyframes md-remove-ripple {\n  0% {\n    opacity: .15; }\n  100% {\n    opacity: 0; } }\n\n.md-padding {\n  padding: 8px; }\n\n.md-margin {\n  margin: 8px; }\n\n.md-scroll-mask {\n  position: absolute;\n  background-color: transparent;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  left: 0;\n  z-index: 50; }\n  .md-scroll-mask > .md-scroll-mask-bar {\n    display: block;\n    position: absolute;\n    background-color: #fafafa;\n    right: 0;\n    top: 0;\n    bottom: 0;\n    z-index: 65;\n    box-shadow: inset 0px 0px 1px rgba(0, 0, 0, 0.3); }\n\n.md-no-momentum {\n  -webkit-overflow-scrolling: auto; }\n\n.md-no-flicker {\n  -webkit-filter: blur(0px); }\n\n@media (min-width: 960px) {\n  .md-padding {\n    padding: 16px; } }\n\nhtml[dir=rtl], html[dir=ltr], body[dir=rtl], body[dir=ltr] {\n  unicode-bidi: embed; }\n\nbdo[dir=rtl] {\n  direction: rtl;\n  unicode-bidi: bidi-override; }\n\nbdo[dir=ltr] {\n  direction: ltr;\n  unicode-bidi: bidi-override; }\n\nhtml, body {\n  -webkit-tap-highlight-color: transparent;\n  -webkit-touch-callout: none;\n  min-height: 100%;\n  -webkit-text-size-adjust: 100%;\n  -ms-text-size-adjust: 100%;\n  -webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale; }\n\n/************\n * Headings\n ************/\n.md-display-4 {\n  font-size: 112px;\n  font-weight: 300;\n  letter-spacing: -0.010em;\n  line-height: 112px; }\n\n.md-display-3 {\n  font-size: 56px;\n  font-weight: 400;\n  letter-spacing: -0.005em;\n  line-height: 56px; }\n\n.md-display-2 {\n  font-size: 45px;\n  font-weight: 400;\n  line-height: 64px; }\n\n.md-display-1 {\n  font-size: 34px;\n  font-weight: 400;\n  line-height: 40px; }\n\n.md-headline {\n  font-size: 24px;\n  font-weight: 400;\n  line-height: 32px; }\n\n.md-title {\n  font-size: 20px;\n  font-weight: 500;\n  letter-spacing: 0.005em; }\n\n.md-subhead {\n  font-size: 16px;\n  font-weight: 400;\n  letter-spacing: 0.010em;\n  line-height: 24px; }\n\n/************\n * Body Copy\n ************/\n.md-body-1 {\n  font-size: 14px;\n  font-weight: 400;\n  letter-spacing: 0.010em;\n  line-height: 20px; }\n\n.md-body-2 {\n  font-size: 14px;\n  font-weight: 500;\n  letter-spacing: 0.010em;\n  line-height: 24px; }\n\n.md-caption {\n  font-size: 12px;\n  letter-spacing: 0.020em; }\n\n.md-button {\n  letter-spacing: 0.010em; }\n\n/************\n * Defaults\n ************/\nbutton,\nselect,\nhtml,\ntextarea,\ninput {\n  font-family: Roboto, \"Helvetica Neue\", sans-serif; }\n\nselect,\nbutton,\ntextarea,\ninput {\n  font-size: 100%; }\n\n/*\n*\n*  Responsive attributes\n*\n*  References:\n*  1) https://scotch.io/tutorials/a-visual-guide-to-css3-flexbox-properties#flex\n*  2) https://css-tricks.com/almanac/properties/f/flex/\n*  3) https://css-tricks.com/snippets/css/a-guide-to-flexbox/\n*  4) https://github.com/philipwalton/flexbugs#3-min-height-on-a-flex-container-wont-apply-to-its-flex-items\n*  5) http://godban.com.ua/projects/flexgrid\n*\n*\n*/\n.md-panel-outer-wrapper {\n  height: 100%;\n  left: 0;\n  position: absolute;\n  top: 0;\n  width: 100%; }\n\n._md-panel-hidden {\n  display: none; }\n\n._md-panel-offscreen {\n  left: -9999px; }\n\n._md-panel-fullscreen {\n  border-radius: 0;\n  left: 0;\n  min-height: 100%;\n  min-width: 100%;\n  position: fixed;\n  top: 0; }\n\n._md-panel-shown .md-panel {\n  opacity: 1;\n  -webkit-transition: none;\n  transition: none; }\n\n.md-panel {\n  opacity: 0;\n  position: fixed; }\n  .md-panel._md-panel-shown {\n    opacity: 1;\n    -webkit-transition: none;\n    transition: none; }\n  .md-panel._md-panel-animate-enter {\n    opacity: 1;\n    -webkit-transition: all 0.3s cubic-bezier(0, 0, 0.2, 1);\n    transition: all 0.3s cubic-bezier(0, 0, 0.2, 1); }\n  .md-panel._md-panel-animate-leave {\n    opacity: 1;\n    -webkit-transition: all 0.3s cubic-bezier(0.4, 0, 1, 1);\n    transition: all 0.3s cubic-bezier(0.4, 0, 1, 1); }\n  .md-panel._md-panel-animate-scale-out, .md-panel._md-panel-animate-fade-out {\n    opacity: 0; }\n  .md-panel._md-panel-backdrop {\n    height: 100%;\n    position: absolute;\n    width: 100%; }\n  .md-panel._md-opaque-enter {\n    opacity: .48;\n    -webkit-transition: opacity 0.3s cubic-bezier(0, 0, 0.2, 1);\n    transition: opacity 0.3s cubic-bezier(0, 0, 0.2, 1); }\n  .md-panel._md-opaque-leave {\n    -webkit-transition: opacity 0.3s cubic-bezier(0.4, 0, 1, 1);\n    transition: opacity 0.3s cubic-bezier(0.4, 0, 1, 1); }\n\nmd-autocomplete {\n  border-radius: 2px;\n  display: block;\n  height: 40px;\n  position: relative;\n  overflow: visible;\n  min-width: 190px; }\n  md-autocomplete[disabled] input {\n    cursor: default; }\n  md-autocomplete[md-floating-label] {\n    border-radius: 0;\n    background: transparent;\n    height: auto; }\n    md-autocomplete[md-floating-label] md-input-container {\n      padding-bottom: 0; }\n    md-autocomplete[md-floating-label] md-autocomplete-wrap {\n      height: auto; }\n    md-autocomplete[md-floating-label] .md-show-clear-button button {\n      display: block;\n      position: absolute;\n      right: 0;\n      top: 20px;\n      width: 30px;\n      height: 30px; }\n    md-autocomplete[md-floating-label] .md-show-clear-button input {\n      padding-right: 30px; }\n      [dir=rtl] md-autocomplete[md-floating-label] .md-show-clear-button input {\n        padding-right: 0;\n        padding-left: 30px; }\n  md-autocomplete md-autocomplete-wrap {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row;\n    box-sizing: border-box;\n    position: relative;\n    overflow: visible;\n    height: 40px; }\n    md-autocomplete md-autocomplete-wrap.md-menu-showing {\n      z-index: 51; }\n    md-autocomplete md-autocomplete-wrap md-input-container, md-autocomplete md-autocomplete-wrap input {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1 1 0%;\n              flex: 1 1 0%;\n      box-sizing: border-box;\n      min-width: 0; }\n    md-autocomplete md-autocomplete-wrap md-progress-linear {\n      position: absolute;\n      bottom: -2px;\n      left: 0; }\n      md-autocomplete md-autocomplete-wrap md-progress-linear.md-inline {\n        bottom: 40px;\n        right: 2px;\n        left: 2px;\n        width: auto; }\n      md-autocomplete md-autocomplete-wrap md-progress-linear .md-mode-indeterminate {\n        position: absolute;\n        top: 0;\n        left: 0;\n        width: 100%;\n        height: 3px;\n        -webkit-transition: none;\n        transition: none; }\n        md-autocomplete md-autocomplete-wrap md-progress-linear .md-mode-indeterminate .md-container {\n          -webkit-transition: none;\n          transition: none;\n          height: 3px; }\n        md-autocomplete md-autocomplete-wrap md-progress-linear .md-mode-indeterminate.ng-enter {\n          -webkit-transition: opacity 0.15s linear;\n          transition: opacity 0.15s linear; }\n          md-autocomplete md-autocomplete-wrap md-progress-linear .md-mode-indeterminate.ng-enter.ng-enter-active {\n            opacity: 1; }\n        md-autocomplete md-autocomplete-wrap md-progress-linear .md-mode-indeterminate.ng-leave {\n          -webkit-transition: opacity 0.15s linear;\n          transition: opacity 0.15s linear; }\n          md-autocomplete md-autocomplete-wrap md-progress-linear .md-mode-indeterminate.ng-leave.ng-leave-active {\n            opacity: 0; }\n  md-autocomplete input:not(.md-input) {\n    font-size: 14px;\n    box-sizing: border-box;\n    border: none;\n    box-shadow: none;\n    outline: none;\n    background: transparent;\n    width: 100%;\n    padding: 0 15px;\n    line-height: 40px;\n    height: 40px; }\n    md-autocomplete input:not(.md-input)::-ms-clear {\n      display: none; }\n  md-autocomplete .md-show-clear-button button {\n    position: relative;\n    line-height: 20px;\n    text-align: center;\n    width: 30px;\n    height: 30px;\n    cursor: pointer;\n    border: none;\n    border-radius: 50%;\n    padding: 0;\n    font-size: 12px;\n    background: transparent;\n    margin: auto 5px; }\n    md-autocomplete .md-show-clear-button button:after {\n      content: '';\n      position: absolute;\n      top: -6px;\n      right: -6px;\n      bottom: -6px;\n      left: -6px;\n      border-radius: 50%;\n      -webkit-transform: scale(0);\n              transform: scale(0);\n      opacity: 0;\n      -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }\n    md-autocomplete .md-show-clear-button button:focus {\n      outline: none; }\n      md-autocomplete .md-show-clear-button button:focus:after {\n        -webkit-transform: scale(1);\n                transform: scale(1);\n        opacity: 1; }\n    md-autocomplete .md-show-clear-button button md-icon {\n      position: absolute;\n      top: 50%;\n      left: 50%;\n      -webkit-transform: translate3d(-50%, -50%, 0) scale(0.9);\n              transform: translate3d(-50%, -50%, 0) scale(0.9); }\n      md-autocomplete .md-show-clear-button button md-icon path {\n        stroke-width: 0; }\n    md-autocomplete .md-show-clear-button button.ng-enter {\n      -webkit-transform: scale(0);\n              transform: scale(0);\n      -webkit-transition: -webkit-transform 0.15s ease-out;\n      transition: -webkit-transform 0.15s ease-out;\n      transition: transform 0.15s ease-out;\n      transition: transform 0.15s ease-out, -webkit-transform 0.15s ease-out; }\n      md-autocomplete .md-show-clear-button button.ng-enter.ng-enter-active {\n        -webkit-transform: scale(1);\n                transform: scale(1); }\n    md-autocomplete .md-show-clear-button button.ng-leave {\n      -webkit-transition: -webkit-transform 0.15s ease-out;\n      transition: -webkit-transform 0.15s ease-out;\n      transition: transform 0.15s ease-out;\n      transition: transform 0.15s ease-out, -webkit-transform 0.15s ease-out; }\n      md-autocomplete .md-show-clear-button button.ng-leave.ng-leave-active {\n        -webkit-transform: scale(0);\n                transform: scale(0); }\n  @media screen and (-ms-high-contrast: active) {\n    md-autocomplete input {\n      border: 1px solid #fff; }\n    md-autocomplete li:focus {\n      color: #fff; } }\n\n.md-virtual-repeat-container.md-autocomplete-suggestions-container {\n  position: absolute;\n  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);\n  z-index: 100;\n  height: 100%; }\n\n.md-virtual-repeat-container.md-not-found {\n  height: 48px; }\n\n.md-autocomplete-suggestions {\n  margin: 0;\n  list-style: none;\n  padding: 0; }\n  .md-autocomplete-suggestions li {\n    font-size: 14px;\n    overflow: hidden;\n    padding: 0 15px;\n    line-height: 48px;\n    height: 48px;\n    -webkit-transition: background 0.15s linear;\n    transition: background 0.15s linear;\n    margin: 0;\n    white-space: nowrap;\n    text-overflow: ellipsis; }\n    .md-autocomplete-suggestions li:focus {\n      outline: none; }\n    .md-autocomplete-suggestions li:not(.md-not-found-wrapper) {\n      cursor: pointer; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-autocomplete,\n  .md-autocomplete-suggestions {\n    border: 1px solid #fff; } }\n\nmd-bottom-sheet {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  padding: 8px 16px 88px 16px;\n  z-index: 70;\n  border-top-width: 1px;\n  border-top-style: solid;\n  -webkit-transform: translate3d(0, 80px, 0);\n          transform: translate3d(0, 80px, 0);\n  -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  -webkit-transition-property: -webkit-transform;\n  transition-property: -webkit-transform;\n  transition-property: transform;\n  transition-property: transform, -webkit-transform; }\n  md-bottom-sheet.md-has-header {\n    padding-top: 0; }\n  md-bottom-sheet.ng-enter {\n    opacity: 0;\n    -webkit-transform: translate3d(0, 100%, 0);\n            transform: translate3d(0, 100%, 0); }\n  md-bottom-sheet.ng-enter-active {\n    opacity: 1;\n    display: block;\n    -webkit-transform: translate3d(0, 80px, 0) !important;\n            transform: translate3d(0, 80px, 0) !important; }\n  md-bottom-sheet.ng-leave-active {\n    -webkit-transform: translate3d(0, 100%, 0) !important;\n            transform: translate3d(0, 100%, 0) !important;\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n  md-bottom-sheet .md-subheader {\n    background-color: transparent;\n    font-family: Roboto, \"Helvetica Neue\", sans-serif;\n    line-height: 56px;\n    padding: 0;\n    white-space: nowrap; }\n  md-bottom-sheet md-inline-icon {\n    display: inline-block;\n    height: 24px;\n    width: 24px;\n    fill: #444; }\n  md-bottom-sheet md-list-item {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    outline: none; }\n    md-bottom-sheet md-list-item:hover {\n      cursor: pointer; }\n  md-bottom-sheet.md-list md-list-item {\n    padding: 0;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    height: 48px; }\n  md-bottom-sheet.md-grid {\n    padding-left: 24px;\n    padding-right: 24px;\n    padding-top: 0; }\n    md-bottom-sheet.md-grid md-list {\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-orient: horizontal;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: row;\n              flex-direction: row;\n      -webkit-flex-wrap: wrap;\n              flex-wrap: wrap;\n      -webkit-transition: all 0.5s;\n      transition: all 0.5s;\n      -webkit-box-align: center;\n      -webkit-align-items: center;\n              align-items: center; }\n    md-bottom-sheet.md-grid md-list-item {\n      -webkit-box-orient: vertical;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: column;\n              flex-direction: column;\n      -webkit-box-align: center;\n      -webkit-align-items: center;\n              align-items: center;\n      -webkit-transition: all 0.5s;\n      transition: all 0.5s;\n      height: 96px;\n      margin-top: 8px;\n      margin-bottom: 8px;\n      /* Mixin for how many grid items to show per row */ }\n      @media (max-width: 960px) {\n        md-bottom-sheet.md-grid md-list-item {\n          -webkit-box-flex: 1;\n          -webkit-flex: 1 1 33.33333%;\n                  flex: 1 1 33.33333%;\n          max-width: 33.33333%; }\n          md-bottom-sheet.md-grid md-list-item:nth-of-type(3n + 1) {\n            -webkit-box-align: start;\n            -webkit-align-items: flex-start;\n                    align-items: flex-start; }\n          md-bottom-sheet.md-grid md-list-item:nth-of-type(3n) {\n            -webkit-box-align: end;\n            -webkit-align-items: flex-end;\n                    align-items: flex-end; } }\n      @media (min-width: 960px) and (max-width: 1279px) {\n        md-bottom-sheet.md-grid md-list-item {\n          -webkit-box-flex: 1;\n          -webkit-flex: 1 1 25%;\n                  flex: 1 1 25%;\n          max-width: 25%; } }\n      @media (min-width: 1280px) and (max-width: 1919px) {\n        md-bottom-sheet.md-grid md-list-item {\n          -webkit-box-flex: 1;\n          -webkit-flex: 1 1 16.66667%;\n                  flex: 1 1 16.66667%;\n          max-width: 16.66667%; } }\n      @media (min-width: 1920px) {\n        md-bottom-sheet.md-grid md-list-item {\n          -webkit-box-flex: 1;\n          -webkit-flex: 1 1 14.28571%;\n                  flex: 1 1 14.28571%;\n          max-width: 14.28571%; } }\n      md-bottom-sheet.md-grid md-list-item::before {\n        display: none; }\n      md-bottom-sheet.md-grid md-list-item .md-list-item-content {\n        display: -webkit-box;\n        display: -webkit-flex;\n        display: flex;\n        -webkit-box-orient: vertical;\n        -webkit-box-direction: normal;\n        -webkit-flex-direction: column;\n                flex-direction: column;\n        -webkit-box-align: center;\n        -webkit-align-items: center;\n                align-items: center;\n        width: 48px;\n        padding-bottom: 16px; }\n      md-bottom-sheet.md-grid md-list-item .md-grid-item-content {\n        border: 1px solid transparent;\n        display: -webkit-box;\n        display: -webkit-flex;\n        display: flex;\n        -webkit-box-orient: vertical;\n        -webkit-box-direction: normal;\n        -webkit-flex-direction: column;\n                flex-direction: column;\n        -webkit-box-align: center;\n        -webkit-align-items: center;\n                align-items: center;\n        width: 80px; }\n      md-bottom-sheet.md-grid md-list-item .md-grid-text {\n        font-weight: 400;\n        line-height: 16px;\n        font-size: 13px;\n        margin: 0;\n        white-space: nowrap;\n        width: 64px;\n        text-align: center;\n        text-transform: none;\n        padding-top: 8px; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-bottom-sheet {\n    border: 1px solid #fff; } }\n\nmd-backdrop {\n  -webkit-transition: opacity 450ms;\n  transition: opacity 450ms;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  z-index: 50; }\n  md-backdrop.md-menu-backdrop {\n    position: fixed !important;\n    z-index: 99; }\n  md-backdrop.md-select-backdrop {\n    z-index: 81;\n    -webkit-transition-duration: 0;\n            transition-duration: 0; }\n  md-backdrop.md-dialog-backdrop {\n    z-index: 79; }\n  md-backdrop.md-bottom-sheet-backdrop {\n    z-index: 69; }\n  md-backdrop.md-sidenav-backdrop {\n    z-index: 59; }\n  md-backdrop.md-click-catcher {\n    position: absolute; }\n  md-backdrop.md-opaque {\n    opacity: .48; }\n    md-backdrop.md-opaque.ng-enter {\n      opacity: 0; }\n    md-backdrop.md-opaque.ng-enter.md-opaque.ng-enter-active {\n      opacity: .48; }\n    md-backdrop.md-opaque.ng-leave {\n      opacity: .48;\n      -webkit-transition: opacity 400ms;\n      transition: opacity 400ms; }\n    md-backdrop.md-opaque.ng-leave.md-opaque.ng-leave-active {\n      opacity: 0; }\n\nbutton.md-button::-moz-focus-inner {\n  border: 0; }\n\n.md-button {\n  display: inline-block;\n  position: relative;\n  cursor: pointer;\n  /** Alignment adjustments */\n  min-height: 36px;\n  min-width: 88px;\n  line-height: 36px;\n  vertical-align: middle;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  text-align: center;\n  border-radius: 2px;\n  box-sizing: border-box;\n  /* Reset default button appearance */\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  outline: none;\n  border: 0;\n  /** Custom styling for button */\n  padding: 0 6px;\n  margin: 6px 8px;\n  background: transparent;\n  color: currentColor;\n  white-space: nowrap;\n  /* Uppercase text content */\n  text-transform: uppercase;\n  font-weight: 500;\n  font-size: 14px;\n  font-style: inherit;\n  font-variant: inherit;\n  font-family: inherit;\n  text-decoration: none;\n  overflow: hidden;\n  -webkit-transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }\n  .md-dense > .md-button:not(.md-dense-disabled),\n  .md-dense :not(.md-dense-disabled) .md-button:not(.md-dense-disabled) {\n    min-height: 32px; }\n  .md-dense > .md-button:not(.md-dense-disabled),\n  .md-dense :not(.md-dense-disabled) .md-button:not(.md-dense-disabled) {\n    line-height: 32px; }\n  .md-dense > .md-button:not(.md-dense-disabled),\n  .md-dense :not(.md-dense-disabled) .md-button:not(.md-dense-disabled) {\n    font-size: 13px; }\n  .md-button:focus {\n    outline: none; }\n  .md-button:hover, .md-button:focus {\n    text-decoration: none; }\n  .md-button.ng-hide, .md-button.ng-leave {\n    -webkit-transition: none;\n    transition: none; }\n  .md-button.md-cornered {\n    border-radius: 0; }\n  .md-button.md-icon {\n    padding: 0;\n    background: none; }\n  .md-button.md-raised:not([disabled]) {\n    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26); }\n  .md-button.md-icon-button {\n    margin: 0 6px;\n    height: 40px;\n    min-width: 0;\n    line-height: 24px;\n    padding: 8px;\n    width: 40px;\n    border-radius: 50%; }\n    .md-button.md-icon-button .md-ripple-container {\n      border-radius: 50%;\n      background-clip: padding-box;\n      overflow: hidden;\n      -webkit-mask-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAA5JREFUeNpiYGBgAAgwAAAEAAGbA+oJAAAAAElFTkSuQmCC\"); }\n  .md-button.md-fab {\n    z-index: 20;\n    line-height: 56px;\n    min-width: 0;\n    width: 56px;\n    height: 56px;\n    vertical-align: middle;\n    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);\n    border-radius: 50%;\n    background-clip: padding-box;\n    overflow: hidden;\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    -webkit-transition-property: background-color, box-shadow, -webkit-transform;\n    transition-property: background-color, box-shadow, -webkit-transform;\n    transition-property: background-color, box-shadow, transform;\n    transition-property: background-color, box-shadow, transform, -webkit-transform; }\n    .md-button.md-fab.md-fab-bottom-right {\n      top: auto;\n      right: 20px;\n      bottom: 20px;\n      left: auto;\n      position: absolute; }\n    .md-button.md-fab.md-fab-bottom-left {\n      top: auto;\n      right: auto;\n      bottom: 20px;\n      left: 20px;\n      position: absolute; }\n    .md-button.md-fab.md-fab-top-right {\n      top: 20px;\n      right: 20px;\n      bottom: auto;\n      left: auto;\n      position: absolute; }\n    .md-button.md-fab.md-fab-top-left {\n      top: 20px;\n      right: auto;\n      bottom: auto;\n      left: 20px;\n      position: absolute; }\n    .md-button.md-fab .md-ripple-container {\n      border-radius: 50%;\n      background-clip: padding-box;\n      overflow: hidden;\n      -webkit-mask-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAA5JREFUeNpiYGBgAAgwAAAEAAGbA+oJAAAAAElFTkSuQmCC\"); }\n    .md-button.md-fab.md-mini {\n      line-height: 40px;\n      width: 40px;\n      height: 40px; }\n    .md-button.md-fab.ng-hide, .md-button.md-fab.ng-leave {\n      -webkit-transition: none;\n      transition: none; }\n  .md-button:not([disabled]).md-raised.md-focused, .md-button:not([disabled]).md-fab.md-focused {\n    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26); }\n  .md-button:not([disabled]).md-raised:active, .md-button:not([disabled]).md-fab:active {\n    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.4); }\n  .md-button .md-ripple-container {\n    border-radius: 2px;\n    background-clip: padding-box;\n    overflow: hidden;\n    -webkit-mask-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAA5JREFUeNpiYGBgAAgwAAAEAAGbA+oJAAAAAElFTkSuQmCC\"); }\n\n.md-button.md-icon-button md-icon,\nbutton.md-button.md-fab md-icon {\n  display: block; }\n\n.md-toast-open-top .md-button.md-fab-top-left,\n.md-toast-open-top .md-button.md-fab-top-right {\n  -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  -webkit-transform: translate3d(0, 42px, 0);\n          transform: translate3d(0, 42px, 0); }\n  .md-toast-open-top .md-button.md-fab-top-left:not([disabled]).md-focused, .md-toast-open-top .md-button.md-fab-top-left:not([disabled]):hover,\n  .md-toast-open-top .md-button.md-fab-top-right:not([disabled]).md-focused,\n  .md-toast-open-top .md-button.md-fab-top-right:not([disabled]):hover {\n    -webkit-transform: translate3d(0, 41px, 0);\n            transform: translate3d(0, 41px, 0); }\n\n.md-toast-open-bottom .md-button.md-fab-bottom-left,\n.md-toast-open-bottom .md-button.md-fab-bottom-right {\n  -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  -webkit-transform: translate3d(0, -42px, 0);\n          transform: translate3d(0, -42px, 0); }\n  .md-toast-open-bottom .md-button.md-fab-bottom-left:not([disabled]).md-focused, .md-toast-open-bottom .md-button.md-fab-bottom-left:not([disabled]):hover,\n  .md-toast-open-bottom .md-button.md-fab-bottom-right:not([disabled]).md-focused,\n  .md-toast-open-bottom .md-button.md-fab-bottom-right:not([disabled]):hover {\n    -webkit-transform: translate3d(0, -43px, 0);\n            transform: translate3d(0, -43px, 0); }\n\n.md-button-group {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-flex: 1;\n  -webkit-flex: 1;\n          flex: 1;\n  width: 100%; }\n  .md-button-group > .md-button {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    display: block;\n    overflow: hidden;\n    width: 0;\n    border-width: 1px 0px 1px 1px;\n    border-radius: 0;\n    text-align: center;\n    text-overflow: ellipsis;\n    white-space: nowrap; }\n    .md-button-group > .md-button:first-child {\n      border-radius: 2px 0px 0px 2px; }\n    .md-button-group > .md-button:last-child {\n      border-right-width: 1px;\n      border-radius: 0px 2px 2px 0px; }\n\n@media screen and (-ms-high-contrast: active) {\n  .md-button.md-raised,\n  .md-button.md-fab {\n    border: 1px solid #fff; } }\n\nmd-card {\n  box-sizing: border-box;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column;\n  margin: 8px;\n  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12); }\n  md-card md-card-header {\n    padding: 16px;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n    md-card md-card-header:first-child md-card-avatar {\n      margin-right: 12px; }\n      [dir=rtl] md-card md-card-header:first-child md-card-avatar {\n        margin-right: auto;\n        margin-left: 12px; }\n    md-card md-card-header:last-child md-card-avatar {\n      margin-left: 12px; }\n      [dir=rtl] md-card md-card-header:last-child md-card-avatar {\n        margin-left: auto;\n        margin-right: 12px; }\n    md-card md-card-header md-card-avatar {\n      width: 40px;\n      height: 40px; }\n      md-card md-card-header md-card-avatar .md-user-avatar,\n      md-card md-card-header md-card-avatar md-icon {\n        border-radius: 50%; }\n      md-card md-card-header md-card-avatar md-icon {\n        padding: 8px; }\n        md-card md-card-header md-card-avatar md-icon > svg {\n          height: inherit;\n          width: inherit; }\n      md-card md-card-header md-card-avatar + md-card-header-text {\n        max-height: 40px; }\n        md-card md-card-header md-card-avatar + md-card-header-text .md-title {\n          font-size: 14px; }\n    md-card md-card-header md-card-header-text {\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      -webkit-box-orient: vertical;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: column;\n              flex-direction: column; }\n      md-card md-card-header md-card-header-text .md-subhead {\n        font-size: 14px; }\n  md-card > img,\n  md-card > md-card-header img,\n  md-card md-card-title-media img {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    width: 100%;\n    height: auto; }\n  md-card md-card-title {\n    padding: 24px 16px 16px;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n    md-card md-card-title + md-card-content {\n      padding-top: 0; }\n    md-card md-card-title md-card-title-text {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      -webkit-box-orient: vertical;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: column;\n              flex-direction: column;\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex; }\n      md-card md-card-title md-card-title-text .md-subhead {\n        padding-top: 0;\n        font-size: 14px; }\n      md-card md-card-title md-card-title-text:only-child .md-subhead {\n        padding-top: 12px; }\n    md-card md-card-title md-card-title-media {\n      margin-top: -8px; }\n      md-card md-card-title md-card-title-media .md-media-sm {\n        height: 80px;\n        width: 80px; }\n      md-card md-card-title md-card-title-media .md-media-md {\n        height: 112px;\n        width: 112px; }\n      md-card md-card-title md-card-title-media .md-media-lg {\n        height: 152px;\n        width: 152px; }\n  md-card md-card-content {\n    display: block;\n    padding: 16px; }\n    md-card md-card-content > p:first-child {\n      margin-top: 0; }\n    md-card md-card-content > p:last-child {\n      margin-bottom: 0; }\n    md-card md-card-content .md-media-xl {\n      height: 240px;\n      width: 240px; }\n  md-card .md-actions, md-card md-card-actions {\n    margin: 8px; }\n    md-card .md-actions.layout-column .md-button:not(.md-icon-button), md-card md-card-actions.layout-column .md-button:not(.md-icon-button) {\n      margin: 2px 0; }\n      md-card .md-actions.layout-column .md-button:not(.md-icon-button):first-of-type, md-card md-card-actions.layout-column .md-button:not(.md-icon-button):first-of-type {\n        margin-top: 0; }\n      md-card .md-actions.layout-column .md-button:not(.md-icon-button):last-of-type, md-card md-card-actions.layout-column .md-button:not(.md-icon-button):last-of-type {\n        margin-bottom: 0; }\n    md-card .md-actions.layout-column .md-button.md-icon-button, md-card md-card-actions.layout-column .md-button.md-icon-button {\n      margin-top: 6px;\n      margin-bottom: 6px; }\n    md-card .md-actions md-card-icon-actions, md-card md-card-actions md-card-icon-actions {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      -webkit-box-pack: start;\n      -webkit-justify-content: flex-start;\n              justify-content: flex-start;\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-orient: horizontal;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: row;\n              flex-direction: row; }\n    md-card .md-actions:not(.layout-column) .md-button:not(.md-icon-button), md-card md-card-actions:not(.layout-column) .md-button:not(.md-icon-button) {\n      margin: 0 4px; }\n      md-card .md-actions:not(.layout-column) .md-button:not(.md-icon-button):first-of-type, md-card md-card-actions:not(.layout-column) .md-button:not(.md-icon-button):first-of-type {\n        margin-left: 0; }\n        [dir=rtl] md-card .md-actions:not(.layout-column) .md-button:not(.md-icon-button):first-of-type, [dir=rtl] md-card md-card-actions:not(.layout-column) .md-button:not(.md-icon-button):first-of-type {\n          margin-left: auto;\n          margin-right: 0; }\n      md-card .md-actions:not(.layout-column) .md-button:not(.md-icon-button):last-of-type, md-card md-card-actions:not(.layout-column) .md-button:not(.md-icon-button):last-of-type {\n        margin-right: 0; }\n        [dir=rtl] md-card .md-actions:not(.layout-column) .md-button:not(.md-icon-button):last-of-type, [dir=rtl] md-card md-card-actions:not(.layout-column) .md-button:not(.md-icon-button):last-of-type {\n          margin-right: auto;\n          margin-left: 0; }\n    md-card .md-actions:not(.layout-column) .md-button.md-icon-button, md-card md-card-actions:not(.layout-column) .md-button.md-icon-button {\n      margin-left: 6px;\n      margin-right: 6px; }\n      md-card .md-actions:not(.layout-column) .md-button.md-icon-button:first-of-type, md-card md-card-actions:not(.layout-column) .md-button.md-icon-button:first-of-type {\n        margin-left: 12px; }\n        [dir=rtl] md-card .md-actions:not(.layout-column) .md-button.md-icon-button:first-of-type, [dir=rtl] md-card md-card-actions:not(.layout-column) .md-button.md-icon-button:first-of-type {\n          margin-left: auto;\n          margin-right: 12px; }\n      md-card .md-actions:not(.layout-column) .md-button.md-icon-button:last-of-type, md-card md-card-actions:not(.layout-column) .md-button.md-icon-button:last-of-type {\n        margin-right: 12px; }\n        [dir=rtl] md-card .md-actions:not(.layout-column) .md-button.md-icon-button:last-of-type, [dir=rtl] md-card md-card-actions:not(.layout-column) .md-button.md-icon-button:last-of-type {\n          margin-right: auto;\n          margin-left: 12px; }\n    md-card .md-actions:not(.layout-column) .md-button + md-card-icon-actions, md-card md-card-actions:not(.layout-column) .md-button + md-card-icon-actions {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      -webkit-box-pack: end;\n      -webkit-justify-content: flex-end;\n              justify-content: flex-end;\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-orient: horizontal;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: row;\n              flex-direction: row; }\n  md-card md-card-footer {\n    margin-top: auto;\n    padding: 16px; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-card {\n    border: 1px solid #fff; } }\n\n.md-image-no-fill > img {\n  width: auto;\n  height: auto; }\n\n.md-inline-form md-checkbox {\n  margin: 19px 0 18px; }\n\nmd-checkbox {\n  box-sizing: border-box;\n  display: inline-block;\n  margin-bottom: 16px;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  position: relative;\n  min-width: 20px;\n  min-height: 20px;\n  margin-left: 0;\n  margin-right: 16px; }\n  [dir=rtl] md-checkbox {\n    margin-left: 16px; }\n  [dir=rtl] md-checkbox {\n    margin-right: 0; }\n  md-checkbox:last-of-type {\n    margin-left: 0;\n    margin-right: 0; }\n  md-checkbox.md-focused:not([disabled]) .md-container:before {\n    left: -8px;\n    top: -8px;\n    right: -8px;\n    bottom: -8px; }\n  md-checkbox.md-focused:not([disabled]):not(.md-checked) .md-container:before {\n    background-color: rgba(0, 0, 0, 0.12); }\n  md-checkbox.md-align-top-left > div.md-container {\n    top: 12px; }\n  md-checkbox .md-container {\n    position: absolute;\n    top: 50%;\n    -webkit-transform: translateY(-50%);\n            transform: translateY(-50%);\n    box-sizing: border-box;\n    display: inline-block;\n    width: 20px;\n    height: 20px;\n    left: 0;\n    right: auto; }\n    [dir=rtl] md-checkbox .md-container {\n      left: auto; }\n    [dir=rtl] md-checkbox .md-container {\n      right: 0; }\n    md-checkbox .md-container:before {\n      box-sizing: border-box;\n      background-color: transparent;\n      border-radius: 50%;\n      content: '';\n      position: absolute;\n      display: block;\n      height: auto;\n      left: 0;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      -webkit-transition: all 0.5s;\n      transition: all 0.5s;\n      width: auto; }\n    md-checkbox .md-container:after {\n      box-sizing: border-box;\n      content: '';\n      position: absolute;\n      top: -10px;\n      right: -10px;\n      bottom: -10px;\n      left: -10px; }\n    md-checkbox .md-container .md-ripple-container {\n      position: absolute;\n      display: block;\n      width: auto;\n      height: auto;\n      left: -15px;\n      top: -15px;\n      right: -15px;\n      bottom: -15px; }\n  md-checkbox .md-icon {\n    box-sizing: border-box;\n    -webkit-transition: 240ms;\n    transition: 240ms;\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 20px;\n    height: 20px;\n    border-width: 2px;\n    border-style: solid;\n    border-radius: 2px; }\n  md-checkbox.md-checked .md-icon {\n    border-color: transparent; }\n    md-checkbox.md-checked .md-icon:after {\n      box-sizing: border-box;\n      -webkit-transform: rotate(45deg);\n              transform: rotate(45deg);\n      position: absolute;\n      left: 4.66667px;\n      top: 0.22222px;\n      display: table;\n      width: 6.66667px;\n      height: 13.33333px;\n      border-width: 2px;\n      border-style: solid;\n      border-top: 0;\n      border-left: 0;\n      content: ''; }\n  md-checkbox[disabled] {\n    cursor: default; }\n  md-checkbox.md-indeterminate .md-icon:after {\n    box-sizing: border-box;\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    -webkit-transform: translate(-50%, -50%);\n            transform: translate(-50%, -50%);\n    display: table;\n    width: 12px;\n    height: 2px;\n    border-width: 2px;\n    border-style: solid;\n    border-top: 0;\n    border-left: 0;\n    content: ''; }\n  md-checkbox .md-label {\n    box-sizing: border-box;\n    position: relative;\n    display: inline-block;\n    vertical-align: middle;\n    white-space: normal;\n    -webkit-user-select: text;\n       -moz-user-select: text;\n        -ms-user-select: text;\n            user-select: text;\n    margin-left: 30px;\n    margin-right: 0; }\n    [dir=rtl] md-checkbox .md-label {\n      margin-left: 0; }\n    [dir=rtl] md-checkbox .md-label {\n      margin-right: 30px; }\n\n.md-contact-chips .md-chips md-chip {\n  padding: 0 25px 0 0; }\n  [dir=rtl] .md-contact-chips .md-chips md-chip {\n    padding: 0 0 0 25px; }\n  .md-contact-chips .md-chips md-chip .md-contact-avatar {\n    float: left; }\n    [dir=rtl] .md-contact-chips .md-chips md-chip .md-contact-avatar {\n      float: right; }\n    .md-contact-chips .md-chips md-chip .md-contact-avatar img {\n      height: 32px;\n      border-radius: 16px; }\n  .md-contact-chips .md-chips md-chip .md-contact-name {\n    display: inline-block;\n    height: 32px;\n    margin-left: 8px; }\n    [dir=rtl] .md-contact-chips .md-chips md-chip .md-contact-name {\n      margin-left: auto;\n      margin-right: 8px; }\n\n.md-contact-suggestion {\n  height: 56px; }\n  .md-contact-suggestion img {\n    height: 40px;\n    border-radius: 20px;\n    margin-top: 8px; }\n  .md-contact-suggestion .md-contact-name {\n    margin-left: 8px;\n    width: 120px; }\n    [dir=rtl] .md-contact-suggestion .md-contact-name {\n      margin-left: auto;\n      margin-right: 8px; }\n  .md-contact-suggestion .md-contact-name, .md-contact-suggestion .md-contact-email {\n    display: inline-block;\n    overflow: hidden;\n    text-overflow: ellipsis; }\n\n.md-contact-chips-suggestions li {\n  height: 100%; }\n\n.md-chips {\n  display: block;\n  font-family: Roboto, \"Helvetica Neue\", sans-serif;\n  font-size: 16px;\n  padding: 0 0 8px 3px;\n  vertical-align: middle; }\n  .md-chips:after {\n    content: '';\n    display: table;\n    clear: both; }\n  [dir=rtl] .md-chips {\n    padding: 0 3px 8px 0; }\n  .md-chips.md-readonly .md-chip-input-container {\n    min-height: 32px; }\n  .md-chips:not(.md-readonly) {\n    cursor: text; }\n  .md-chips.md-removable md-chip {\n    padding-right: 22px; }\n    [dir=rtl] .md-chips.md-removable md-chip {\n      padding-right: 0;\n      padding-left: 22px; }\n    .md-chips.md-removable md-chip .md-chip-content {\n      padding-right: 4px; }\n      [dir=rtl] .md-chips.md-removable md-chip .md-chip-content {\n        padding-right: 0;\n        padding-left: 4px; }\n  .md-chips md-chip {\n    cursor: default;\n    border-radius: 16px;\n    display: block;\n    height: 32px;\n    line-height: 32px;\n    margin: 8px 8px 0 0;\n    padding: 0 12px 0 12px;\n    float: left;\n    box-sizing: border-box;\n    max-width: 100%;\n    position: relative; }\n    [dir=rtl] .md-chips md-chip {\n      margin: 8px 0 0 8px; }\n    [dir=rtl] .md-chips md-chip {\n      float: right; }\n    .md-chips md-chip .md-chip-content {\n      display: block;\n      float: left;\n      white-space: nowrap;\n      max-width: 100%;\n      overflow: hidden;\n      text-overflow: ellipsis; }\n      [dir=rtl] .md-chips md-chip .md-chip-content {\n        float: right; }\n      .md-chips md-chip .md-chip-content:focus {\n        outline: none; }\n    .md-chips md-chip._md-chip-content-edit-is-enabled {\n      -webkit-user-select: none;\n      /* webkit (safari, chrome) browsers */\n      -moz-user-select: none;\n      /* mozilla browsers */\n      -khtml-user-select: none;\n      /* webkit (konqueror) browsers */\n      -ms-user-select: none;\n      /* IE10+ */ }\n    .md-chips md-chip .md-chip-remove-container {\n      position: absolute;\n      right: 0;\n      line-height: 22px; }\n      [dir=rtl] .md-chips md-chip .md-chip-remove-container {\n        right: auto;\n        left: 0; }\n    .md-chips md-chip .md-chip-remove {\n      text-align: center;\n      width: 32px;\n      height: 32px;\n      min-width: 0;\n      padding: 0;\n      background: transparent;\n      border: none;\n      box-shadow: none;\n      margin: 0;\n      position: relative; }\n      .md-chips md-chip .md-chip-remove md-icon {\n        height: 18px;\n        width: 18px;\n        position: absolute;\n        top: 50%;\n        left: 50%;\n        -webkit-transform: translate3d(-50%, -50%, 0);\n                transform: translate3d(-50%, -50%, 0); }\n  .md-chips .md-chip-input-container {\n    display: block;\n    line-height: 32px;\n    margin: 8px 8px 0 0;\n    padding: 0;\n    float: left; }\n    [dir=rtl] .md-chips .md-chip-input-container {\n      margin: 8px 0 0 8px; }\n    [dir=rtl] .md-chips .md-chip-input-container {\n      float: right; }\n    .md-chips .md-chip-input-container input:not([type]), .md-chips .md-chip-input-container input[type=\"email\"], .md-chips .md-chip-input-container input[type=\"number\"], .md-chips .md-chip-input-container input[type=\"tel\"], .md-chips .md-chip-input-container input[type=\"url\"], .md-chips .md-chip-input-container input[type=\"text\"] {\n      border: 0;\n      height: 32px;\n      line-height: 32px;\n      padding: 0; }\n      .md-chips .md-chip-input-container input:not([type]):focus, .md-chips .md-chip-input-container input[type=\"email\"]:focus, .md-chips .md-chip-input-container input[type=\"number\"]:focus, .md-chips .md-chip-input-container input[type=\"tel\"]:focus, .md-chips .md-chip-input-container input[type=\"url\"]:focus, .md-chips .md-chip-input-container input[type=\"text\"]:focus {\n        outline: none; }\n    .md-chips .md-chip-input-container md-autocomplete, .md-chips .md-chip-input-container md-autocomplete-wrap {\n      background: transparent;\n      height: 32px; }\n    .md-chips .md-chip-input-container md-autocomplete md-autocomplete-wrap {\n      box-shadow: none; }\n    .md-chips .md-chip-input-container md-autocomplete input {\n      position: relative; }\n    .md-chips .md-chip-input-container input {\n      border: 0;\n      height: 32px;\n      line-height: 32px;\n      padding: 0; }\n      .md-chips .md-chip-input-container input:focus {\n        outline: none; }\n    .md-chips .md-chip-input-container md-autocomplete, .md-chips .md-chip-input-container md-autocomplete-wrap {\n      height: 32px; }\n    .md-chips .md-chip-input-container md-autocomplete {\n      box-shadow: none; }\n      .md-chips .md-chip-input-container md-autocomplete input {\n        position: relative; }\n    .md-chips .md-chip-input-container:not(:first-child) {\n      margin: 8px 8px 0 0; }\n      [dir=rtl] .md-chips .md-chip-input-container:not(:first-child) {\n        margin: 8px 0 0 8px; }\n    .md-chips .md-chip-input-container input {\n      background: transparent;\n      border-width: 0; }\n  .md-chips md-autocomplete button {\n    display: none; }\n\n@media screen and (-ms-high-contrast: active) {\n  .md-chip-input-container,\n  md-chip {\n    border: 1px solid #fff; }\n  .md-chip-input-container md-autocomplete {\n    border: none; } }\n\nmd-content {\n  display: block;\n  position: relative;\n  overflow: auto;\n  -webkit-overflow-scrolling: touch; }\n  md-content[md-scroll-y] {\n    overflow-y: auto;\n    overflow-x: hidden; }\n  md-content[md-scroll-x] {\n    overflow-x: auto;\n    overflow-y: hidden; }\n  @media print {\n    md-content {\n      overflow: visible !important; } }\n\n/** Styles for mdCalendar. */\nmd-calendar {\n  font-size: 13px;\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none; }\n\n.md-calendar-scroll-mask {\n  display: inline-block;\n  overflow: hidden;\n  height: 308px; }\n  .md-calendar-scroll-mask .md-virtual-repeat-scroller {\n    overflow-y: scroll;\n    -webkit-overflow-scrolling: touch; }\n    .md-calendar-scroll-mask .md-virtual-repeat-scroller::-webkit-scrollbar {\n      display: none; }\n  .md-calendar-scroll-mask .md-virtual-repeat-offsetter {\n    width: 100%; }\n\n.md-calendar-scroll-container {\n  box-shadow: inset -3px 3px 6px rgba(0, 0, 0, 0.2);\n  display: inline-block;\n  height: 308px;\n  width: 346px; }\n\n.md-calendar-date {\n  height: 44px;\n  width: 44px;\n  text-align: center;\n  padding: 0;\n  border: none;\n  box-sizing: content-box; }\n  .md-calendar-date:first-child {\n    padding-left: 16px; }\n    [dir=rtl] .md-calendar-date:first-child {\n      padding-left: 0;\n      padding-right: 16px; }\n  .md-calendar-date:last-child {\n    padding-right: 16px; }\n    [dir=rtl] .md-calendar-date:last-child {\n      padding-right: 0;\n      padding-left: 16px; }\n  .md-calendar-date.md-calendar-date-disabled {\n    cursor: default; }\n\n.md-calendar-date-selection-indicator {\n  -webkit-transition: background-color, color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: background-color, color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  border-radius: 50%;\n  display: inline-block;\n  width: 40px;\n  height: 40px;\n  line-height: 40px; }\n  .md-calendar-date:not(.md-disabled) .md-calendar-date-selection-indicator {\n    cursor: pointer; }\n\n.md-calendar-month-label {\n  height: 44px;\n  font-size: 14px;\n  font-weight: 500;\n  padding: 0 0 0 24px; }\n  [dir=rtl] .md-calendar-month-label {\n    padding: 0 24px 0 0; }\n  .md-calendar-month-label.md-calendar-label-clickable {\n    cursor: pointer; }\n  .md-calendar-month-label md-icon {\n    -webkit-transform: rotate(180deg);\n            transform: rotate(180deg); }\n    [dir=rtl] .md-calendar-month-label md-icon {\n      -webkit-transform: none;\n              transform: none; }\n  .md-calendar-month-label span {\n    vertical-align: middle; }\n\n.md-calendar-day-header {\n  table-layout: fixed;\n  border-spacing: 0;\n  border-collapse: collapse; }\n  .md-calendar-day-header th {\n    height: 40px;\n    width: 44px;\n    text-align: center;\n    padding: 0;\n    border: none;\n    box-sizing: content-box;\n    font-weight: normal; }\n    .md-calendar-day-header th:first-child {\n      padding-left: 16px; }\n      [dir=rtl] .md-calendar-day-header th:first-child {\n        padding-left: 0;\n        padding-right: 16px; }\n    .md-calendar-day-header th:last-child {\n      padding-right: 16px; }\n      [dir=rtl] .md-calendar-day-header th:last-child {\n        padding-right: 0;\n        padding-left: 16px; }\n\n.md-calendar {\n  table-layout: fixed;\n  border-spacing: 0;\n  border-collapse: collapse; }\n  .md-calendar tr:last-child td {\n    border-bottom-width: 1px;\n    border-bottom-style: solid; }\n  .md-calendar:first-child {\n    border-top: 1px solid transparent; }\n  .md-calendar tbody, .md-calendar td, .md-calendar tr {\n    vertical-align: middle;\n    box-sizing: content-box; }\n\n/** Styles for mdDatepicker. */\nmd-datepicker {\n  white-space: nowrap;\n  overflow: hidden;\n  vertical-align: middle; }\n\n.md-inline-form md-datepicker {\n  margin-top: 12px; }\n\n.md-datepicker-button {\n  display: inline-block;\n  box-sizing: border-box;\n  background: none;\n  vertical-align: middle;\n  position: relative; }\n  .md-datepicker-button:before {\n    top: 0;\n    left: 0;\n    bottom: 0;\n    right: 0;\n    position: absolute;\n    content: '';\n    speak: none; }\n\n.md-datepicker-input {\n  font-size: 14px;\n  box-sizing: border-box;\n  border: none;\n  box-shadow: none;\n  outline: none;\n  background: transparent;\n  min-width: 120px;\n  max-width: 328px;\n  padding: 0 0 5px; }\n  .md-datepicker-input::-ms-clear {\n    display: none; }\n\n._md-datepicker-floating-label > md-datepicker {\n  overflow: visible; }\n  ._md-datepicker-floating-label > md-datepicker .md-datepicker-input-container {\n    border: none; }\n  ._md-datepicker-floating-label > md-datepicker .md-datepicker-button {\n    float: left;\n    margin-top: -12px;\n    top: 9.5px; }\n    [dir=rtl] ._md-datepicker-floating-label > md-datepicker .md-datepicker-button {\n      float: right; }\n\n._md-datepicker-floating-label .md-input {\n  float: none; }\n\n._md-datepicker-floating-label._md-datepicker-has-calendar-icon > label:not(.md-no-float):not(.md-container-ignore) {\n  right: 18px;\n  left: auto;\n  width: calc(100% - 84px); }\n  [dir=rtl] ._md-datepicker-floating-label._md-datepicker-has-calendar-icon > label:not(.md-no-float):not(.md-container-ignore) {\n    right: auto; }\n  [dir=rtl] ._md-datepicker-floating-label._md-datepicker-has-calendar-icon > label:not(.md-no-float):not(.md-container-ignore) {\n    left: 18px; }\n\n._md-datepicker-floating-label._md-datepicker-has-calendar-icon .md-input-message-animation {\n  margin-left: 64px; }\n  [dir=rtl] ._md-datepicker-floating-label._md-datepicker-has-calendar-icon .md-input-message-animation {\n    margin-left: auto;\n    margin-right: 64px; }\n\n._md-datepicker-has-triangle-icon {\n  padding-right: 18px;\n  margin-right: -18px; }\n  [dir=rtl] ._md-datepicker-has-triangle-icon {\n    padding-right: 0;\n    padding-left: 18px; }\n  [dir=rtl] ._md-datepicker-has-triangle-icon {\n    margin-right: auto;\n    margin-left: -18px; }\n\n.md-datepicker-input-container {\n  position: relative;\n  border-bottom-width: 1px;\n  border-bottom-style: solid;\n  display: inline-block;\n  width: auto; }\n  .md-icon-button + .md-datepicker-input-container {\n    margin-left: 12px; }\n    [dir=rtl] .md-icon-button + .md-datepicker-input-container {\n      margin-left: auto;\n      margin-right: 12px; }\n  .md-datepicker-input-container.md-datepicker-focused {\n    border-bottom-width: 2px; }\n\n.md-datepicker-is-showing .md-scroll-mask {\n  z-index: 99; }\n\n.md-datepicker-calendar-pane {\n  position: absolute;\n  top: 0;\n  left: -100%;\n  z-index: 100;\n  border-width: 1px;\n  border-style: solid;\n  background: transparent;\n  -webkit-transform: scale(0);\n          transform: scale(0);\n  -webkit-transform-origin: 0 0;\n          transform-origin: 0 0;\n  -webkit-transition: -webkit-transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: -webkit-transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); }\n  .md-datepicker-calendar-pane.md-pane-open {\n    -webkit-transform: scale(1);\n            transform: scale(1); }\n\n.md-datepicker-input-mask {\n  height: 40px;\n  width: 340px;\n  position: relative;\n  overflow: hidden;\n  background: transparent;\n  pointer-events: none;\n  cursor: text; }\n\n.md-datepicker-calendar {\n  opacity: 0;\n  -webkit-transition: opacity 0.2s cubic-bezier(0.5, 0, 0.25, 1);\n  transition: opacity 0.2s cubic-bezier(0.5, 0, 0.25, 1); }\n  .md-pane-open .md-datepicker-calendar {\n    opacity: 1; }\n  .md-datepicker-calendar md-calendar:focus {\n    outline: none; }\n\n.md-datepicker-expand-triangle {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  -webkit-transform: translate(-50%, -50%);\n          transform: translate(-50%, -50%);\n  width: 0;\n  height: 0;\n  border-left: 5px solid transparent;\n  border-right: 5px solid transparent;\n  border-top: 5px solid; }\n\n.md-datepicker-triangle-button {\n  position: absolute;\n  right: 0;\n  bottom: -2.5px;\n  -webkit-transform: translateX(45%);\n          transform: translateX(45%); }\n  [dir=rtl] .md-datepicker-triangle-button {\n    right: auto;\n    left: 0; }\n  [dir=rtl] .md-datepicker-triangle-button {\n    -webkit-transform: translateX(-45%);\n            transform: translateX(-45%); }\n\n.md-datepicker-triangle-button.md-button.md-icon-button {\n  height: 36px;\n  width: 36px;\n  position: absolute;\n  padding: 8px; }\n\nmd-datepicker[disabled] .md-datepicker-input-container {\n  border-bottom-color: transparent; }\n\nmd-datepicker[disabled] .md-datepicker-triangle-button {\n  display: none; }\n\n.md-datepicker-open {\n  overflow: hidden; }\n  .md-datepicker-open .md-datepicker-input-container,\n  .md-datepicker-open input.md-input {\n    border-bottom-color: transparent; }\n  .md-datepicker-open .md-datepicker-triangle-button,\n  .md-datepicker-open.md-input-has-value > label,\n  .md-datepicker-open.md-input-has-placeholder > label {\n    display: none; }\n\n.md-datepicker-pos-adjusted .md-datepicker-input-mask {\n  display: none; }\n\n.md-datepicker-calendar-pane .md-calendar {\n  -webkit-transform: translateY(-85px);\n          transform: translateY(-85px);\n  -webkit-transition: -webkit-transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: -webkit-transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);\n  -webkit-transition-delay: 0.125s;\n          transition-delay: 0.125s; }\n\n.md-datepicker-calendar-pane.md-pane-open .md-calendar {\n  -webkit-transform: translateY(0);\n          transform: translateY(0); }\n\n.md-dialog-is-showing {\n  max-height: 100%; }\n\n.md-dialog-container {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-pack: center;\n  -webkit-justify-content: center;\n          justify-content: center;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  z-index: 80;\n  overflow: hidden; }\n\nmd-dialog {\n  opacity: 0;\n  min-width: 240px;\n  max-width: 80%;\n  max-height: 80%;\n  position: relative;\n  overflow: auto;\n  box-shadow: 0px 7px 8px -4px rgba(0, 0, 0, 0.2), 0px 13px 19px 2px rgba(0, 0, 0, 0.14), 0px 5px 24px 4px rgba(0, 0, 0, 0.12);\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column; }\n  md-dialog.md-transition-in {\n    opacity: 1;\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transform: translate(0, 0) scale(1);\n            transform: translate(0, 0) scale(1); }\n  md-dialog.md-transition-out {\n    opacity: 0;\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transform: translate(0, 100%) scale(0.2);\n            transform: translate(0, 100%) scale(0.2); }\n  md-dialog > form {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column;\n    overflow: auto; }\n  md-dialog .md-dialog-content {\n    padding: 24px; }\n  md-dialog md-dialog-content {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1;\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column;\n    overflow: auto;\n    -webkit-overflow-scrolling: touch; }\n    md-dialog md-dialog-content:not([layout=row]) > *:first-child:not(.md-subheader) {\n      margin-top: 0; }\n    md-dialog md-dialog-content:focus {\n      outline: none; }\n    md-dialog md-dialog-content .md-subheader {\n      margin: 0; }\n    md-dialog md-dialog-content .md-dialog-content-body {\n      width: 100%; }\n    md-dialog md-dialog-content .md-prompt-input-container {\n      width: 100%;\n      box-sizing: border-box; }\n  md-dialog .md-actions, md-dialog md-dialog-actions {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2;\n    box-sizing: border-box;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end;\n    margin-bottom: 0;\n    padding-right: 8px;\n    padding-left: 16px;\n    min-height: 52px;\n    overflow: hidden; }\n    [dir=rtl] md-dialog .md-actions, [dir=rtl] md-dialog md-dialog-actions {\n      padding-right: 16px; }\n    [dir=rtl] md-dialog .md-actions, [dir=rtl] md-dialog md-dialog-actions {\n      padding-left: 8px; }\n    md-dialog .md-actions .md-button, md-dialog md-dialog-actions .md-button {\n      margin-bottom: 8px;\n      margin-left: 8px;\n      margin-right: 0;\n      margin-top: 8px; }\n      [dir=rtl] md-dialog .md-actions .md-button, [dir=rtl] md-dialog md-dialog-actions .md-button {\n        margin-left: 0; }\n      [dir=rtl] md-dialog .md-actions .md-button, [dir=rtl] md-dialog md-dialog-actions .md-button {\n        margin-right: 8px; }\n  md-dialog.md-content-overflow .md-actions, md-dialog.md-content-overflow md-dialog-actions {\n    border-top-width: 1px;\n    border-top-style: solid; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-dialog {\n    border: 1px solid #fff; } }\n\n@media (max-width: 959px) {\n  md-dialog.md-dialog-fullscreen {\n    min-height: 100%;\n    min-width: 100%;\n    border-radius: 0; } }\n\nmd-divider {\n  display: block;\n  border-top-width: 1px;\n  border-top-style: solid;\n  margin: 0; }\n  md-divider[md-inset] {\n    margin-left: 80px; }\n    [dir=rtl] md-divider[md-inset] {\n      margin-left: auto;\n      margin-right: 80px; }\n\n.layout-row > md-divider,\n.layout-xs-row > md-divider, .layout-gt-xs-row > md-divider,\n.layout-sm-row > md-divider, .layout-gt-sm-row > md-divider,\n.layout-md-row > md-divider, .layout-gt-md-row > md-divider,\n.layout-lg-row > md-divider, .layout-gt-lg-row > md-divider,\n.layout-xl-row > md-divider {\n  border-top-width: 0;\n  border-right-width: 1px;\n  border-right-style: solid; }\n\nmd-fab-speed-dial {\n  position: relative;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  z-index: 20;\n  /*\n   * Hide some graphics glitches if switching animation types\n   */\n  /*\n   * Handle the animations\n   */ }\n  md-fab-speed-dial.md-fab-bottom-right {\n    top: auto;\n    right: 20px;\n    bottom: 20px;\n    left: auto;\n    position: absolute; }\n  md-fab-speed-dial.md-fab-bottom-left {\n    top: auto;\n    right: auto;\n    bottom: 20px;\n    left: 20px;\n    position: absolute; }\n  md-fab-speed-dial.md-fab-top-right {\n    top: 20px;\n    right: 20px;\n    bottom: auto;\n    left: auto;\n    position: absolute; }\n  md-fab-speed-dial.md-fab-top-left {\n    top: 20px;\n    right: auto;\n    bottom: auto;\n    left: 20px;\n    position: absolute; }\n  md-fab-speed-dial:not(.md-hover-full) {\n    pointer-events: none; }\n    md-fab-speed-dial:not(.md-hover-full) md-fab-trigger, md-fab-speed-dial:not(.md-hover-full) .md-fab-action-item {\n      pointer-events: auto; }\n    md-fab-speed-dial:not(.md-hover-full).md-is-open {\n      pointer-events: auto; }\n  md-fab-speed-dial ._md-css-variables {\n    z-index: 20; }\n  md-fab-speed-dial.md-is-open .md-fab-action-item {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center; }\n  md-fab-speed-dial md-fab-actions {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    height: auto; }\n    md-fab-speed-dial md-fab-actions .md-fab-action-item {\n      -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n      transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n  md-fab-speed-dial.md-down {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n    md-fab-speed-dial.md-down md-fab-trigger {\n      -webkit-box-ordinal-group: 2;\n      -webkit-order: 1;\n              order: 1; }\n    md-fab-speed-dial.md-down md-fab-actions {\n      -webkit-box-orient: vertical;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: column;\n              flex-direction: column;\n      -webkit-box-ordinal-group: 3;\n      -webkit-order: 2;\n              order: 2; }\n  md-fab-speed-dial.md-up {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n    md-fab-speed-dial.md-up md-fab-trigger {\n      -webkit-box-ordinal-group: 3;\n      -webkit-order: 2;\n              order: 2; }\n    md-fab-speed-dial.md-up md-fab-actions {\n      -webkit-box-orient: vertical;\n      -webkit-box-direction: reverse;\n      -webkit-flex-direction: column-reverse;\n              flex-direction: column-reverse;\n      -webkit-box-ordinal-group: 2;\n      -webkit-order: 1;\n              order: 1; }\n  md-fab-speed-dial.md-left {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n    md-fab-speed-dial.md-left md-fab-trigger {\n      -webkit-box-ordinal-group: 3;\n      -webkit-order: 2;\n              order: 2; }\n    md-fab-speed-dial.md-left md-fab-actions {\n      -webkit-box-orient: horizontal;\n      -webkit-box-direction: reverse;\n      -webkit-flex-direction: row-reverse;\n              flex-direction: row-reverse;\n      -webkit-box-ordinal-group: 2;\n      -webkit-order: 1;\n              order: 1; }\n      md-fab-speed-dial.md-left md-fab-actions .md-fab-action-item {\n        -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n        transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n  md-fab-speed-dial.md-right {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n    md-fab-speed-dial.md-right md-fab-trigger {\n      -webkit-box-ordinal-group: 2;\n      -webkit-order: 1;\n              order: 1; }\n    md-fab-speed-dial.md-right md-fab-actions {\n      -webkit-box-orient: horizontal;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: row;\n              flex-direction: row;\n      -webkit-box-ordinal-group: 3;\n      -webkit-order: 2;\n              order: 2; }\n      md-fab-speed-dial.md-right md-fab-actions .md-fab-action-item {\n        -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n        transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n  md-fab-speed-dial.md-fling-remove .md-fab-action-item > *, md-fab-speed-dial.md-scale-remove .md-fab-action-item > * {\n    visibility: hidden; }\n  md-fab-speed-dial.md-fling .md-fab-action-item {\n    opacity: 1; }\n  md-fab-speed-dial.md-fling.md-animations-waiting .md-fab-action-item {\n    opacity: 0;\n    -webkit-transition-duration: 0s;\n            transition-duration: 0s; }\n  md-fab-speed-dial.md-scale .md-fab-action-item {\n    -webkit-transform: scale(0);\n            transform: scale(0);\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    -webkit-transition-duration: 0.14286s;\n            transition-duration: 0.14286s; }\n\nmd-fab-toolbar {\n  display: block;\n  /*\n   * Closed styling\n   */\n  /*\n   * Hover styling\n   */ }\n  md-fab-toolbar.md-fab-bottom-right {\n    top: auto;\n    right: 20px;\n    bottom: 20px;\n    left: auto;\n    position: absolute; }\n  md-fab-toolbar.md-fab-bottom-left {\n    top: auto;\n    right: auto;\n    bottom: 20px;\n    left: 20px;\n    position: absolute; }\n  md-fab-toolbar.md-fab-top-right {\n    top: 20px;\n    right: 20px;\n    bottom: auto;\n    left: auto;\n    position: absolute; }\n  md-fab-toolbar.md-fab-top-left {\n    top: 20px;\n    right: auto;\n    bottom: auto;\n    left: 20px;\n    position: absolute; }\n  md-fab-toolbar .md-fab-toolbar-wrapper {\n    display: block;\n    position: relative;\n    overflow: hidden;\n    height: 68px; }\n  md-fab-toolbar md-fab-trigger {\n    position: absolute;\n    z-index: 20; }\n    md-fab-toolbar md-fab-trigger button {\n      overflow: visible !important; }\n    md-fab-toolbar md-fab-trigger .md-fab-toolbar-background {\n      display: block;\n      position: absolute;\n      z-index: 21;\n      opacity: 1;\n      -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n      transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n    md-fab-toolbar md-fab-trigger md-icon {\n      position: relative;\n      z-index: 22;\n      opacity: 1;\n      -webkit-transition: all 200ms ease-in;\n      transition: all 200ms ease-in; }\n  md-fab-toolbar.md-left md-fab-trigger {\n    right: 0; }\n    [dir=rtl] md-fab-toolbar.md-left md-fab-trigger {\n      right: auto;\n      left: 0; }\n  md-fab-toolbar.md-left .md-toolbar-tools {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: reverse;\n    -webkit-flex-direction: row-reverse;\n            flex-direction: row-reverse; }\n    md-fab-toolbar.md-left .md-toolbar-tools > .md-button:first-child {\n      margin-right: 0.6rem; }\n      [dir=rtl] md-fab-toolbar.md-left .md-toolbar-tools > .md-button:first-child {\n        margin-right: auto;\n        margin-left: 0.6rem; }\n    md-fab-toolbar.md-left .md-toolbar-tools > .md-button:first-child {\n      margin-left: -0.8rem; }\n      [dir=rtl] md-fab-toolbar.md-left .md-toolbar-tools > .md-button:first-child {\n        margin-left: auto;\n        margin-right: -0.8rem; }\n    md-fab-toolbar.md-left .md-toolbar-tools > .md-button:last-child {\n      margin-right: 8px; }\n      [dir=rtl] md-fab-toolbar.md-left .md-toolbar-tools > .md-button:last-child {\n        margin-right: auto;\n        margin-left: 8px; }\n  md-fab-toolbar.md-right md-fab-trigger {\n    left: 0; }\n    [dir=rtl] md-fab-toolbar.md-right md-fab-trigger {\n      left: auto;\n      right: 0; }\n  md-fab-toolbar.md-right .md-toolbar-tools {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n  md-fab-toolbar md-toolbar {\n    background-color: transparent !important;\n    pointer-events: none;\n    z-index: 23; }\n    md-fab-toolbar md-toolbar .md-toolbar-tools {\n      padding: 0 20px;\n      margin-top: 3px; }\n    md-fab-toolbar md-toolbar .md-fab-action-item {\n      opacity: 0;\n      -webkit-transform: scale(0);\n              transform: scale(0);\n      -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n      transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n      -webkit-transition-duration: 0.15s;\n              transition-duration: 0.15s; }\n  md-fab-toolbar.md-is-open md-fab-trigger > button {\n    box-shadow: none; }\n    md-fab-toolbar.md-is-open md-fab-trigger > button md-icon {\n      opacity: 0; }\n  md-fab-toolbar.md-is-open .md-fab-action-item {\n    opacity: 1;\n    -webkit-transform: scale(1);\n            transform: scale(1); }\n\nmd-grid-list {\n  box-sizing: border-box;\n  display: block;\n  position: relative; }\n  md-grid-list md-grid-tile,\n  md-grid-list md-grid-tile > figure,\n  md-grid-list md-grid-tile-header,\n  md-grid-list md-grid-tile-footer {\n    box-sizing: border-box; }\n  md-grid-list md-grid-tile {\n    display: block;\n    position: absolute; }\n    md-grid-list md-grid-tile figure {\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-align: center;\n      -webkit-align-items: center;\n              align-items: center;\n      -webkit-box-pack: center;\n      -webkit-justify-content: center;\n              justify-content: center;\n      height: 100%;\n      position: absolute;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      padding: 0;\n      margin: 0; }\n    md-grid-list md-grid-tile md-grid-tile-header,\n    md-grid-list md-grid-tile md-grid-tile-footer {\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-orient: horizontal;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: row;\n              flex-direction: row;\n      -webkit-box-align: center;\n      -webkit-align-items: center;\n              align-items: center;\n      height: 48px;\n      color: #fff;\n      background: rgba(0, 0, 0, 0.18);\n      overflow: hidden;\n      position: absolute;\n      left: 0;\n      right: 0; }\n      md-grid-list md-grid-tile md-grid-tile-header h3,\n      md-grid-list md-grid-tile md-grid-tile-header h4,\n      md-grid-list md-grid-tile md-grid-tile-footer h3,\n      md-grid-list md-grid-tile md-grid-tile-footer h4 {\n        font-weight: 400;\n        margin: 0 0 0 16px; }\n      md-grid-list md-grid-tile md-grid-tile-header h3,\n      md-grid-list md-grid-tile md-grid-tile-footer h3 {\n        font-size: 14px; }\n      md-grid-list md-grid-tile md-grid-tile-header h4,\n      md-grid-list md-grid-tile md-grid-tile-footer h4 {\n        font-size: 12px; }\n    md-grid-list md-grid-tile md-grid-tile-header {\n      top: 0; }\n    md-grid-list md-grid-tile md-grid-tile-footer {\n      bottom: 0; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-grid-tile {\n    border: 1px solid #fff; }\n  md-grid-tile-footer {\n    border-top: 1px solid #fff; } }\n\nmd-icon {\n  margin: auto;\n  background-repeat: no-repeat no-repeat;\n  display: inline-block;\n  vertical-align: middle;\n  fill: currentColor;\n  height: 24px;\n  width: 24px;\n  min-height: 24px;\n  min-width: 24px; }\n  md-icon svg {\n    pointer-events: none;\n    display: block; }\n  md-icon[md-font-icon] {\n    line-height: 24px;\n    width: auto; }\n\nmd-input-container {\n  display: inline-block;\n  position: relative;\n  padding: 2px;\n  margin: 18px 0;\n  vertical-align: middle;\n  /*\n   * The .md-input class is added to the input/textarea\n   */ }\n  md-input-container:after {\n    content: '';\n    display: table;\n    clear: both; }\n  md-input-container.md-block {\n    display: block; }\n  md-input-container .md-errors-spacer {\n    float: right;\n    min-height: 24px;\n    min-width: 1px; }\n    [dir=rtl] md-input-container .md-errors-spacer {\n      float: left; }\n  md-input-container > md-icon {\n    position: absolute;\n    top: 8px;\n    left: 2px;\n    right: auto; }\n    [dir=rtl] md-input-container > md-icon {\n      left: auto; }\n    [dir=rtl] md-input-container > md-icon {\n      right: 2px; }\n  md-input-container textarea,\n  md-input-container input[type=\"text\"],\n  md-input-container input[type=\"password\"],\n  md-input-container input[type=\"datetime\"],\n  md-input-container input[type=\"datetime-local\"],\n  md-input-container input[type=\"date\"],\n  md-input-container input[type=\"month\"],\n  md-input-container input[type=\"time\"],\n  md-input-container input[type=\"week\"],\n  md-input-container input[type=\"number\"],\n  md-input-container input[type=\"email\"],\n  md-input-container input[type=\"url\"],\n  md-input-container input[type=\"search\"],\n  md-input-container input[type=\"tel\"],\n  md-input-container input[type=\"color\"] {\n    /* remove default appearance from all input/textarea */\n    -moz-appearance: none;\n    -webkit-appearance: none; }\n  md-input-container input[type=\"date\"],\n  md-input-container input[type=\"datetime-local\"],\n  md-input-container input[type=\"month\"],\n  md-input-container input[type=\"time\"],\n  md-input-container input[type=\"week\"] {\n    min-height: 26px; }\n  md-input-container textarea {\n    resize: none;\n    overflow: hidden; }\n    md-input-container textarea.md-input {\n      min-height: 26px;\n      -ms-flex-preferred-size: auto; }\n    md-input-container textarea[md-no-autogrow] {\n      height: auto;\n      overflow: auto; }\n  md-input-container label:not(.md-container-ignore) {\n    position: absolute;\n    bottom: 100%;\n    left: 0;\n    right: auto; }\n    [dir=rtl] md-input-container label:not(.md-container-ignore) {\n      left: auto; }\n    [dir=rtl] md-input-container label:not(.md-container-ignore) {\n      right: 0; }\n    md-input-container label:not(.md-container-ignore).md-required:after {\n      content: ' *';\n      font-size: 13px;\n      vertical-align: top; }\n  md-input-container label:not(.md-no-float):not(.md-container-ignore),\n  md-input-container .md-placeholder {\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n    width: 100%;\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1;\n    pointer-events: none;\n    -webkit-font-smoothing: antialiased;\n    padding-left: 3px;\n    padding-right: 0;\n    z-index: 1;\n    -webkit-transform: translate3d(0, 28px, 0) scale(1);\n            transform: translate3d(0, 28px, 0) scale(1);\n    -webkit-transition: -webkit-transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: -webkit-transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    max-width: 100%;\n    -webkit-transform-origin: left top;\n            transform-origin: left top; }\n    [dir=rtl] md-input-container label:not(.md-no-float):not(.md-container-ignore), [dir=rtl]\n    md-input-container .md-placeholder {\n      padding-left: 0; }\n    [dir=rtl] md-input-container label:not(.md-no-float):not(.md-container-ignore), [dir=rtl]\n    md-input-container .md-placeholder {\n      padding-right: 3px; }\n    [dir=rtl] md-input-container label:not(.md-no-float):not(.md-container-ignore), [dir=rtl]\n    md-input-container .md-placeholder {\n      -webkit-transform-origin: right top;\n              transform-origin: right top; }\n  md-input-container .md-placeholder {\n    position: absolute;\n    top: 0;\n    opacity: 0;\n    -webkit-transition-property: opacity, -webkit-transform;\n    transition-property: opacity, -webkit-transform;\n    transition-property: opacity, transform;\n    transition-property: opacity, transform, -webkit-transform;\n    -webkit-transform: translate3d(0, 30px, 0);\n            transform: translate3d(0, 30px, 0); }\n  md-input-container.md-input-focused .md-placeholder {\n    opacity: 1;\n    -webkit-transform: translate3d(0, 24px, 0);\n            transform: translate3d(0, 24px, 0); }\n  md-input-container.md-input-has-value .md-placeholder {\n    -webkit-transition: none;\n    transition: none;\n    opacity: 0; }\n  md-input-container:not(.md-input-has-value) input:not(:focus),\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-ampm-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-day-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-hour-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-millisecond-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-minute-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-month-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-second-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-week-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-year-field,\n  md-input-container:not(.md-input-has-value) input:not(:focus)::-webkit-datetime-edit-text {\n    color: transparent; }\n  md-input-container .md-input {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2;\n    display: block;\n    margin-top: 0;\n    background: none;\n    padding-top: 2px;\n    padding-bottom: 1px;\n    padding-left: 2px;\n    padding-right: 2px;\n    border-width: 0 0 1px 0;\n    line-height: 26px;\n    height: 30px;\n    -ms-flex-preferred-size: 26px;\n    border-radius: 0;\n    border-style: solid;\n    width: 100%;\n    box-sizing: border-box;\n    float: left; }\n    [dir=rtl] md-input-container .md-input {\n      float: right; }\n    md-input-container .md-input:focus {\n      outline: none; }\n    md-input-container .md-input:invalid {\n      outline: none;\n      box-shadow: none; }\n    md-input-container .md-input.md-no-flex {\n      -webkit-box-flex: 0 !important;\n      -webkit-flex: none !important;\n              flex: none !important; }\n  md-input-container .md-char-counter {\n    text-align: right;\n    padding-right: 2px;\n    padding-left: 0; }\n    [dir=rtl] md-input-container .md-char-counter {\n      text-align: left; }\n    [dir=rtl] md-input-container .md-char-counter {\n      padding-right: 0; }\n    [dir=rtl] md-input-container .md-char-counter {\n      padding-left: 2px; }\n  md-input-container .md-input-messages-animation {\n    position: relative;\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4;\n    overflow: hidden;\n    clear: left; }\n    [dir=rtl] md-input-container .md-input-messages-animation {\n      clear: right; }\n  md-input-container .md-input-message-animation, md-input-container .md-char-counter {\n    font-size: 12px;\n    line-height: 14px;\n    overflow: hidden;\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    opacity: 1;\n    margin-top: 0;\n    padding-top: 5px; }\n    md-input-container .md-input-message-animation:not(.md-char-counter), md-input-container .md-char-counter:not(.md-char-counter) {\n      padding-right: 5px;\n      padding-left: 0; }\n      [dir=rtl] md-input-container .md-input-message-animation:not(.md-char-counter), [dir=rtl] md-input-container .md-char-counter:not(.md-char-counter) {\n        padding-right: 0; }\n      [dir=rtl] md-input-container .md-input-message-animation:not(.md-char-counter), [dir=rtl] md-input-container .md-char-counter:not(.md-char-counter) {\n        padding-left: 5px; }\n  md-input-container:not(.md-input-invalid) .md-auto-hide .md-input-message-animation {\n    opacity: 0;\n    margin-top: -100px; }\n  md-input-container .md-input-message-animation.ng-enter-prepare {\n    opacity: 0;\n    margin-top: -100px; }\n  md-input-container .md-input-message-animation.ng-enter:not(.ng-enter-active) {\n    opacity: 0;\n    margin-top: -100px; }\n  md-input-container.md-input-focused label:not(.md-no-float), md-input-container.md-input-has-placeholder label:not(.md-no-float), md-input-container.md-input-has-value label:not(.md-no-float) {\n    -webkit-transform: translate3d(0, 6px, 0) scale(0.75);\n            transform: translate3d(0, 6px, 0) scale(0.75);\n    -webkit-transition: width cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s, -webkit-transform cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s;\n    transition: width cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s, -webkit-transform cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s;\n    transition: transform cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s, width cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s;\n    transition: transform cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s, width cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s, -webkit-transform cubic-bezier(0.25, 0.8, 0.25, 1) 0.4s; }\n  md-input-container.md-input-has-value label {\n    -webkit-transition: none;\n    transition: none; }\n  md-input-container.md-input-focused .md-input,\n  md-input-container .md-input.ng-invalid.ng-dirty,\n  md-input-container.md-input-resized .md-input {\n    padding-bottom: 0;\n    border-width: 0 0 2px 0; }\n  md-input-container .md-input[disabled],\n  [disabled] md-input-container .md-input {\n    background-position: bottom -1px left 0;\n    background-size: 4px 1px;\n    background-repeat: repeat-x; }\n  md-input-container.md-icon-float {\n    -webkit-transition: margin-top 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: margin-top 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }\n    md-input-container.md-icon-float > label {\n      pointer-events: none;\n      position: absolute; }\n    md-input-container.md-icon-float > md-icon {\n      top: 8px;\n      left: 2px;\n      right: auto; }\n      [dir=rtl] md-input-container.md-icon-float > md-icon {\n        left: auto; }\n      [dir=rtl] md-input-container.md-icon-float > md-icon {\n        right: 2px; }\n  md-input-container.md-icon-left > label:not(.md-no-float):not(.md-container-ignore),\n  md-input-container.md-icon-left > label .md-placeholder, md-input-container.md-icon-right > label:not(.md-no-float):not(.md-container-ignore),\n  md-input-container.md-icon-right > label .md-placeholder {\n    width: calc(100% - 36px - 18px); }\n  md-input-container.md-icon-left {\n    padding-left: 36px;\n    padding-right: 0; }\n    [dir=rtl] md-input-container.md-icon-left {\n      padding-left: 0; }\n    [dir=rtl] md-input-container.md-icon-left {\n      padding-right: 36px; }\n    md-input-container.md-icon-left > label {\n      left: 36px;\n      right: auto; }\n      [dir=rtl] md-input-container.md-icon-left > label {\n        left: auto; }\n      [dir=rtl] md-input-container.md-icon-left > label {\n        right: 36px; }\n  md-input-container.md-icon-right {\n    padding-left: 0;\n    padding-right: 36px; }\n    [dir=rtl] md-input-container.md-icon-right {\n      padding-left: 36px; }\n    [dir=rtl] md-input-container.md-icon-right {\n      padding-right: 0; }\n    md-input-container.md-icon-right > md-icon:last-of-type {\n      margin: 0;\n      right: 2px;\n      left: auto; }\n      [dir=rtl] md-input-container.md-icon-right > md-icon:last-of-type {\n        right: auto; }\n      [dir=rtl] md-input-container.md-icon-right > md-icon:last-of-type {\n        left: 2px; }\n  md-input-container.md-icon-left.md-icon-right {\n    padding-left: 36px;\n    padding-right: 36px; }\n    md-input-container.md-icon-left.md-icon-right > label:not(.md-no-float):not(.md-container-ignore),\n    md-input-container.md-icon-left.md-icon-right > label .md-placeholder {\n      width: calc(100% - (36px * 2)); }\n\n.md-resize-wrapper {\n  position: relative; }\n  .md-resize-wrapper:after {\n    content: '';\n    display: table;\n    clear: both; }\n\n.md-resize-handle {\n  position: absolute;\n  bottom: -5px;\n  left: 0;\n  height: 10px;\n  background: transparent;\n  width: 100%;\n  cursor: ns-resize; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-input-container.md-default-theme > md-icon {\n    fill: #fff; } }\n\nmd-list {\n  display: block;\n  padding: 8px 0px 8px 0px; }\n  md-list .md-subheader {\n    font-size: 14px;\n    font-weight: 500;\n    letter-spacing: 0.010em;\n    line-height: 1.2em; }\n  md-list.md-dense md-list-item,\n  md-list.md-dense md-list-item .md-list-item-inner {\n    min-height: 48px; }\n    md-list.md-dense md-list-item::before,\n    md-list.md-dense md-list-item .md-list-item-inner::before {\n      content: '';\n      min-height: 48px;\n      visibility: hidden;\n      display: inline-block; }\n    md-list.md-dense md-list-item md-icon:first-child,\n    md-list.md-dense md-list-item .md-list-item-inner md-icon:first-child {\n      width: 20px;\n      height: 20px; }\n    md-list.md-dense md-list-item > md-icon:first-child:not(.md-avatar-icon),\n    md-list.md-dense md-list-item .md-list-item-inner > md-icon:first-child:not(.md-avatar-icon) {\n      margin-right: 36px; }\n      [dir=rtl] md-list.md-dense md-list-item > md-icon:first-child:not(.md-avatar-icon), [dir=rtl]\n      md-list.md-dense md-list-item .md-list-item-inner > md-icon:first-child:not(.md-avatar-icon) {\n        margin-right: auto;\n        margin-left: 36px; }\n    md-list.md-dense md-list-item .md-avatar, md-list.md-dense md-list-item .md-avatar-icon,\n    md-list.md-dense md-list-item .md-list-item-inner .md-avatar,\n    md-list.md-dense md-list-item .md-list-item-inner .md-avatar-icon {\n      margin-right: 20px; }\n      [dir=rtl] md-list.md-dense md-list-item .md-avatar, [dir=rtl] md-list.md-dense md-list-item .md-avatar-icon, [dir=rtl]\n      md-list.md-dense md-list-item .md-list-item-inner .md-avatar, [dir=rtl]\n      md-list.md-dense md-list-item .md-list-item-inner .md-avatar-icon {\n        margin-right: auto;\n        margin-left: 20px; }\n    md-list.md-dense md-list-item .md-avatar,\n    md-list.md-dense md-list-item .md-list-item-inner .md-avatar {\n      -webkit-box-flex: 0;\n      -webkit-flex: none;\n              flex: none;\n      width: 36px;\n      height: 36px; }\n  md-list.md-dense md-list-item.md-2-line .md-list-item-text.md-offset, md-list.md-dense md-list-item.md-2-line > .md-no-style .md-list-item-text.md-offset, md-list.md-dense md-list-item.md-3-line .md-list-item-text.md-offset, md-list.md-dense md-list-item.md-3-line > .md-no-style .md-list-item-text.md-offset {\n    margin-left: 56px; }\n    [dir=rtl] md-list.md-dense md-list-item.md-2-line .md-list-item-text.md-offset, [dir=rtl] md-list.md-dense md-list-item.md-2-line > .md-no-style .md-list-item-text.md-offset, [dir=rtl] md-list.md-dense md-list-item.md-3-line .md-list-item-text.md-offset, [dir=rtl] md-list.md-dense md-list-item.md-3-line > .md-no-style .md-list-item-text.md-offset {\n      margin-left: auto;\n      margin-right: 56px; }\n  md-list.md-dense md-list-item.md-2-line .md-list-item-text h3,\n  md-list.md-dense md-list-item.md-2-line .md-list-item-text h4,\n  md-list.md-dense md-list-item.md-2-line .md-list-item-text p, md-list.md-dense md-list-item.md-2-line > .md-no-style .md-list-item-text h3,\n  md-list.md-dense md-list-item.md-2-line > .md-no-style .md-list-item-text h4,\n  md-list.md-dense md-list-item.md-2-line > .md-no-style .md-list-item-text p, md-list.md-dense md-list-item.md-3-line .md-list-item-text h3,\n  md-list.md-dense md-list-item.md-3-line .md-list-item-text h4,\n  md-list.md-dense md-list-item.md-3-line .md-list-item-text p, md-list.md-dense md-list-item.md-3-line > .md-no-style .md-list-item-text h3,\n  md-list.md-dense md-list-item.md-3-line > .md-no-style .md-list-item-text h4,\n  md-list.md-dense md-list-item.md-3-line > .md-no-style .md-list-item-text p {\n    line-height: 1.05;\n    font-size: 12px; }\n  md-list.md-dense md-list-item.md-2-line .md-list-item-text h3, md-list.md-dense md-list-item.md-2-line > .md-no-style .md-list-item-text h3, md-list.md-dense md-list-item.md-3-line .md-list-item-text h3, md-list.md-dense md-list-item.md-3-line > .md-no-style .md-list-item-text h3 {\n    font-size: 13px; }\n  md-list.md-dense md-list-item.md-2-line, md-list.md-dense md-list-item.md-2-line > .md-no-style {\n    min-height: 60px; }\n    md-list.md-dense md-list-item.md-2-line::before, md-list.md-dense md-list-item.md-2-line > .md-no-style::before {\n      content: '';\n      min-height: 60px;\n      visibility: hidden;\n      display: inline-block; }\n    md-list.md-dense md-list-item.md-2-line > .md-avatar, md-list.md-dense md-list-item.md-2-line .md-avatar-icon, md-list.md-dense md-list-item.md-2-line > .md-no-style > .md-avatar, md-list.md-dense md-list-item.md-2-line > .md-no-style .md-avatar-icon {\n      margin-top: 12px; }\n  md-list.md-dense md-list-item.md-3-line, md-list.md-dense md-list-item.md-3-line > .md-no-style {\n    min-height: 76px; }\n    md-list.md-dense md-list-item.md-3-line::before, md-list.md-dense md-list-item.md-3-line > .md-no-style::before {\n      content: '';\n      min-height: 76px;\n      visibility: hidden;\n      display: inline-block; }\n    md-list.md-dense md-list-item.md-3-line > md-icon:first-child,\n    md-list.md-dense md-list-item.md-3-line > .md-avatar, md-list.md-dense md-list-item.md-3-line > .md-no-style > md-icon:first-child,\n    md-list.md-dense md-list-item.md-3-line > .md-no-style > .md-avatar {\n      margin-top: 16px; }\n\nmd-list-item {\n  position: relative; }\n  md-list-item.md-proxy-focus.md-focused .md-no-style {\n    -webkit-transition: background-color 0.15s linear;\n    transition: background-color 0.15s linear; }\n  md-list-item._md-button-wrap {\n    position: relative; }\n    md-list-item._md-button-wrap > div.md-button:first-child {\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-align: center;\n      -webkit-align-items: center;\n              align-items: center;\n      -webkit-box-pack: start;\n      -webkit-justify-content: flex-start;\n              justify-content: flex-start;\n      padding: 0 16px;\n      margin: 0;\n      font-weight: 400;\n      text-align: left;\n      border: medium none; }\n      [dir=rtl] md-list-item._md-button-wrap > div.md-button:first-child {\n        text-align: right; }\n      md-list-item._md-button-wrap > div.md-button:first-child > .md-button:first-child {\n        position: absolute;\n        top: 0;\n        left: 0;\n        height: 100%;\n        margin: 0;\n        padding: 0; }\n      md-list-item._md-button-wrap > div.md-button:first-child .md-list-item-inner {\n        width: 100%;\n        min-height: inherit; }\n  md-list-item.md-no-proxy,\n  md-list-item .md-no-style {\n    position: relative;\n    padding: 0px 16px;\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto; }\n    md-list-item.md-no-proxy.md-button,\n    md-list-item .md-no-style.md-button {\n      font-size: inherit;\n      height: inherit;\n      text-align: left;\n      text-transform: none;\n      width: 100%;\n      white-space: normal;\n      -webkit-box-orient: vertical;\n      -webkit-box-direction: normal;\n      -webkit-flex-direction: inherit;\n              flex-direction: inherit;\n      -webkit-box-align: inherit;\n      -webkit-align-items: inherit;\n              align-items: inherit;\n      border-radius: 0;\n      margin: 0; }\n      [dir=rtl] md-list-item.md-no-proxy.md-button, [dir=rtl]\n      md-list-item .md-no-style.md-button {\n        text-align: right; }\n      md-list-item.md-no-proxy.md-button > .md-ripple-container,\n      md-list-item .md-no-style.md-button > .md-ripple-container {\n        border-radius: 0; }\n    md-list-item.md-no-proxy:focus,\n    md-list-item .md-no-style:focus {\n      outline: none; }\n  md-list-item.md-clickable:hover {\n    cursor: pointer; }\n  md-list-item md-divider {\n    position: absolute;\n    bottom: 0;\n    left: 0;\n    width: 100%; }\n    [dir=rtl] md-list-item md-divider {\n      left: auto;\n      right: 0; }\n    md-list-item md-divider[md-inset] {\n      left: 72px;\n      width: calc(100% - 72px);\n      margin: 0 !important; }\n      [dir=rtl] md-list-item md-divider[md-inset] {\n        left: auto;\n        right: 72px; }\n  md-list-item,\n  md-list-item .md-list-item-inner {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    min-height: 48px;\n    height: auto; }\n    md-list-item::before,\n    md-list-item .md-list-item-inner::before {\n      content: '';\n      min-height: 48px;\n      visibility: hidden;\n      display: inline-block; }\n    md-list-item > div.md-primary > md-icon:not(.md-avatar-icon),\n    md-list-item > div.md-secondary > md-icon:not(.md-avatar-icon),\n    md-list-item > md-icon:first-child:not(.md-avatar-icon),\n    md-list-item > md-icon.md-secondary:not(.md-avatar-icon),\n    md-list-item .md-list-item-inner > div.md-primary > md-icon:not(.md-avatar-icon),\n    md-list-item .md-list-item-inner > div.md-secondary > md-icon:not(.md-avatar-icon),\n    md-list-item .md-list-item-inner > md-icon:first-child:not(.md-avatar-icon),\n    md-list-item .md-list-item-inner > md-icon.md-secondary:not(.md-avatar-icon) {\n      width: 24px;\n      margin-top: 16px;\n      margin-bottom: 12px;\n      box-sizing: content-box; }\n    md-list-item > div.md-primary > md-checkbox,\n    md-list-item > div.md-secondary > md-checkbox,\n    md-list-item > md-checkbox,\n    md-list-item md-checkbox.md-secondary,\n    md-list-item .md-list-item-inner > div.md-primary > md-checkbox,\n    md-list-item .md-list-item-inner > div.md-secondary > md-checkbox,\n    md-list-item .md-list-item-inner > md-checkbox,\n    md-list-item .md-list-item-inner md-checkbox.md-secondary {\n      -webkit-align-self: center;\n                  -ms-grid-row-align: center;\n              align-self: center; }\n      md-list-item > div.md-primary > md-checkbox .md-label,\n      md-list-item > div.md-secondary > md-checkbox .md-label,\n      md-list-item > md-checkbox .md-label,\n      md-list-item md-checkbox.md-secondary .md-label,\n      md-list-item .md-list-item-inner > div.md-primary > md-checkbox .md-label,\n      md-list-item .md-list-item-inner > div.md-secondary > md-checkbox .md-label,\n      md-list-item .md-list-item-inner > md-checkbox .md-label,\n      md-list-item .md-list-item-inner md-checkbox.md-secondary .md-label {\n        display: none; }\n    md-list-item > md-icon:first-child:not(.md-avatar-icon),\n    md-list-item .md-list-item-inner > md-icon:first-child:not(.md-avatar-icon) {\n      margin-right: 32px; }\n      [dir=rtl] md-list-item > md-icon:first-child:not(.md-avatar-icon), [dir=rtl]\n      md-list-item .md-list-item-inner > md-icon:first-child:not(.md-avatar-icon) {\n        margin-right: auto;\n        margin-left: 32px; }\n    md-list-item .md-avatar, md-list-item .md-avatar-icon,\n    md-list-item .md-list-item-inner .md-avatar,\n    md-list-item .md-list-item-inner .md-avatar-icon {\n      margin-top: 8px;\n      margin-bottom: 8px;\n      margin-right: 16px;\n      border-radius: 50%;\n      box-sizing: content-box; }\n      [dir=rtl] md-list-item .md-avatar, [dir=rtl] md-list-item .md-avatar-icon, [dir=rtl]\n      md-list-item .md-list-item-inner .md-avatar, [dir=rtl]\n      md-list-item .md-list-item-inner .md-avatar-icon {\n        margin-right: auto;\n        margin-left: 16px; }\n    md-list-item .md-avatar,\n    md-list-item .md-list-item-inner .md-avatar {\n      -webkit-box-flex: 0;\n      -webkit-flex: none;\n              flex: none;\n      width: 40px;\n      height: 40px; }\n    md-list-item .md-avatar-icon,\n    md-list-item .md-list-item-inner .md-avatar-icon {\n      padding: 8px; }\n      md-list-item .md-avatar-icon svg,\n      md-list-item .md-list-item-inner .md-avatar-icon svg {\n        width: 24px;\n        height: 24px; }\n    md-list-item > md-checkbox,\n    md-list-item .md-list-item-inner > md-checkbox {\n      width: 24px;\n      margin-left: 3px;\n      margin-right: 29px;\n      margin-top: 16px; }\n      [dir=rtl] md-list-item > md-checkbox, [dir=rtl]\n      md-list-item .md-list-item-inner > md-checkbox {\n        margin-left: 29px; }\n      [dir=rtl] md-list-item > md-checkbox, [dir=rtl]\n      md-list-item .md-list-item-inner > md-checkbox {\n        margin-right: 3px; }\n    md-list-item .md-secondary-container,\n    md-list-item .md-list-item-inner .md-secondary-container {\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-align: center;\n      -webkit-align-items: center;\n              align-items: center;\n      -webkit-flex-shrink: 0;\n              flex-shrink: 0;\n      margin: auto;\n      margin-right: 0;\n      margin-left: auto; }\n      [dir=rtl] md-list-item .md-secondary-container, [dir=rtl]\n      md-list-item .md-list-item-inner .md-secondary-container {\n        margin-right: auto; }\n      [dir=rtl] md-list-item .md-secondary-container, [dir=rtl]\n      md-list-item .md-list-item-inner .md-secondary-container {\n        margin-left: 0; }\n      md-list-item .md-secondary-container .md-button:last-of-type, md-list-item .md-secondary-container .md-icon-button:last-of-type,\n      md-list-item .md-list-item-inner .md-secondary-container .md-button:last-of-type,\n      md-list-item .md-list-item-inner .md-secondary-container .md-icon-button:last-of-type {\n        margin-right: 0; }\n        [dir=rtl] md-list-item .md-secondary-container .md-button:last-of-type, [dir=rtl] md-list-item .md-secondary-container .md-icon-button:last-of-type, [dir=rtl]\n        md-list-item .md-list-item-inner .md-secondary-container .md-button:last-of-type, [dir=rtl]\n        md-list-item .md-list-item-inner .md-secondary-container .md-icon-button:last-of-type {\n          margin-right: auto;\n          margin-left: 0; }\n      md-list-item .md-secondary-container md-checkbox,\n      md-list-item .md-list-item-inner .md-secondary-container md-checkbox {\n        margin-top: 0;\n        margin-bottom: 0; }\n        md-list-item .md-secondary-container md-checkbox:last-child,\n        md-list-item .md-list-item-inner .md-secondary-container md-checkbox:last-child {\n          width: 24px;\n          margin-right: 0; }\n          [dir=rtl] md-list-item .md-secondary-container md-checkbox:last-child, [dir=rtl]\n          md-list-item .md-list-item-inner .md-secondary-container md-checkbox:last-child {\n            margin-right: auto;\n            margin-left: 0; }\n      md-list-item .md-secondary-container md-switch,\n      md-list-item .md-list-item-inner .md-secondary-container md-switch {\n        margin-top: 0;\n        margin-bottom: 0;\n        margin-right: -6px; }\n        [dir=rtl] md-list-item .md-secondary-container md-switch, [dir=rtl]\n        md-list-item .md-list-item-inner .md-secondary-container md-switch {\n          margin-right: auto;\n          margin-left: -6px; }\n    md-list-item > p, md-list-item > .md-list-item-inner > p,\n    md-list-item .md-list-item-inner > p,\n    md-list-item .md-list-item-inner > .md-list-item-inner > p {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1 1 auto;\n              flex: 1 1 auto;\n      margin: 0; }\n  md-list-item.md-2-line, md-list-item.md-2-line > .md-no-style, md-list-item.md-3-line, md-list-item.md-3-line > .md-no-style {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n    md-list-item.md-2-line.md-long-text, md-list-item.md-2-line > .md-no-style.md-long-text, md-list-item.md-3-line.md-long-text, md-list-item.md-3-line > .md-no-style.md-long-text {\n      margin-top: 8px;\n      margin-bottom: 8px; }\n    md-list-item.md-2-line .md-list-item-text, md-list-item.md-2-line > .md-no-style .md-list-item-text, md-list-item.md-3-line .md-list-item-text, md-list-item.md-3-line > .md-no-style .md-list-item-text {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1 1 auto;\n              flex: 1 1 auto;\n      margin: auto;\n      text-overflow: ellipsis;\n      overflow: hidden; }\n      md-list-item.md-2-line .md-list-item-text.md-offset, md-list-item.md-2-line > .md-no-style .md-list-item-text.md-offset, md-list-item.md-3-line .md-list-item-text.md-offset, md-list-item.md-3-line > .md-no-style .md-list-item-text.md-offset {\n        margin-left: 56px; }\n        [dir=rtl] md-list-item.md-2-line .md-list-item-text.md-offset, [dir=rtl] md-list-item.md-2-line > .md-no-style .md-list-item-text.md-offset, [dir=rtl] md-list-item.md-3-line .md-list-item-text.md-offset, [dir=rtl] md-list-item.md-3-line > .md-no-style .md-list-item-text.md-offset {\n          margin-left: auto;\n          margin-right: 56px; }\n      md-list-item.md-2-line .md-list-item-text h3, md-list-item.md-2-line > .md-no-style .md-list-item-text h3, md-list-item.md-3-line .md-list-item-text h3, md-list-item.md-3-line > .md-no-style .md-list-item-text h3 {\n        font-size: 16px;\n        font-weight: 400;\n        letter-spacing: 0.010em;\n        margin: 0 0 0px 0;\n        line-height: 1.2em;\n        overflow: hidden;\n        white-space: nowrap;\n        text-overflow: ellipsis; }\n      md-list-item.md-2-line .md-list-item-text h4, md-list-item.md-2-line > .md-no-style .md-list-item-text h4, md-list-item.md-3-line .md-list-item-text h4, md-list-item.md-3-line > .md-no-style .md-list-item-text h4 {\n        font-size: 14px;\n        letter-spacing: 0.010em;\n        margin: 3px 0 1px 0;\n        font-weight: 400;\n        line-height: 1.2em;\n        overflow: hidden;\n        white-space: nowrap;\n        text-overflow: ellipsis; }\n      md-list-item.md-2-line .md-list-item-text p, md-list-item.md-2-line > .md-no-style .md-list-item-text p, md-list-item.md-3-line .md-list-item-text p, md-list-item.md-3-line > .md-no-style .md-list-item-text p {\n        font-size: 14px;\n        font-weight: 500;\n        letter-spacing: 0.010em;\n        margin: 0 0 0 0;\n        line-height: 1.6em; }\n  md-list-item.md-2-line, md-list-item.md-2-line > .md-no-style {\n    height: auto;\n    min-height: 72px; }\n    md-list-item.md-2-line::before, md-list-item.md-2-line > .md-no-style::before {\n      content: '';\n      min-height: 72px;\n      visibility: hidden;\n      display: inline-block; }\n    md-list-item.md-2-line > .md-avatar, md-list-item.md-2-line .md-avatar-icon, md-list-item.md-2-line > .md-no-style > .md-avatar, md-list-item.md-2-line > .md-no-style .md-avatar-icon {\n      margin-top: 12px; }\n    md-list-item.md-2-line > md-icon:first-child, md-list-item.md-2-line > .md-no-style > md-icon:first-child {\n      -webkit-align-self: flex-start;\n              align-self: flex-start; }\n    md-list-item.md-2-line .md-list-item-text, md-list-item.md-2-line > .md-no-style .md-list-item-text {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1 1 auto;\n              flex: 1 1 auto; }\n  md-list-item.md-3-line, md-list-item.md-3-line > .md-no-style {\n    height: auto;\n    min-height: 88px; }\n    md-list-item.md-3-line::before, md-list-item.md-3-line > .md-no-style::before {\n      content: '';\n      min-height: 88px;\n      visibility: hidden;\n      display: inline-block; }\n    md-list-item.md-3-line > md-icon:first-child,\n    md-list-item.md-3-line > .md-avatar, md-list-item.md-3-line > .md-no-style > md-icon:first-child,\n    md-list-item.md-3-line > .md-no-style > .md-avatar {\n      margin-top: 16px; }\n\n.md-open-menu-container {\n  position: fixed;\n  left: 0;\n  top: 0;\n  z-index: 100;\n  opacity: 0;\n  border-radius: 2px;\n  max-height: calc(100vh - 10px);\n  overflow: auto; }\n  .md-open-menu-container md-menu-divider {\n    margin-top: 4px;\n    margin-bottom: 4px;\n    height: 1px;\n    min-height: 1px;\n    max-height: 1px;\n    width: 100%; }\n  .md-open-menu-container md-menu-content > * {\n    opacity: 0; }\n  .md-open-menu-container:not(.md-clickable) {\n    pointer-events: none; }\n  .md-open-menu-container.md-active {\n    opacity: 1;\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transition-duration: 200ms;\n            transition-duration: 200ms; }\n    .md-open-menu-container.md-active > md-menu-content > * {\n      opacity: 1;\n      -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n      transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n      -webkit-transition-duration: 200ms;\n              transition-duration: 200ms;\n      -webkit-transition-delay: 100ms;\n              transition-delay: 100ms; }\n  .md-open-menu-container.md-leave {\n    opacity: 0;\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    -webkit-transition-duration: 250ms;\n            transition-duration: 250ms; }\n\nmd-menu-content {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column;\n  padding: 8px 0;\n  max-height: 304px;\n  overflow-y: auto; }\n  md-menu-content.md-dense {\n    max-height: 208px; }\n    md-menu-content.md-dense md-menu-item {\n      height: 32px;\n      min-height: 0px; }\n\nmd-menu-item {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: row;\n          flex-direction: row;\n  min-height: 48px;\n  height: 48px;\n  -webkit-align-content: center;\n          align-content: center;\n  -webkit-box-pack: start;\n  -webkit-justify-content: flex-start;\n          justify-content: flex-start;\n  /*\n   * We cannot use flex on <button> elements due to a bug in Firefox, so we also can't use it on\n   * <a> elements. Add some top padding to fix alignment since buttons automatically align their\n   * text vertically.\n   */ }\n  md-menu-item > * {\n    width: 100%;\n    margin: auto 0;\n    padding-left: 16px;\n    padding-right: 16px; }\n  md-menu-item > a.md-button {\n    padding-top: 5px; }\n  md-menu-item > .md-button {\n    text-align: left;\n    display: inline-block;\n    border-radius: 0;\n    margin: auto 0;\n    font-size: 15px;\n    text-transform: none;\n    font-weight: 400;\n    height: 100%;\n    padding-left: 16px;\n    padding-right: 16px;\n    width: 100%; }\n    md-menu-item > .md-button::-moz-focus-inner {\n      padding: 0;\n      border: 0; }\n    [dir=rtl] md-menu-item > .md-button {\n      text-align: right; }\n    md-menu-item > .md-button md-icon {\n      margin: auto 16px auto 0; }\n      [dir=rtl] md-menu-item > .md-button md-icon {\n        margin: auto 0 auto 16px; }\n    md-menu-item > .md-button p {\n      display: inline-block;\n      margin: auto; }\n    md-menu-item > .md-button span {\n      margin-top: auto;\n      margin-bottom: auto; }\n    md-menu-item > .md-button .md-ripple-container {\n      border-radius: inherit; }\n\nmd-toolbar .md-menu {\n  height: auto;\n  margin: auto;\n  padding: 0; }\n\n@media (max-width: 959px) {\n  md-menu-content {\n    min-width: 112px; }\n  md-menu-content[width=\"3\"] {\n    min-width: 168px; }\n  md-menu-content[width=\"4\"] {\n    min-width: 224px; }\n  md-menu-content[width=\"5\"] {\n    min-width: 280px; }\n  md-menu-content[width=\"6\"] {\n    min-width: 336px; }\n  md-menu-content[width=\"7\"] {\n    min-width: 392px; } }\n\n@media (min-width: 960px) {\n  md-menu-content {\n    min-width: 96px; }\n  md-menu-content[width=\"3\"] {\n    min-width: 192px; }\n  md-menu-content[width=\"4\"] {\n    min-width: 256px; }\n  md-menu-content[width=\"5\"] {\n    min-width: 320px; }\n  md-menu-content[width=\"6\"] {\n    min-width: 384px; }\n  md-menu-content[width=\"7\"] {\n    min-width: 448px; } }\n\nmd-toolbar.md-menu-toolbar h2.md-toolbar-tools {\n  line-height: 1rem;\n  height: auto;\n  padding: 28px;\n  padding-bottom: 12px; }\n\nmd-toolbar.md-has-open-menu {\n  position: relative;\n  z-index: 100; }\n\nmd-menu-bar {\n  padding: 0 20px;\n  display: block;\n  position: relative;\n  z-index: 2; }\n  md-menu-bar .md-menu {\n    display: inline-block;\n    padding: 0;\n    position: relative; }\n  md-menu-bar button {\n    font-size: 14px;\n    padding: 0 10px;\n    margin: 0;\n    border: 0;\n    background-color: transparent;\n    height: 40px; }\n  md-menu-bar md-backdrop.md-menu-backdrop {\n    z-index: -2; }\n\nmd-menu-content.md-menu-bar-menu.md-dense {\n  max-height: none;\n  padding: 16px 0; }\n  md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent {\n    position: relative; }\n    md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent > md-icon {\n      position: absolute;\n      padding: 0;\n      width: 24px;\n      top: 6px;\n      left: 24px; }\n      [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent > md-icon {\n        left: auto;\n        right: 24px; }\n    md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent > .md-button, md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent .md-menu > .md-button {\n      padding: 0 32px 0 64px; }\n      [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent > .md-button, [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense md-menu-item.md-indent .md-menu > .md-button {\n        padding: 0 64px 0 32px; }\n  md-menu-content.md-menu-bar-menu.md-dense .md-button {\n    min-height: 0;\n    height: 32px; }\n    md-menu-content.md-menu-bar-menu.md-dense .md-button span {\n      float: left; }\n      [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense .md-button span {\n        float: right; }\n    md-menu-content.md-menu-bar-menu.md-dense .md-button span.md-alt-text {\n      float: right;\n      margin: 0 8px; }\n      [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense .md-button span.md-alt-text {\n        float: left; }\n  md-menu-content.md-menu-bar-menu.md-dense md-menu-divider {\n    margin: 8px 0; }\n  md-menu-content.md-menu-bar-menu.md-dense md-menu-item > .md-button, md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button {\n    text-align: left; }\n    [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense md-menu-item > .md-button, [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button {\n      text-align: right; }\n  md-menu-content.md-menu-bar-menu.md-dense .md-menu {\n    padding: 0; }\n    md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button {\n      position: relative;\n      margin: 0;\n      width: 100%;\n      text-transform: none;\n      font-weight: normal;\n      border-radius: 0px;\n      padding-left: 16px; }\n      [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button {\n        padding-left: 0;\n        padding-right: 16px; }\n      md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button:after {\n        display: block;\n        content: '\\25BC';\n        position: absolute;\n        top: 0px;\n        speak: none;\n        -webkit-transform: rotate(270deg) scaleY(0.45) scaleX(0.9);\n                transform: rotate(270deg) scaleY(0.45) scaleX(0.9);\n        right: 28px; }\n        [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button:after {\n          -webkit-transform: rotate(90deg) scaleY(0.45) scaleX(0.9);\n                  transform: rotate(90deg) scaleY(0.45) scaleX(0.9); }\n        [dir=rtl] md-menu-content.md-menu-bar-menu.md-dense .md-menu > .md-button:after {\n          right: auto;\n          left: 28px; }\n\n/** Matches \"md-tabs md-tabs-wrapper\" style. */\n.md-nav-bar {\n  border-style: solid;\n  border-width: 0 0 1px;\n  height: 48px;\n  position: relative; }\n\n._md-nav-bar-list {\n  outline: none;\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: row;\n          flex-direction: row; }\n\n.md-nav-item:first-of-type {\n  margin-left: 8px; }\n\n.md-button._md-nav-button {\n  line-height: 24px;\n  margin: 0 4px;\n  padding: 12px 16px;\n  -webkit-transition: background-color 0.35s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: background-color 0.35s cubic-bezier(0.35, 0, 0.25, 1); }\n  .md-button._md-nav-button:focus {\n    outline: none; }\n  .md-button._md-nav-button:hover {\n    background-color: inherit; }\n\nmd-nav-ink-bar {\n  bottom: 0;\n  height: 2px;\n  left: auto;\n  position: absolute;\n  right: auto;\n  background-color: black; }\n  md-nav-ink-bar._md-left {\n    -webkit-transition: left 0.125s cubic-bezier(0.35, 0, 0.25, 1), right 0.25s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: left 0.125s cubic-bezier(0.35, 0, 0.25, 1), right 0.25s cubic-bezier(0.35, 0, 0.25, 1); }\n  md-nav-ink-bar._md-right {\n    -webkit-transition: left 0.25s cubic-bezier(0.35, 0, 0.25, 1), right 0.125s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: left 0.25s cubic-bezier(0.35, 0, 0.25, 1), right 0.125s cubic-bezier(0.35, 0, 0.25, 1); }\n  md-nav-ink-bar.ng-animate {\n    -webkit-transition: none;\n    transition: none; }\n\nmd-nav-extra-content {\n  min-height: 48px;\n  padding-right: 12px; }\n\n@-webkit-keyframes indeterminate-rotate {\n  0% {\n    -webkit-transform: rotate(0deg);\n            transform: rotate(0deg); }\n  100% {\n    -webkit-transform: rotate(360deg);\n            transform: rotate(360deg); } }\n\n@keyframes indeterminate-rotate {\n  0% {\n    -webkit-transform: rotate(0deg);\n            transform: rotate(0deg); }\n  100% {\n    -webkit-transform: rotate(360deg);\n            transform: rotate(360deg); } }\n\nmd-progress-circular {\n  position: relative;\n  display: block; }\n  md-progress-circular._md-progress-circular-disabled {\n    visibility: hidden; }\n  md-progress-circular.md-mode-indeterminate svg {\n    -webkit-animation: indeterminate-rotate 1568.63ms linear infinite;\n            animation: indeterminate-rotate 1568.63ms linear infinite; }\n  md-progress-circular svg {\n    position: absolute;\n    overflow: visible;\n    top: 0;\n    left: 0; }\n\nmd-progress-linear {\n  display: block;\n  position: relative;\n  width: 100%;\n  height: 5px;\n  padding-top: 0 !important;\n  margin-bottom: 0 !important; }\n  md-progress-linear._md-progress-linear-disabled {\n    visibility: hidden; }\n  md-progress-linear .md-container {\n    display: block;\n    position: relative;\n    overflow: hidden;\n    width: 100%;\n    height: 5px;\n    -webkit-transform: translate(0, 0) scale(1, 1);\n            transform: translate(0, 0) scale(1, 1); }\n    md-progress-linear .md-container .md-bar {\n      position: absolute;\n      left: 0;\n      top: 0;\n      bottom: 0;\n      width: 100%;\n      height: 5px; }\n    md-progress-linear .md-container .md-dashed:before {\n      content: \"\";\n      display: none;\n      position: absolute;\n      margin-top: 0;\n      height: 5px;\n      width: 100%;\n      background-color: transparent;\n      background-size: 10px 10px !important;\n      background-position: 0px -23px; }\n    md-progress-linear .md-container .md-bar1, md-progress-linear .md-container .md-bar2 {\n      -webkit-transition: -webkit-transform 0.2s linear;\n      transition: -webkit-transform 0.2s linear;\n      transition: transform 0.2s linear;\n      transition: transform 0.2s linear, -webkit-transform 0.2s linear; }\n    md-progress-linear .md-container.md-mode-query .md-bar1 {\n      display: none; }\n    md-progress-linear .md-container.md-mode-query .md-bar2 {\n      -webkit-transition: all 0.2s linear;\n      transition: all 0.2s linear;\n      -webkit-animation: query 0.8s infinite cubic-bezier(0.39, 0.575, 0.565, 1);\n              animation: query 0.8s infinite cubic-bezier(0.39, 0.575, 0.565, 1); }\n    md-progress-linear .md-container.md-mode-determinate .md-bar1 {\n      display: none; }\n    md-progress-linear .md-container.md-mode-indeterminate .md-bar1 {\n      -webkit-animation: md-progress-linear-indeterminate-scale-1 4s infinite, md-progress-linear-indeterminate-1 4s infinite;\n              animation: md-progress-linear-indeterminate-scale-1 4s infinite, md-progress-linear-indeterminate-1 4s infinite; }\n    md-progress-linear .md-container.md-mode-indeterminate .md-bar2 {\n      -webkit-animation: md-progress-linear-indeterminate-scale-2 4s infinite, md-progress-linear-indeterminate-2 4s infinite;\n              animation: md-progress-linear-indeterminate-scale-2 4s infinite, md-progress-linear-indeterminate-2 4s infinite; }\n    md-progress-linear .md-container.ng-hide ._md-progress-linear-disabled md-progress-linear .md-container {\n      -webkit-animation: none;\n              animation: none; }\n      md-progress-linear .md-container.ng-hide ._md-progress-linear-disabled md-progress-linear .md-container .md-bar1 {\n        -webkit-animation-name: none;\n                animation-name: none; }\n      md-progress-linear .md-container.ng-hide ._md-progress-linear-disabled md-progress-linear .md-container .md-bar2 {\n        -webkit-animation-name: none;\n                animation-name: none; }\n  md-progress-linear .md-container.md-mode-buffer {\n    background-color: transparent !important;\n    -webkit-transition: all 0.2s linear;\n    transition: all 0.2s linear; }\n    md-progress-linear .md-container.md-mode-buffer .md-dashed:before {\n      display: block;\n      -webkit-animation: buffer 3s infinite linear;\n              animation: buffer 3s infinite linear; }\n\n@-webkit-keyframes query {\n  0% {\n    opacity: 1;\n    -webkit-transform: translateX(35%) scale(0.3, 1);\n            transform: translateX(35%) scale(0.3, 1); }\n  100% {\n    opacity: 0;\n    -webkit-transform: translateX(-50%) scale(0, 1);\n            transform: translateX(-50%) scale(0, 1); } }\n\n@keyframes query {\n  0% {\n    opacity: 1;\n    -webkit-transform: translateX(35%) scale(0.3, 1);\n            transform: translateX(35%) scale(0.3, 1); }\n  100% {\n    opacity: 0;\n    -webkit-transform: translateX(-50%) scale(0, 1);\n            transform: translateX(-50%) scale(0, 1); } }\n\n@-webkit-keyframes buffer {\n  0% {\n    opacity: 1;\n    background-position: 0px -23px; }\n  50% {\n    opacity: 0; }\n  100% {\n    opacity: 1;\n    background-position: -200px -23px; } }\n\n@keyframes buffer {\n  0% {\n    opacity: 1;\n    background-position: 0px -23px; }\n  50% {\n    opacity: 0; }\n  100% {\n    opacity: 1;\n    background-position: -200px -23px; } }\n\n@-webkit-keyframes md-progress-linear-indeterminate-scale-1 {\n  0% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1);\n    -webkit-animation-timing-function: linear;\n            animation-timing-function: linear; }\n  36.6% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1);\n    -webkit-animation-timing-function: cubic-bezier(0.33473, 0.12482, 0.78584, 1);\n            animation-timing-function: cubic-bezier(0.33473, 0.12482, 0.78584, 1); }\n  69.15% {\n    -webkit-transform: scaleX(0.83);\n            transform: scaleX(0.83);\n    -webkit-animation-timing-function: cubic-bezier(0.22573, 0, 0.23365, 1.37098);\n            animation-timing-function: cubic-bezier(0.22573, 0, 0.23365, 1.37098); }\n  100% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1); } }\n\n@keyframes md-progress-linear-indeterminate-scale-1 {\n  0% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1);\n    -webkit-animation-timing-function: linear;\n            animation-timing-function: linear; }\n  36.6% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1);\n    -webkit-animation-timing-function: cubic-bezier(0.33473, 0.12482, 0.78584, 1);\n            animation-timing-function: cubic-bezier(0.33473, 0.12482, 0.78584, 1); }\n  69.15% {\n    -webkit-transform: scaleX(0.83);\n            transform: scaleX(0.83);\n    -webkit-animation-timing-function: cubic-bezier(0.22573, 0, 0.23365, 1.37098);\n            animation-timing-function: cubic-bezier(0.22573, 0, 0.23365, 1.37098); }\n  100% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1); } }\n\n@-webkit-keyframes md-progress-linear-indeterminate-1 {\n  0% {\n    left: -105.16667%;\n    -webkit-animation-timing-function: linear;\n            animation-timing-function: linear; }\n  20% {\n    left: -105.16667%;\n    -webkit-animation-timing-function: cubic-bezier(0.5, 0, 0.70173, 0.49582);\n            animation-timing-function: cubic-bezier(0.5, 0, 0.70173, 0.49582); }\n  69.15% {\n    left: 21.5%;\n    -webkit-animation-timing-function: cubic-bezier(0.30244, 0.38135, 0.55, 0.95635);\n            animation-timing-function: cubic-bezier(0.30244, 0.38135, 0.55, 0.95635); }\n  100% {\n    left: 95.44444%; } }\n\n@keyframes md-progress-linear-indeterminate-1 {\n  0% {\n    left: -105.16667%;\n    -webkit-animation-timing-function: linear;\n            animation-timing-function: linear; }\n  20% {\n    left: -105.16667%;\n    -webkit-animation-timing-function: cubic-bezier(0.5, 0, 0.70173, 0.49582);\n            animation-timing-function: cubic-bezier(0.5, 0, 0.70173, 0.49582); }\n  69.15% {\n    left: 21.5%;\n    -webkit-animation-timing-function: cubic-bezier(0.30244, 0.38135, 0.55, 0.95635);\n            animation-timing-function: cubic-bezier(0.30244, 0.38135, 0.55, 0.95635); }\n  100% {\n    left: 95.44444%; } }\n\n@-webkit-keyframes md-progress-linear-indeterminate-scale-2 {\n  0% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1);\n    -webkit-animation-timing-function: cubic-bezier(0.20503, 0.05705, 0.57661, 0.45397);\n            animation-timing-function: cubic-bezier(0.20503, 0.05705, 0.57661, 0.45397); }\n  19.15% {\n    -webkit-transform: scaleX(0.57);\n            transform: scaleX(0.57);\n    -webkit-animation-timing-function: cubic-bezier(0.15231, 0.19643, 0.64837, 1.00432);\n            animation-timing-function: cubic-bezier(0.15231, 0.19643, 0.64837, 1.00432); }\n  44.15% {\n    -webkit-transform: scaleX(0.91);\n            transform: scaleX(0.91);\n    -webkit-animation-timing-function: cubic-bezier(0.25776, -0.00316, 0.21176, 1.38179);\n            animation-timing-function: cubic-bezier(0.25776, -0.00316, 0.21176, 1.38179); }\n  100% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1); } }\n\n@keyframes md-progress-linear-indeterminate-scale-2 {\n  0% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1);\n    -webkit-animation-timing-function: cubic-bezier(0.20503, 0.05705, 0.57661, 0.45397);\n            animation-timing-function: cubic-bezier(0.20503, 0.05705, 0.57661, 0.45397); }\n  19.15% {\n    -webkit-transform: scaleX(0.57);\n            transform: scaleX(0.57);\n    -webkit-animation-timing-function: cubic-bezier(0.15231, 0.19643, 0.64837, 1.00432);\n            animation-timing-function: cubic-bezier(0.15231, 0.19643, 0.64837, 1.00432); }\n  44.15% {\n    -webkit-transform: scaleX(0.91);\n            transform: scaleX(0.91);\n    -webkit-animation-timing-function: cubic-bezier(0.25776, -0.00316, 0.21176, 1.38179);\n            animation-timing-function: cubic-bezier(0.25776, -0.00316, 0.21176, 1.38179); }\n  100% {\n    -webkit-transform: scaleX(0.1);\n            transform: scaleX(0.1); } }\n\n@-webkit-keyframes md-progress-linear-indeterminate-2 {\n  0% {\n    left: -54.88889%;\n    -webkit-animation-timing-function: cubic-bezier(0.15, 0, 0.51506, 0.40968);\n            animation-timing-function: cubic-bezier(0.15, 0, 0.51506, 0.40968); }\n  25% {\n    left: -17.25%;\n    -webkit-animation-timing-function: cubic-bezier(0.31033, 0.28406, 0.8, 0.73372);\n            animation-timing-function: cubic-bezier(0.31033, 0.28406, 0.8, 0.73372); }\n  48.35% {\n    left: 29.5%;\n    -webkit-animation-timing-function: cubic-bezier(0.4, 0.62703, 0.6, 0.90203);\n            animation-timing-function: cubic-bezier(0.4, 0.62703, 0.6, 0.90203); }\n  100% {\n    left: 117.38889%; } }\n\n@keyframes md-progress-linear-indeterminate-2 {\n  0% {\n    left: -54.88889%;\n    -webkit-animation-timing-function: cubic-bezier(0.15, 0, 0.51506, 0.40968);\n            animation-timing-function: cubic-bezier(0.15, 0, 0.51506, 0.40968); }\n  25% {\n    left: -17.25%;\n    -webkit-animation-timing-function: cubic-bezier(0.31033, 0.28406, 0.8, 0.73372);\n            animation-timing-function: cubic-bezier(0.31033, 0.28406, 0.8, 0.73372); }\n  48.35% {\n    left: 29.5%;\n    -webkit-animation-timing-function: cubic-bezier(0.4, 0.62703, 0.6, 0.90203);\n            animation-timing-function: cubic-bezier(0.4, 0.62703, 0.6, 0.90203); }\n  100% {\n    left: 117.38889%; } }\n\nmd-radio-button {\n  box-sizing: border-box;\n  display: block;\n  margin-bottom: 16px;\n  white-space: nowrap;\n  cursor: pointer;\n  position: relative; }\n  md-radio-button[disabled] {\n    cursor: default; }\n    md-radio-button[disabled] .md-container {\n      cursor: default; }\n  md-radio-button .md-container {\n    position: absolute;\n    top: 50%;\n    -webkit-transform: translateY(-50%);\n            transform: translateY(-50%);\n    box-sizing: border-box;\n    display: inline-block;\n    width: 20px;\n    height: 20px;\n    cursor: pointer;\n    left: 0;\n    right: auto; }\n    [dir=rtl] md-radio-button .md-container {\n      left: auto; }\n    [dir=rtl] md-radio-button .md-container {\n      right: 0; }\n    md-radio-button .md-container .md-ripple-container {\n      position: absolute;\n      display: block;\n      width: auto;\n      height: auto;\n      left: -15px;\n      top: -15px;\n      right: -15px;\n      bottom: -15px; }\n    md-radio-button .md-container:before {\n      box-sizing: border-box;\n      background-color: transparent;\n      border-radius: 50%;\n      content: '';\n      position: absolute;\n      display: block;\n      height: auto;\n      left: 0;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      -webkit-transition: all 0.5s;\n      transition: all 0.5s;\n      width: auto; }\n  md-radio-button.md-align-top-left > div.md-container {\n    top: 12px; }\n  md-radio-button .md-off {\n    box-sizing: border-box;\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 20px;\n    height: 20px;\n    border-style: solid;\n    border-width: 2px;\n    border-radius: 50%;\n    -webkit-transition: border-color ease 0.28s;\n    transition: border-color ease 0.28s; }\n  md-radio-button .md-on {\n    box-sizing: border-box;\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 20px;\n    height: 20px;\n    border-radius: 50%;\n    -webkit-transition: -webkit-transform ease 0.28s;\n    transition: -webkit-transform ease 0.28s;\n    transition: transform ease 0.28s;\n    transition: transform ease 0.28s, -webkit-transform ease 0.28s;\n    -webkit-transform: scale(0);\n            transform: scale(0); }\n  md-radio-button.md-checked .md-on {\n    -webkit-transform: scale(0.5);\n            transform: scale(0.5); }\n  md-radio-button .md-label {\n    box-sizing: border-box;\n    position: relative;\n    display: inline-block;\n    margin-left: 30px;\n    margin-right: 0;\n    vertical-align: middle;\n    white-space: normal;\n    pointer-events: none;\n    width: auto; }\n    [dir=rtl] md-radio-button .md-label {\n      margin-left: 0; }\n    [dir=rtl] md-radio-button .md-label {\n      margin-right: 30px; }\n\nmd-radio-group {\n  /** Layout adjustments for the radio group. */ }\n  md-radio-group.layout-column md-radio-button, md-radio-group.layout-xs-column md-radio-button, md-radio-group.layout-gt-xs-column md-radio-button, md-radio-group.layout-sm-column md-radio-button, md-radio-group.layout-gt-sm-column md-radio-button, md-radio-group.layout-md-column md-radio-button, md-radio-group.layout-gt-md-column md-radio-button, md-radio-group.layout-lg-column md-radio-button, md-radio-group.layout-gt-lg-column md-radio-button, md-radio-group.layout-xl-column md-radio-button {\n    margin-bottom: 16px; }\n  md-radio-group.layout-row md-radio-button, md-radio-group.layout-xs-row md-radio-button, md-radio-group.layout-gt-xs-row md-radio-button, md-radio-group.layout-sm-row md-radio-button, md-radio-group.layout-gt-sm-row md-radio-button, md-radio-group.layout-md-row md-radio-button, md-radio-group.layout-gt-md-row md-radio-button, md-radio-group.layout-lg-row md-radio-button, md-radio-group.layout-gt-lg-row md-radio-button, md-radio-group.layout-xl-row md-radio-button {\n    margin-top: 0;\n    margin-bottom: 0;\n    margin-left: 0;\n    margin-right: 16px; }\n    [dir=rtl] md-radio-group.layout-row md-radio-button, [dir=rtl] md-radio-group.layout-xs-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-xs-row md-radio-button, [dir=rtl] md-radio-group.layout-sm-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-sm-row md-radio-button, [dir=rtl] md-radio-group.layout-md-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-md-row md-radio-button, [dir=rtl] md-radio-group.layout-lg-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-lg-row md-radio-button, [dir=rtl] md-radio-group.layout-xl-row md-radio-button {\n      margin-left: 16px; }\n    [dir=rtl] md-radio-group.layout-row md-radio-button, [dir=rtl] md-radio-group.layout-xs-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-xs-row md-radio-button, [dir=rtl] md-radio-group.layout-sm-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-sm-row md-radio-button, [dir=rtl] md-radio-group.layout-md-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-md-row md-radio-button, [dir=rtl] md-radio-group.layout-lg-row md-radio-button, [dir=rtl] md-radio-group.layout-gt-lg-row md-radio-button, [dir=rtl] md-radio-group.layout-xl-row md-radio-button {\n      margin-right: 0; }\n    md-radio-group.layout-row md-radio-button:last-of-type, md-radio-group.layout-xs-row md-radio-button:last-of-type, md-radio-group.layout-gt-xs-row md-radio-button:last-of-type, md-radio-group.layout-sm-row md-radio-button:last-of-type, md-radio-group.layout-gt-sm-row md-radio-button:last-of-type, md-radio-group.layout-md-row md-radio-button:last-of-type, md-radio-group.layout-gt-md-row md-radio-button:last-of-type, md-radio-group.layout-lg-row md-radio-button:last-of-type, md-radio-group.layout-gt-lg-row md-radio-button:last-of-type, md-radio-group.layout-xl-row md-radio-button:last-of-type {\n      margin-left: 0;\n      margin-right: 0; }\n  md-radio-group:focus {\n    outline: none; }\n  md-radio-group.md-focused .md-checked .md-container:before {\n    left: -8px;\n    top: -8px;\n    right: -8px;\n    bottom: -8px; }\n  md-radio-group[disabled] md-radio-button {\n    cursor: default; }\n    md-radio-group[disabled] md-radio-button .md-container {\n      cursor: default; }\n\n.md-inline-form md-radio-group {\n  margin: 18px 0 19px; }\n  .md-inline-form md-radio-group md-radio-button {\n    display: inline-block;\n    height: 30px;\n    padding: 2px;\n    box-sizing: border-box;\n    margin-top: 0;\n    margin-bottom: 0; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-radio-button.md-default-theme .md-on {\n    background-color: #fff; } }\n\nmd-input-container:not([md-no-float]) .md-select-placeholder span:first-child {\n  -webkit-transition: -webkit-transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: -webkit-transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), -webkit-transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  -webkit-transform-origin: left top;\n          transform-origin: left top; }\n  [dir=rtl] md-input-container:not([md-no-float]) .md-select-placeholder span:first-child {\n    -webkit-transform-origin: right top;\n            transform-origin: right top; }\n\nmd-input-container.md-input-focused:not([md-no-float]) .md-select-placeholder span:first-child {\n  -webkit-transform: translateY(-22px) translateX(-2px) scale(0.75);\n          transform: translateY(-22px) translateX(-2px) scale(0.75); }\n\n.md-select-menu-container {\n  position: fixed;\n  left: 0;\n  top: 0;\n  z-index: 90;\n  opacity: 0;\n  display: none;\n  -webkit-transform: translateY(-1px);\n          transform: translateY(-1px); }\n  .md-select-menu-container:not(.md-clickable) {\n    pointer-events: none; }\n  .md-select-menu-container md-progress-circular {\n    display: table;\n    margin: 24px auto !important; }\n  .md-select-menu-container.md-active {\n    display: block;\n    opacity: 1; }\n    .md-select-menu-container.md-active md-select-menu {\n      -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n      -webkit-transition-duration: 150ms;\n              transition-duration: 150ms; }\n      .md-select-menu-container.md-active md-select-menu > * {\n        opacity: 1;\n        -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n        transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n        -webkit-transition-duration: 150ms;\n                transition-duration: 150ms;\n        -webkit-transition-delay: 100ms;\n                transition-delay: 100ms; }\n  .md-select-menu-container.md-leave {\n    opacity: 0;\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    -webkit-transition-duration: 250ms;\n            transition-duration: 250ms; }\n\nmd-input-container > md-select {\n  margin: 0;\n  -webkit-box-ordinal-group: 3;\n  -webkit-order: 2;\n          order: 2; }\n\nmd-input-container:not(.md-input-has-value) md-select[required]:not(.md-no-asterisk) .md-select-value span:first-child:after, md-input-container:not(.md-input-has-value) md-select.ng-required:not(.md-no-asterisk) .md-select-value span:first-child:after {\n  content: ' *';\n  font-size: 13px;\n  vertical-align: top; }\n\nmd-input-container.md-input-invalid md-select .md-select-value {\n  border-bottom-style: solid;\n  padding-bottom: 1px; }\n\nmd-select {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  margin: 20px 0 26px 0; }\n  md-select[required].ng-invalid:not(.md-no-asterisk) .md-select-value span:first-child:after, md-select.ng-required.ng-invalid:not(.md-no-asterisk) .md-select-value span:first-child:after {\n    content: ' *';\n    font-size: 13px;\n    vertical-align: top; }\n  md-select[disabled] .md-select-value {\n    background-position: 0 bottom;\n    background-size: 4px 1px;\n    background-repeat: repeat-x;\n    margin-bottom: -1px; }\n  md-select:focus {\n    outline: none; }\n  md-select[disabled]:hover {\n    cursor: default; }\n  md-select:not([disabled]):hover {\n    cursor: pointer; }\n  md-select:not([disabled]).ng-invalid.ng-touched .md-select-value {\n    border-bottom-style: solid;\n    padding-bottom: 1px; }\n  md-select:not([disabled]):focus .md-select-value {\n    border-bottom-width: 2px;\n    border-bottom-style: solid;\n    padding-bottom: 0; }\n  md-select:not([disabled]):focus.ng-invalid.ng-touched .md-select-value {\n    padding-bottom: 0; }\n\nmd-input-container.md-input-has-value .md-select-value > span:not(.md-select-icon) {\n  -webkit-transform: translate3d(0, 1px, 0);\n          transform: translate3d(0, 1px, 0); }\n\n.md-select-value {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  padding: 2px 2px 1px;\n  border-bottom-width: 1px;\n  border-bottom-style: solid;\n  background-color: transparent;\n  position: relative;\n  box-sizing: content-box;\n  min-width: 64px;\n  min-height: 26px;\n  -webkit-box-flex: 1;\n  -webkit-flex-grow: 1;\n          flex-grow: 1; }\n  .md-select-value > span:not(.md-select-icon) {\n    max-width: 100%;\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n    overflow: hidden; }\n    .md-select-value > span:not(.md-select-icon) .md-text {\n      display: inline; }\n  .md-select-value .md-select-icon {\n    display: block;\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    text-align: end;\n    width: 24px;\n    margin: 0 4px;\n    -webkit-transform: translate3d(0, -2px, 0);\n            transform: translate3d(0, -2px, 0);\n    font-size: 1.2rem; }\n  .md-select-value .md-select-icon:after {\n    display: block;\n    content: '\\25BC';\n    position: relative;\n    top: 2px;\n    speak: none;\n    font-size: 13px;\n    -webkit-transform: scaleY(0.5) scaleX(1);\n            transform: scaleY(0.5) scaleX(1); }\n  .md-select-value.md-select-placeholder {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1;\n    pointer-events: none;\n    -webkit-font-smoothing: antialiased;\n    padding-left: 2px;\n    z-index: 1; }\n\nmd-select-menu {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column;\n  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12);\n  max-height: 256px;\n  min-height: 48px;\n  overflow-y: hidden;\n  -webkit-transform-origin: left top;\n          transform-origin: left top;\n  -webkit-transform: scale(1);\n          transform: scale(1); }\n  md-select-menu.md-reverse {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: reverse;\n    -webkit-flex-direction: column-reverse;\n            flex-direction: column-reverse; }\n  md-select-menu:not(.md-overflow) md-content {\n    padding-top: 8px;\n    padding-bottom: 8px; }\n  [dir=rtl] md-select-menu {\n    -webkit-transform-origin: right top;\n            transform-origin: right top; }\n  md-select-menu md-content {\n    min-width: 136px;\n    min-height: 48px;\n    max-height: 256px;\n    overflow-y: auto; }\n  md-select-menu > * {\n    opacity: 0; }\n\nmd-option {\n  cursor: pointer;\n  position: relative;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  width: auto;\n  -webkit-transition: background 0.15s linear;\n  transition: background 0.15s linear;\n  padding: 0 16px 0 16px;\n  height: 48px; }\n  md-option[disabled] {\n    cursor: default; }\n  md-option:focus {\n    outline: none; }\n  md-option .md-text {\n    -webkit-touch-callout: none;\n    -webkit-user-select: none;\n    -moz-user-select: none;\n    -ms-user-select: none;\n    user-select: none;\n    width: auto;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis; }\n\nmd-optgroup {\n  display: block; }\n  md-optgroup label {\n    display: block;\n    font-size: 14px;\n    text-transform: uppercase;\n    padding: 16px;\n    font-weight: 500; }\n  md-optgroup md-option {\n    padding-left: 32px;\n    padding-right: 32px; }\n\n@media screen and (-ms-high-contrast: active) {\n  .md-select-backdrop {\n    background-color: transparent; }\n  md-select-menu {\n    border: 1px solid #fff; } }\n\nmd-select-menu[multiple] md-option.md-checkbox-enabled {\n  padding-left: 40px;\n  padding-right: 16px; }\n  [dir=rtl] md-select-menu[multiple] md-option.md-checkbox-enabled {\n    padding-left: 16px; }\n  [dir=rtl] md-select-menu[multiple] md-option.md-checkbox-enabled {\n    padding-right: 40px; }\n  md-select-menu[multiple] md-option.md-checkbox-enabled .md-container {\n    position: absolute;\n    top: 50%;\n    -webkit-transform: translateY(-50%);\n            transform: translateY(-50%);\n    box-sizing: border-box;\n    display: inline-block;\n    width: 20px;\n    height: 20px;\n    left: 0;\n    right: auto; }\n    [dir=rtl] md-select-menu[multiple] md-option.md-checkbox-enabled .md-container {\n      left: auto; }\n    [dir=rtl] md-select-menu[multiple] md-option.md-checkbox-enabled .md-container {\n      right: 0; }\n    md-select-menu[multiple] md-option.md-checkbox-enabled .md-container:before {\n      box-sizing: border-box;\n      background-color: transparent;\n      border-radius: 50%;\n      content: '';\n      position: absolute;\n      display: block;\n      height: auto;\n      left: 0;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      -webkit-transition: all 0.5s;\n      transition: all 0.5s;\n      width: auto; }\n    md-select-menu[multiple] md-option.md-checkbox-enabled .md-container:after {\n      box-sizing: border-box;\n      content: '';\n      position: absolute;\n      top: -10px;\n      right: -10px;\n      bottom: -10px;\n      left: -10px; }\n    md-select-menu[multiple] md-option.md-checkbox-enabled .md-container .md-ripple-container {\n      position: absolute;\n      display: block;\n      width: auto;\n      height: auto;\n      left: -15px;\n      top: -15px;\n      right: -15px;\n      bottom: -15px; }\n  md-select-menu[multiple] md-option.md-checkbox-enabled .md-icon {\n    box-sizing: border-box;\n    -webkit-transition: 240ms;\n    transition: 240ms;\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 20px;\n    height: 20px;\n    border-width: 2px;\n    border-style: solid;\n    border-radius: 2px; }\n  md-select-menu[multiple] md-option.md-checkbox-enabled[selected] .md-icon {\n    border-color: transparent; }\n    md-select-menu[multiple] md-option.md-checkbox-enabled[selected] .md-icon:after {\n      box-sizing: border-box;\n      -webkit-transform: rotate(45deg);\n              transform: rotate(45deg);\n      position: absolute;\n      left: 4.66667px;\n      top: 0.22222px;\n      display: table;\n      width: 6.66667px;\n      height: 13.33333px;\n      border-width: 2px;\n      border-style: solid;\n      border-top: 0;\n      border-left: 0;\n      content: ''; }\n  md-select-menu[multiple] md-option.md-checkbox-enabled[disabled] {\n    cursor: default; }\n  md-select-menu[multiple] md-option.md-checkbox-enabled.md-indeterminate .md-icon:after {\n    box-sizing: border-box;\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    -webkit-transform: translate(-50%, -50%);\n            transform: translate(-50%, -50%);\n    display: table;\n    width: 12px;\n    height: 2px;\n    border-width: 2px;\n    border-style: solid;\n    border-top: 0;\n    border-left: 0;\n    content: ''; }\n  md-select-menu[multiple] md-option.md-checkbox-enabled .md-container {\n    margin-left: 10.66667px;\n    margin-right: auto; }\n    [dir=rtl] md-select-menu[multiple] md-option.md-checkbox-enabled .md-container {\n      margin-left: auto; }\n    [dir=rtl] md-select-menu[multiple] md-option.md-checkbox-enabled .md-container {\n      margin-right: 10.66667px; }\n\nmd-sidenav {\n  box-sizing: border-box;\n  position: absolute;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column;\n  z-index: 60;\n  width: 320px;\n  max-width: 320px;\n  bottom: 0;\n  overflow: auto;\n  -webkit-overflow-scrolling: touch; }\n  md-sidenav ul {\n    list-style: none; }\n  md-sidenav.md-closed {\n    display: none; }\n  md-sidenav.md-closed-add, md-sidenav.md-closed-remove {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-transition: 0.2s ease-in all;\n    transition: 0.2s ease-in all; }\n  md-sidenav.md-closed-add.md-closed-add-active, md-sidenav.md-closed-remove.md-closed-remove-active {\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }\n  md-sidenav.md-locked-open-add, md-sidenav.md-locked-open-remove {\n    position: static;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-transform: translate3d(0, 0, 0);\n            transform: translate3d(0, 0, 0); }\n  md-sidenav.md-locked-open, md-sidenav.md-locked-open.md-closed, md-sidenav.md-locked-open.md-closed.md-sidenav-left, md-sidenav.md-locked-open.md-closed, md-sidenav.md-locked-open.md-closed.md-sidenav-right {\n    position: static;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-transform: translate3d(0, 0, 0);\n            transform: translate3d(0, 0, 0); }\n  md-sidenav.md-locked-open-remove.md-closed {\n    position: static;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-transform: translate3d(0, 0, 0);\n            transform: translate3d(0, 0, 0); }\n  md-sidenav.md-closed.md-locked-open-add {\n    position: static;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-transform: translate3d(0%, 0, 0);\n            transform: translate3d(0%, 0, 0); }\n  md-sidenav.md-closed.md-locked-open-add:not(.md-locked-open-add-active) {\n    -webkit-transition: width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2), min-width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2), min-width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    width: 0 !important;\n    min-width: 0 !important; }\n  md-sidenav.md-closed.md-locked-open-add-active {\n    -webkit-transition: width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2), min-width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2), min-width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n  md-sidenav.md-locked-open-remove-active {\n    -webkit-transition: width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2), min-width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2), min-width 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    width: 0 !important;\n    min-width: 0 !important; }\n\n.md-sidenav-backdrop.md-locked-open {\n  display: none; }\n\n.md-sidenav-left, md-sidenav {\n  left: 0;\n  top: 0;\n  -webkit-transform: translate3d(0%, 0, 0);\n          transform: translate3d(0%, 0, 0); }\n  .md-sidenav-left.md-closed, md-sidenav.md-closed {\n    -webkit-transform: translate3d(-100%, 0, 0);\n            transform: translate3d(-100%, 0, 0); }\n\n.md-sidenav-right {\n  left: 100%;\n  top: 0;\n  -webkit-transform: translate(-100%, 0);\n          transform: translate(-100%, 0); }\n  .md-sidenav-right.md-closed {\n    -webkit-transform: translate(0%, 0);\n            transform: translate(0%, 0); }\n\n@media (min-width: 600px) {\n  md-sidenav {\n    max-width: 400px; } }\n\n@media (max-width: 456px) {\n  md-sidenav {\n    width: calc(100% - 56px);\n    min-width: calc(100% - 56px);\n    max-width: calc(100% - 56px); } }\n\n@media screen and (-ms-high-contrast: active) {\n  .md-sidenav-left, md-sidenav {\n    border-right: 1px solid #fff; }\n  .md-sidenav-right {\n    border-left: 1px solid #fff; } }\n\n@-webkit-keyframes sliderFocusThumb {\n  0% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7); }\n  30% {\n    -webkit-transform: scale(1);\n            transform: scale(1); }\n  100% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7); } }\n\n@keyframes sliderFocusThumb {\n  0% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7); }\n  30% {\n    -webkit-transform: scale(1);\n            transform: scale(1); }\n  100% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7); } }\n\n@-webkit-keyframes sliderDiscreteFocusThumb {\n  0% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7); }\n  50% {\n    -webkit-transform: scale(0.8);\n            transform: scale(0.8); }\n  100% {\n    -webkit-transform: scale(0);\n            transform: scale(0); } }\n\n@keyframes sliderDiscreteFocusThumb {\n  0% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7); }\n  50% {\n    -webkit-transform: scale(0.8);\n            transform: scale(0.8); }\n  100% {\n    -webkit-transform: scale(0);\n            transform: scale(0); } }\n\n@-webkit-keyframes sliderDiscreteFocusRing {\n  0% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7);\n    opacity: 0; }\n  50% {\n    -webkit-transform: scale(1);\n            transform: scale(1);\n    opacity: 1; }\n  100% {\n    -webkit-transform: scale(0);\n            transform: scale(0); } }\n\n@keyframes sliderDiscreteFocusRing {\n  0% {\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7);\n    opacity: 0; }\n  50% {\n    -webkit-transform: scale(1);\n            transform: scale(1);\n    opacity: 1; }\n  100% {\n    -webkit-transform: scale(0);\n            transform: scale(0); } }\n\nmd-slider {\n  height: 48px;\n  min-width: 128px;\n  position: relative;\n  margin-left: 4px;\n  margin-right: 4px;\n  padding: 0;\n  display: block;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: row;\n          flex-direction: row;\n  /**\n   * Track\n   */\n  /**\n   * Slider thumb\n   */\n  /* The sign that's focused in discrete mode */\n  /**\n   * The border/background that comes in when focused in non-discrete mode\n   */\n  /* Don't animate left/right while panning */ }\n  md-slider *, md-slider *:after {\n    box-sizing: border-box; }\n  md-slider .md-slider-wrapper {\n    outline: none;\n    width: 100%;\n    height: 100%; }\n  md-slider .md-slider-content {\n    position: relative; }\n  md-slider .md-track-container {\n    width: 100%;\n    position: absolute;\n    top: 23px;\n    height: 2px; }\n  md-slider .md-track {\n    position: absolute;\n    left: 0;\n    right: 0;\n    height: 100%; }\n  md-slider .md-track-fill {\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transition-property: width, height;\n    transition-property: width, height; }\n  md-slider .md-track-ticks {\n    position: absolute;\n    left: 0;\n    right: 0;\n    height: 100%; }\n  md-slider .md-track-ticks canvas {\n    width: 100%;\n    height: 100%; }\n  md-slider .md-thumb-container {\n    position: absolute;\n    left: 0;\n    top: 50%;\n    -webkit-transform: translate3d(-50%, -50%, 0);\n            transform: translate3d(-50%, -50%, 0);\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transition-property: left, right, bottom;\n    transition-property: left, right, bottom; }\n    [dir=rtl] md-slider .md-thumb-container {\n      left: auto;\n      right: 0; }\n  md-slider .md-thumb {\n    z-index: 1;\n    position: absolute;\n    left: -10px;\n    top: 14px;\n    width: 20px;\n    height: 20px;\n    border-radius: 20px;\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7);\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }\n    [dir=rtl] md-slider .md-thumb {\n      left: auto;\n      right: -10px; }\n    md-slider .md-thumb:after {\n      content: '';\n      position: absolute;\n      width: 20px;\n      height: 20px;\n      border-radius: 20px;\n      border-width: 3px;\n      border-style: solid;\n      -webkit-transition: inherit;\n      transition: inherit; }\n  md-slider .md-sign {\n    /* Center the children (slider-thumb-text) */\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center;\n    position: absolute;\n    left: -14px;\n    top: -17px;\n    width: 28px;\n    height: 28px;\n    border-radius: 28px;\n    -webkit-transform: scale(0.4) translate3d(0, 67.5px, 0);\n            transform: scale(0.4) translate3d(0, 67.5px, 0);\n    -webkit-transition: all 0.3s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: all 0.3s cubic-bezier(0.35, 0, 0.25, 1);\n    /* The arrow pointing down under the sign */ }\n    md-slider .md-sign:after {\n      position: absolute;\n      content: '';\n      left: 0px;\n      border-radius: 16px;\n      top: 19px;\n      border-left: 14px solid transparent;\n      border-right: 14px solid transparent;\n      border-top-width: 16px;\n      border-top-style: solid;\n      opacity: 0;\n      -webkit-transform: translate3d(0, -8px, 0);\n              transform: translate3d(0, -8px, 0);\n      -webkit-transition: all 0.2s cubic-bezier(0.35, 0, 0.25, 1);\n      transition: all 0.2s cubic-bezier(0.35, 0, 0.25, 1); }\n      [dir=rtl] md-slider .md-sign:after {\n        left: auto;\n        right: 0px; }\n    md-slider .md-sign .md-thumb-text {\n      z-index: 1;\n      font-size: 12px;\n      font-weight: bold; }\n  md-slider .md-focus-ring {\n    position: absolute;\n    left: -17px;\n    top: 7px;\n    width: 34px;\n    height: 34px;\n    border-radius: 34px;\n    -webkit-transform: scale(0.7);\n            transform: scale(0.7);\n    opacity: 0;\n    -webkit-transition: all 0.35s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: all 0.35s cubic-bezier(0.35, 0, 0.25, 1); }\n    [dir=rtl] md-slider .md-focus-ring {\n      left: auto;\n      right: -17px; }\n  md-slider .md-disabled-thumb {\n    position: absolute;\n    left: -14px;\n    top: 10px;\n    width: 28px;\n    height: 28px;\n    border-radius: 28px;\n    -webkit-transform: scale(0.5);\n            transform: scale(0.5);\n    border-width: 4px;\n    border-style: solid;\n    display: none; }\n    [dir=rtl] md-slider .md-disabled-thumb {\n      left: auto;\n      right: -14px; }\n  md-slider.md-min .md-sign {\n    opacity: 0; }\n  md-slider:focus {\n    outline: none; }\n  md-slider.md-dragging .md-thumb-container,\n  md-slider.md-dragging .md-track-fill {\n    -webkit-transition: none;\n    transition: none; }\n  md-slider:not([md-discrete]) {\n    /* Hide the sign and ticks in non-discrete mode */ }\n    md-slider:not([md-discrete]) .md-track-ticks,\n    md-slider:not([md-discrete]) .md-sign {\n      display: none; }\n    md-slider:not([md-discrete]):not([disabled]) .md-slider-wrapper .md-thumb:hover {\n      -webkit-transform: scale(0.8);\n              transform: scale(0.8); }\n    md-slider:not([md-discrete]):not([disabled]) .md-slider-wrapper.md-focused .md-focus-ring {\n      -webkit-transform: scale(1);\n              transform: scale(1);\n      opacity: 1; }\n    md-slider:not([md-discrete]):not([disabled]) .md-slider-wrapper.md-focused .md-thumb {\n      -webkit-animation: sliderFocusThumb 0.7s cubic-bezier(0.35, 0, 0.25, 1);\n              animation: sliderFocusThumb 0.7s cubic-bezier(0.35, 0, 0.25, 1); }\n    md-slider:not([md-discrete]):not([disabled]).md-active .md-slider-wrapper .md-thumb {\n      -webkit-transform: scale(1);\n              transform: scale(1); }\n  md-slider[md-discrete]:not([disabled]) .md-slider-wrapper.md-focused .md-focus-ring {\n    -webkit-transform: scale(0);\n            transform: scale(0);\n    -webkit-animation: sliderDiscreteFocusRing 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n            animation: sliderDiscreteFocusRing 0.5s cubic-bezier(0.35, 0, 0.25, 1); }\n  md-slider[md-discrete]:not([disabled]) .md-slider-wrapper.md-focused .md-thumb {\n    -webkit-animation: sliderDiscreteFocusThumb 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n            animation: sliderDiscreteFocusThumb 0.5s cubic-bezier(0.35, 0, 0.25, 1); }\n  md-slider[md-discrete]:not([disabled]) .md-slider-wrapper.md-focused .md-thumb, md-slider[md-discrete]:not([disabled]).md-active .md-thumb {\n    -webkit-transform: scale(0);\n            transform: scale(0); }\n  md-slider[md-discrete]:not([disabled]) .md-slider-wrapper.md-focused .md-sign,\n  md-slider[md-discrete]:not([disabled]) .md-slider-wrapper.md-focused .md-sign:after, md-slider[md-discrete]:not([disabled]).md-active .md-sign,\n  md-slider[md-discrete]:not([disabled]).md-active .md-sign:after {\n    opacity: 1;\n    -webkit-transform: translate3d(0, 0, 0) scale(1);\n            transform: translate3d(0, 0, 0) scale(1); }\n  md-slider[md-discrete][disabled][readonly] .md-thumb {\n    -webkit-transform: scale(0);\n            transform: scale(0); }\n  md-slider[md-discrete][disabled][readonly] .md-sign,\n  md-slider[md-discrete][disabled][readonly] .md-sign:after {\n    opacity: 1;\n    -webkit-transform: translate3d(0, 0, 0) scale(1);\n            transform: translate3d(0, 0, 0) scale(1); }\n  md-slider[disabled] .md-track-fill {\n    display: none; }\n  md-slider[disabled] .md-track-ticks {\n    opacity: 0; }\n  md-slider[disabled]:not([readonly]) .md-sign {\n    opacity: 0; }\n  md-slider[disabled] .md-thumb {\n    -webkit-transform: scale(0.5);\n            transform: scale(0.5); }\n  md-slider[disabled] .md-disabled-thumb {\n    display: block; }\n  md-slider[md-vertical] {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column;\n    min-height: 128px;\n    min-width: 0; }\n    md-slider[md-vertical] .md-slider-wrapper {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      padding-top: 12px;\n      padding-bottom: 12px;\n      width: 48px;\n      -webkit-align-self: center;\n              align-self: center;\n      display: -webkit-box;\n      display: -webkit-flex;\n      display: flex;\n      -webkit-box-pack: center;\n      -webkit-justify-content: center;\n              justify-content: center; }\n    md-slider[md-vertical] .md-track-container {\n      height: 100%;\n      width: 2px;\n      top: 0;\n      left: calc(50% - (2px / 2)); }\n    md-slider[md-vertical] .md-thumb-container {\n      top: auto;\n      margin-bottom: 23px;\n      left: calc(50% - 1px);\n      bottom: 0; }\n      md-slider[md-vertical] .md-thumb-container .md-thumb:after {\n        left: 1px; }\n      md-slider[md-vertical] .md-thumb-container .md-focus-ring {\n        left: -16px; }\n    md-slider[md-vertical] .md-track-fill {\n      bottom: 0; }\n    md-slider[md-vertical][md-discrete] .md-sign {\n      left: -40px;\n      top: 9.5px;\n      -webkit-transform: scale(0.4) translate3d(67.5px, 0, 0);\n              transform: scale(0.4) translate3d(67.5px, 0, 0);\n      /* The arrow pointing left next the sign */ }\n      md-slider[md-vertical][md-discrete] .md-sign:after {\n        top: 9.5px;\n        left: 19px;\n        border-top: 14px solid transparent;\n        border-right: 0;\n        border-bottom: 14px solid transparent;\n        border-left-width: 16px;\n        border-left-style: solid;\n        opacity: 0;\n        -webkit-transform: translate3d(0, -8px, 0);\n                transform: translate3d(0, -8px, 0);\n        -webkit-transition: all 0.2s ease-in-out;\n        transition: all 0.2s ease-in-out; }\n      md-slider[md-vertical][md-discrete] .md-sign .md-thumb-text {\n        z-index: 1;\n        font-size: 12px;\n        font-weight: bold; }\n    md-slider[md-vertical][md-discrete].md-active .md-sign:after,\n    md-slider[md-vertical][md-discrete] .md-focused .md-sign:after, md-slider[md-vertical][md-discrete][disabled][readonly] .md-sign:after {\n      top: 0; }\n    md-slider[md-vertical][disabled][readonly] .md-thumb {\n      -webkit-transform: scale(0);\n              transform: scale(0); }\n    md-slider[md-vertical][disabled][readonly] .md-sign,\n    md-slider[md-vertical][disabled][readonly] .md-sign:after {\n      opacity: 1;\n      -webkit-transform: translate3d(0, 0, 0) scale(1);\n              transform: translate3d(0, 0, 0) scale(1); }\n  md-slider[md-invert]:not([md-vertical]) .md-track-fill {\n    left: auto;\n    right: 0; }\n    [dir=rtl] md-slider[md-invert]:not([md-vertical]) .md-track-fill {\n      left: 0; }\n    [dir=rtl] md-slider[md-invert]:not([md-vertical]) .md-track-fill {\n      right: auto; }\n  md-slider[md-invert][md-vertical] .md-track-fill {\n    bottom: auto;\n    top: 0; }\n\nmd-slider-container {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: row;\n          flex-direction: row; }\n  md-slider-container > *:first-child:not(md-slider),\n  md-slider-container > *:last-child:not(md-slider) {\n    min-width: 25px;\n    max-width: 42px;\n    height: 25px;\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transition-property: color, max-width;\n    transition-property: color, max-width; }\n  md-slider-container > *:first-child:not(md-slider) {\n    margin-right: 16px; }\n    [dir=rtl] md-slider-container > *:first-child:not(md-slider) {\n      margin-right: auto;\n      margin-left: 16px; }\n  md-slider-container > *:last-child:not(md-slider) {\n    margin-left: 16px; }\n    [dir=rtl] md-slider-container > *:last-child:not(md-slider) {\n      margin-left: auto;\n      margin-right: 16px; }\n  md-slider-container[md-vertical] {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n    md-slider-container[md-vertical] > *:first-child:not(md-slider),\n    md-slider-container[md-vertical] > *:last-child:not(md-slider) {\n      margin-right: 0;\n      margin-left: 0;\n      text-align: center; }\n  md-slider-container md-input-container input[type=\"number\"] {\n    text-align: center;\n    padding-left: 15px;\n    height: 50px;\n    margin-top: -25px; }\n    [dir=rtl] md-slider-container md-input-container input[type=\"number\"] {\n      padding-left: 0;\n      padding-right: 15px; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-slider.md-default-theme .md-track {\n    border-bottom: 1px solid #fff; } }\n\n.md-sticky-clone {\n  z-index: 2;\n  top: 0;\n  left: 0;\n  right: 0;\n  position: absolute !important;\n  -webkit-transform: translate3d(-9999px, -9999px, 0);\n          transform: translate3d(-9999px, -9999px, 0); }\n  .md-sticky-clone[sticky-state=\"active\"] {\n    -webkit-transform: translate3d(0, 0, 0);\n            transform: translate3d(0, 0, 0); }\n    .md-sticky-clone[sticky-state=\"active\"]:not(.md-sticky-no-effect) .md-subheader-inner {\n      -webkit-animation: subheaderStickyHoverIn 0.3s ease-out both;\n              animation: subheaderStickyHoverIn 0.3s ease-out both; }\n\n@-webkit-keyframes subheaderStickyHoverIn {\n  0% {\n    box-shadow: 0 0 0 0 transparent; }\n  100% {\n    box-shadow: 0px 2px 4px 0 rgba(0, 0, 0, 0.16); } }\n\n@keyframes subheaderStickyHoverIn {\n  0% {\n    box-shadow: 0 0 0 0 transparent; }\n  100% {\n    box-shadow: 0px 2px 4px 0 rgba(0, 0, 0, 0.16); } }\n\n@-webkit-keyframes subheaderStickyHoverOut {\n  0% {\n    box-shadow: 0px 2px 4px 0 rgba(0, 0, 0, 0.16); }\n  100% {\n    box-shadow: 0 0 0 0 transparent; } }\n\n@keyframes subheaderStickyHoverOut {\n  0% {\n    box-shadow: 0px 2px 4px 0 rgba(0, 0, 0, 0.16); }\n  100% {\n    box-shadow: 0 0 0 0 transparent; } }\n\n.md-subheader-wrapper:not(.md-sticky-no-effect) {\n  -webkit-transition: 0.2s ease-out margin;\n  transition: 0.2s ease-out margin; }\n  .md-subheader-wrapper:not(.md-sticky-no-effect) .md-subheader {\n    margin: 0; }\n  .md-subheader-wrapper:not(.md-sticky-no-effect).md-sticky-clone {\n    z-index: 2; }\n  .md-subheader-wrapper:not(.md-sticky-no-effect)[sticky-state=\"active\"] {\n    margin-top: -2px; }\n  .md-subheader-wrapper:not(.md-sticky-no-effect):not(.md-sticky-clone)[sticky-prev-state=\"active\"] .md-subheader-inner:after {\n    -webkit-animation: subheaderStickyHoverOut 0.3s ease-out both;\n            animation: subheaderStickyHoverOut 0.3s ease-out both; }\n\n.md-subheader {\n  display: block;\n  font-size: 14px;\n  font-weight: 500;\n  line-height: 1em;\n  margin: 0 0 0 0;\n  position: relative; }\n  .md-subheader .md-subheader-inner {\n    display: block;\n    padding: 16px; }\n  .md-subheader .md-subheader-content {\n    display: block;\n    z-index: 1;\n    position: relative; }\n\n.md-inline-form md-switch {\n  margin-top: 18px;\n  margin-bottom: 19px; }\n\nmd-switch {\n  margin: 16px 0;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  height: 30px;\n  line-height: 28px;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  margin-left: inherit;\n  margin-right: 16px; }\n  [dir=rtl] md-switch {\n    margin-left: 16px; }\n  [dir=rtl] md-switch {\n    margin-right: inherit; }\n  md-switch:last-of-type {\n    margin-left: inherit;\n    margin-right: 0; }\n    [dir=rtl] md-switch:last-of-type {\n      margin-left: 0; }\n    [dir=rtl] md-switch:last-of-type {\n      margin-right: inherit; }\n  md-switch[disabled] {\n    cursor: default; }\n    md-switch[disabled] .md-container {\n      cursor: default; }\n  md-switch .md-container {\n    cursor: -webkit-grab;\n    cursor: grab;\n    width: 36px;\n    height: 24px;\n    position: relative;\n    -webkit-user-select: none;\n       -moz-user-select: none;\n        -ms-user-select: none;\n            user-select: none;\n    margin-right: 8px;\n    float: left; }\n    [dir=rtl] md-switch .md-container {\n      margin-right: 0px;\n      margin-left: 8px; }\n  md-switch.md-inverted .md-container {\n    margin-right: initial;\n    margin-left: 8px; }\n    [dir=rtl] md-switch.md-inverted .md-container {\n      margin-right: 8px; }\n    [dir=rtl] md-switch.md-inverted .md-container {\n      margin-left: initial; }\n  md-switch:not([disabled]) .md-dragging,\n  md-switch:not([disabled]).md-dragging .md-container {\n    cursor: -webkit-grabbing;\n    cursor: grabbing; }\n  md-switch.md-focused:not([disabled]) .md-thumb:before {\n    left: -8px;\n    top: -8px;\n    right: -8px;\n    bottom: -8px; }\n  md-switch.md-focused:not([disabled]):not(.md-checked) .md-thumb:before {\n    background-color: rgba(0, 0, 0, 0.12); }\n  md-switch .md-label {\n    border-color: transparent;\n    border-width: 0;\n    float: left; }\n  md-switch .md-bar {\n    left: 1px;\n    width: 34px;\n    top: 5px;\n    height: 14px;\n    border-radius: 8px;\n    position: absolute; }\n  md-switch .md-thumb-container {\n    top: 2px;\n    left: 0;\n    width: 16px;\n    position: absolute;\n    -webkit-transform: translate3d(0, 0, 0);\n            transform: translate3d(0, 0, 0);\n    z-index: 1; }\n  md-switch.md-checked .md-thumb-container {\n    -webkit-transform: translate3d(100%, 0, 0);\n            transform: translate3d(100%, 0, 0); }\n  md-switch .md-thumb {\n    position: absolute;\n    margin: 0;\n    left: 0;\n    top: 0;\n    outline: none;\n    height: 20px;\n    width: 20px;\n    border-radius: 50%;\n    box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12); }\n    md-switch .md-thumb:before {\n      background-color: transparent;\n      border-radius: 50%;\n      content: '';\n      position: absolute;\n      display: block;\n      height: auto;\n      left: 0;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      -webkit-transition: all 0.5s;\n      transition: all 0.5s;\n      width: auto; }\n    md-switch .md-thumb .md-ripple-container {\n      position: absolute;\n      display: block;\n      width: auto;\n      height: auto;\n      left: -20px;\n      top: -20px;\n      right: -20px;\n      bottom: -20px; }\n  md-switch:not(.md-dragging) .md-bar,\n  md-switch:not(.md-dragging) .md-thumb-container,\n  md-switch:not(.md-dragging) .md-thumb {\n    -webkit-transition: all 0.08s linear;\n    transition: all 0.08s linear;\n    -webkit-transition-property: background-color, -webkit-transform;\n    transition-property: background-color, -webkit-transform;\n    transition-property: transform, background-color;\n    transition-property: transform, background-color, -webkit-transform; }\n  md-switch:not(.md-dragging) .md-bar,\n  md-switch:not(.md-dragging) .md-thumb {\n    -webkit-transition-delay: 0.05s;\n            transition-delay: 0.05s; }\n\n@media screen and (-ms-high-contrast: active) {\n  md-switch.md-default-theme .md-bar {\n    background-color: #666; }\n  md-switch.md-default-theme.md-checked .md-bar {\n    background-color: #9E9E9E; }\n  md-switch.md-default-theme .md-thumb {\n    background-color: #fff; } }\n\n[md-swipe-left], [md-swipe-right] {\n  touch-action: pan-y; }\n\n[md-swipe-up], [md-swipe-down] {\n  touch-action: pan-x; }\n\n@-webkit-keyframes md-tab-content-hide {\n  0% {\n    opacity: 1; }\n  50% {\n    opacity: 1; }\n  100% {\n    opacity: 0; } }\n\n@keyframes md-tab-content-hide {\n  0% {\n    opacity: 1; }\n  50% {\n    opacity: 1; }\n  100% {\n    opacity: 0; } }\n\nmd-tab-data {\n  position: absolute;\n  top: 0;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  z-index: -1;\n  opacity: 0; }\n\nmd-tabs {\n  display: block;\n  margin: 0;\n  border-radius: 2px;\n  overflow: hidden;\n  position: relative;\n  -webkit-flex-shrink: 0;\n          flex-shrink: 0; }\n  md-tabs:not(.md-no-tab-content):not(.md-dynamic-height) {\n    min-height: 248px; }\n  md-tabs[md-align-tabs=\"bottom\"] {\n    padding-bottom: 48px; }\n    md-tabs[md-align-tabs=\"bottom\"] md-tabs-wrapper {\n      position: absolute;\n      bottom: 0;\n      left: 0;\n      right: 0;\n      height: 48px;\n      z-index: 2; }\n    md-tabs[md-align-tabs=\"bottom\"] md-tabs-content-wrapper {\n      top: 0;\n      bottom: 48px; }\n  md-tabs.md-dynamic-height md-tabs-content-wrapper {\n    min-height: 0;\n    position: relative;\n    top: auto;\n    left: auto;\n    right: auto;\n    bottom: auto;\n    overflow: visible; }\n  md-tabs.md-dynamic-height md-tab-content.md-active {\n    position: relative; }\n  md-tabs[md-border-bottom] md-tabs-wrapper {\n    border-width: 0 0 1px;\n    border-style: solid; }\n  md-tabs[md-border-bottom]:not(.md-dynamic-height) md-tabs-content-wrapper {\n    top: 49px; }\n\nmd-tabs-wrapper {\n  display: block;\n  position: relative;\n  -webkit-transform: translate3d(0, 0, 0);\n          transform: translate3d(0, 0, 0); }\n  md-tabs-wrapper md-prev-button, md-tabs-wrapper md-next-button {\n    height: 100%;\n    width: 32px;\n    position: absolute;\n    top: 50%;\n    -webkit-transform: translateY(-50%);\n            transform: translateY(-50%);\n    line-height: 1em;\n    z-index: 2;\n    cursor: pointer;\n    font-size: 16px;\n    background: transparent no-repeat center center;\n    -webkit-transition: all 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: all 0.5s cubic-bezier(0.35, 0, 0.25, 1); }\n    md-tabs-wrapper md-prev-button:focus, md-tabs-wrapper md-next-button:focus {\n      outline: none; }\n    md-tabs-wrapper md-prev-button.md-disabled, md-tabs-wrapper md-next-button.md-disabled {\n      opacity: 0.25;\n      cursor: default; }\n    md-tabs-wrapper md-prev-button.ng-leave, md-tabs-wrapper md-next-button.ng-leave {\n      -webkit-transition: none;\n      transition: none; }\n    md-tabs-wrapper md-prev-button md-icon, md-tabs-wrapper md-next-button md-icon {\n      position: absolute;\n      top: 50%;\n      left: 50%;\n      -webkit-transform: translate3d(-50%, -50%, 0);\n              transform: translate3d(-50%, -50%, 0); }\n    [dir=\"rtl\"] md-tabs-wrapper md-prev-button, [dir=\"rtl\"] md-tabs-wrapper md-next-button {\n      -webkit-transform: rotateY(180deg) translateY(-50%);\n              transform: rotateY(180deg) translateY(-50%); }\n  md-tabs-wrapper md-prev-button {\n    left: 0;\n    background-image: url(\"data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4gPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE3LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPiA8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4iICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPiA8c3ZnIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiIHdpZHRoPSIyNHB4IiBoZWlnaHQ9IjI0cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMjQgMjQiIHhtbDpzcGFjZT0icHJlc2VydmUiPiA8ZyBpZD0iSGVhZGVyIj4gPGc+IDxyZWN0IHg9Ii02MTgiIHk9Ii0xMjA4IiBmaWxsPSJub25lIiB3aWR0aD0iMTQwMCIgaGVpZ2h0PSIzNjAwIi8+IDwvZz4gPC9nPiA8ZyBpZD0iTGFiZWwiPiA8L2c+IDxnIGlkPSJJY29uIj4gPGc+IDxwb2x5Z29uIHBvaW50cz0iMTUuNCw3LjQgMTQsNiA4LDEyIDE0LDE4IDE1LjQsMTYuNiAxMC44LDEyIAkJIiBzdHlsZT0iZmlsbDp3aGl0ZTsiLz4gPHJlY3QgZmlsbD0ibm9uZSIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ii8+IDwvZz4gPC9nPiA8ZyBpZD0iR3JpZCIgZGlzcGxheT0ibm9uZSI+IDxnIGRpc3BsYXk9ImlubGluZSI+IDwvZz4gPC9nPiA8L3N2Zz4NCg==\"); }\n    [dir=rtl] md-tabs-wrapper md-prev-button {\n      left: auto;\n      right: 0; }\n  md-tabs-wrapper md-next-button {\n    right: 0;\n    background-image: url(\"data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4gPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE3LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPiA8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4iICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPiA8c3ZnIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiIHdpZHRoPSIyNHB4IiBoZWlnaHQ9IjI0cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMjQgMjQiIHhtbDpzcGFjZT0icHJlc2VydmUiPiA8ZyBpZD0iSGVhZGVyIj4gPGc+IDxyZWN0IHg9Ii02MTgiIHk9Ii0xMzM2IiBmaWxsPSJub25lIiB3aWR0aD0iMTQwMCIgaGVpZ2h0PSIzNjAwIi8+IDwvZz4gPC9nPiA8ZyBpZD0iTGFiZWwiPiA8L2c+IDxnIGlkPSJJY29uIj4gPGc+IDxwb2x5Z29uIHBvaW50cz0iMTAsNiA4LjYsNy40IDEzLjIsMTIgOC42LDE2LjYgMTAsMTggMTYsMTIgCQkiIHN0eWxlPSJmaWxsOndoaXRlOyIvPiA8cmVjdCBmaWxsPSJub25lIiB3aWR0aD0iMjQiIGhlaWdodD0iMjQiLz4gPC9nPiA8L2c+IDxnIGlkPSJHcmlkIiBkaXNwbGF5PSJub25lIj4gPGcgZGlzcGxheT0iaW5saW5lIj4gPC9nPiA8L2c+IDwvc3ZnPg0K\"); }\n    [dir=rtl] md-tabs-wrapper md-next-button {\n      right: auto;\n      left: 0; }\n    md-tabs-wrapper md-next-button md-icon {\n      -webkit-transform: translate3d(-50%, -50%, 0) rotate(180deg);\n              transform: translate3d(-50%, -50%, 0) rotate(180deg); }\n  md-tabs-wrapper.md-stretch-tabs md-pagination-wrapper {\n    width: 100%;\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n    md-tabs-wrapper.md-stretch-tabs md-pagination-wrapper md-tab-item {\n      -webkit-box-flex: 1;\n      -webkit-flex-grow: 1;\n              flex-grow: 1; }\n\nmd-tabs-canvas {\n  position: relative;\n  overflow: hidden;\n  display: block;\n  height: 48px; }\n  md-tabs-canvas:after {\n    content: '';\n    display: table;\n    clear: both; }\n  md-tabs-canvas .md-dummy-wrapper {\n    position: absolute;\n    top: 0;\n    left: 0; }\n    [dir=rtl] md-tabs-canvas .md-dummy-wrapper {\n      left: auto;\n      right: 0; }\n  md-tabs-canvas.md-paginated {\n    margin: 0 32px; }\n  md-tabs-canvas.md-center-tabs {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column;\n    text-align: center; }\n    md-tabs-canvas.md-center-tabs .md-tab {\n      float: none;\n      display: inline-block; }\n\nmd-pagination-wrapper {\n  height: 48px;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-transition: -webkit-transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: -webkit-transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: transform 0.5s cubic-bezier(0.35, 0, 0.25, 1), -webkit-transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  position: absolute;\n  left: 0;\n  -webkit-transform: translate3d(0, 0, 0);\n          transform: translate3d(0, 0, 0); }\n  md-pagination-wrapper:after {\n    content: '';\n    display: table;\n    clear: both; }\n  [dir=rtl] md-pagination-wrapper {\n    left: auto;\n    right: 0; }\n  md-pagination-wrapper.md-center-tabs {\n    position: relative;\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n\nmd-tabs-content-wrapper {\n  display: block;\n  position: absolute;\n  top: 48px;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  overflow: hidden; }\n\nmd-tab-content {\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  position: absolute;\n  top: 0;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  -webkit-transition: -webkit-transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: -webkit-transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: transform 0.5s cubic-bezier(0.35, 0, 0.25, 1), -webkit-transform 0.5s cubic-bezier(0.35, 0, 0.25, 1);\n  overflow: auto;\n  -webkit-transform: translate3d(0, 0, 0);\n          transform: translate3d(0, 0, 0); }\n  md-tab-content.md-no-scroll {\n    bottom: auto;\n    overflow: hidden; }\n  md-tab-content.ng-leave, md-tab-content.md-no-transition {\n    -webkit-transition: none;\n    transition: none; }\n  md-tab-content.md-left:not(.md-active) {\n    -webkit-transform: translateX(-100%);\n            transform: translateX(-100%);\n    -webkit-animation: 1s md-tab-content-hide;\n            animation: 1s md-tab-content-hide;\n    visibility: hidden; }\n    [dir=rtl] md-tab-content.md-left:not(.md-active) {\n      -webkit-transform: translateX(100%);\n              transform: translateX(100%); }\n    md-tab-content.md-left:not(.md-active) * {\n      -webkit-transition: visibility 0s linear;\n      transition: visibility 0s linear;\n      -webkit-transition-delay: 0.5s;\n              transition-delay: 0.5s;\n      visibility: hidden; }\n  md-tab-content.md-right:not(.md-active) {\n    -webkit-transform: translateX(100%);\n            transform: translateX(100%);\n    -webkit-animation: 1s md-tab-content-hide;\n            animation: 1s md-tab-content-hide;\n    visibility: hidden; }\n    [dir=rtl] md-tab-content.md-right:not(.md-active) {\n      -webkit-transform: translateX(-100%);\n              transform: translateX(-100%); }\n    md-tab-content.md-right:not(.md-active) * {\n      -webkit-transition: visibility 0s linear;\n      transition: visibility 0s linear;\n      -webkit-transition-delay: 0.5s;\n              transition-delay: 0.5s;\n      visibility: hidden; }\n  md-tab-content > div {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 100%;\n            flex: 1 0 100%;\n    min-width: 0; }\n    md-tab-content > div.ng-leave {\n      -webkit-animation: 1s md-tab-content-hide;\n              animation: 1s md-tab-content-hide; }\n\nmd-ink-bar {\n  position: absolute;\n  left: auto;\n  right: auto;\n  bottom: 0;\n  height: 2px; }\n  md-ink-bar.md-left {\n    -webkit-transition: left 0.125s cubic-bezier(0.35, 0, 0.25, 1), right 0.25s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: left 0.125s cubic-bezier(0.35, 0, 0.25, 1), right 0.25s cubic-bezier(0.35, 0, 0.25, 1); }\n  md-ink-bar.md-right {\n    -webkit-transition: left 0.25s cubic-bezier(0.35, 0, 0.25, 1), right 0.125s cubic-bezier(0.35, 0, 0.25, 1);\n    transition: left 0.25s cubic-bezier(0.35, 0, 0.25, 1), right 0.125s cubic-bezier(0.35, 0, 0.25, 1); }\n\nmd-tab {\n  position: absolute;\n  z-index: -1;\n  left: -9999px; }\n\n.md-tab {\n  font-size: 14px;\n  text-align: center;\n  line-height: 24px;\n  padding: 12px 24px;\n  -webkit-transition: background-color 0.35s cubic-bezier(0.35, 0, 0.25, 1);\n  transition: background-color 0.35s cubic-bezier(0.35, 0, 0.25, 1);\n  cursor: pointer;\n  white-space: nowrap;\n  position: relative;\n  text-transform: uppercase;\n  float: left;\n  font-weight: 500;\n  box-sizing: border-box;\n  overflow: hidden;\n  text-overflow: ellipsis; }\n  [dir=rtl] .md-tab {\n    float: right; }\n  .md-tab.md-focused, .md-tab:focus {\n    box-shadow: none;\n    outline: none; }\n  .md-tab.md-active {\n    cursor: default; }\n  .md-tab.md-disabled {\n    pointer-events: none;\n    touch-action: pan-y;\n    -webkit-user-select: none;\n       -moz-user-select: none;\n        -ms-user-select: none;\n            user-select: none;\n    -webkit-user-drag: none;\n    opacity: 0.5;\n    cursor: default; }\n  .md-tab.ng-leave {\n    -webkit-transition: none;\n    transition: none; }\n\nmd-toolbar + md-tabs, md-toolbar + md-dialog-content md-tabs {\n  border-top-left-radius: 0;\n  border-top-right-radius: 0; }\n\n.md-toast-text {\n  padding: 0 6px; }\n\nmd-toast {\n  position: absolute;\n  z-index: 105;\n  box-sizing: border-box;\n  cursor: default;\n  overflow: hidden;\n  padding: 8px;\n  opacity: 1;\n  -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n  /* Transition differently when swiping */\n  /*\n   * When the toast doesn't take up the whole screen,\n   * make it rotate when the user swipes it away\n   */ }\n  md-toast .md-toast-content {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    direction: row;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    max-height: 168px;\n    max-width: 100%;\n    min-height: 48px;\n    padding: 0 18px;\n    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);\n    border-radius: 2px;\n    font-size: 14px;\n    overflow: hidden;\n    -webkit-transform: translate3d(0, 0, 0) rotateZ(0deg);\n            transform: translate3d(0, 0, 0) rotateZ(0deg);\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n    md-toast .md-toast-content::before {\n      content: '';\n      min-height: 48px;\n      visibility: hidden;\n      display: inline-block; }\n    [dir=rtl] md-toast .md-toast-content {\n      -webkit-box-pack: end;\n      -webkit-justify-content: flex-end;\n              justify-content: flex-end; }\n    md-toast .md-toast-content span {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1 1 0%;\n              flex: 1 1 0%;\n      box-sizing: border-box;\n      min-width: 0; }\n  md-toast.md-capsule {\n    border-radius: 24px; }\n    md-toast.md-capsule .md-toast-content {\n      border-radius: 24px; }\n  md-toast.ng-leave-active .md-toast-content {\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2); }\n  md-toast.md-swipeleft .md-toast-content, md-toast.md-swiperight .md-toast-content, md-toast.md-swipeup .md-toast-content, md-toast.md-swipedown .md-toast-content {\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }\n  md-toast.ng-enter {\n    opacity: 0; }\n    md-toast.ng-enter .md-toast-content {\n      -webkit-transform: translate3d(0, 100%, 0);\n              transform: translate3d(0, 100%, 0); }\n    md-toast.ng-enter.md-top .md-toast-content {\n      -webkit-transform: translate3d(0, -100%, 0);\n              transform: translate3d(0, -100%, 0); }\n    md-toast.ng-enter.ng-enter-active {\n      opacity: 1; }\n      md-toast.ng-enter.ng-enter-active .md-toast-content {\n        -webkit-transform: translate3d(0, 0, 0);\n                transform: translate3d(0, 0, 0); }\n  md-toast.ng-leave.ng-leave-active .md-toast-content {\n    opacity: 0;\n    -webkit-transform: translate3d(0, 100%, 0);\n            transform: translate3d(0, 100%, 0); }\n  md-toast.ng-leave.ng-leave-active.md-swipeup .md-toast-content {\n    -webkit-transform: translate3d(0, -50%, 0);\n            transform: translate3d(0, -50%, 0); }\n  md-toast.ng-leave.ng-leave-active.md-swipedown .md-toast-content {\n    -webkit-transform: translate3d(0, 50%, 0);\n            transform: translate3d(0, 50%, 0); }\n  md-toast.ng-leave.ng-leave-active.md-top .md-toast-content {\n    -webkit-transform: translate3d(0, -100%, 0);\n            transform: translate3d(0, -100%, 0); }\n  md-toast .md-action {\n    line-height: 19px;\n    margin-left: 24px;\n    margin-right: 0;\n    cursor: pointer;\n    text-transform: uppercase;\n    float: right; }\n  md-toast .md-button {\n    min-width: 0;\n    margin-right: 0;\n    margin-left: 12px; }\n    [dir=rtl] md-toast .md-button {\n      margin-right: 12px; }\n    [dir=rtl] md-toast .md-button {\n      margin-left: 0; }\n\n@media (max-width: 959px) {\n  md-toast {\n    left: 0;\n    right: 0;\n    width: 100%;\n    max-width: 100%;\n    min-width: 0;\n    border-radius: 0;\n    bottom: 0;\n    padding: 0; }\n    md-toast.ng-leave.ng-leave-active.md-swipeup .md-toast-content {\n      -webkit-transform: translate3d(0, -50%, 0);\n              transform: translate3d(0, -50%, 0); }\n    md-toast.ng-leave.ng-leave-active.md-swipedown .md-toast-content {\n      -webkit-transform: translate3d(0, 50%, 0);\n              transform: translate3d(0, 50%, 0); } }\n\n@media (min-width: 960px) {\n  md-toast {\n    min-width: 304px;\n    /*\n   * When the toast doesn't take up the whole screen,\n   * make it rotate when the user swipes it away\n   */ }\n    md-toast.md-bottom {\n      bottom: 0; }\n    md-toast.md-left {\n      left: 0; }\n    md-toast.md-right {\n      right: 0; }\n    md-toast.md-top {\n      top: 0; }\n    md-toast._md-start {\n      left: 0; }\n      [dir=rtl] md-toast._md-start {\n        left: auto;\n        right: 0; }\n    md-toast._md-end {\n      right: 0; }\n      [dir=rtl] md-toast._md-end {\n        right: auto;\n        left: 0; }\n    md-toast.ng-leave.ng-leave-active.md-swipeleft .md-toast-content {\n      -webkit-transform: translate3d(-50%, 0, 0);\n              transform: translate3d(-50%, 0, 0); }\n    md-toast.ng-leave.ng-leave-active.md-swiperight .md-toast-content {\n      -webkit-transform: translate3d(50%, 0, 0);\n              transform: translate3d(50%, 0, 0); } }\n\n@media (min-width: 1920px) {\n  md-toast .md-toast-content {\n    max-width: 568px; } }\n\n@media screen and (-ms-high-contrast: active) {\n  md-toast {\n    border: 1px solid #fff; } }\n\n.md-toast-animating {\n  overflow: hidden !important; }\n\nmd-toolbar {\n  box-sizing: border-box;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column;\n  position: relative;\n  z-index: 2;\n  font-size: 20px;\n  min-height: 64px;\n  width: 100%; }\n  md-toolbar._md-toolbar-transitions {\n    -webkit-transition-duration: 0.5s;\n            transition-duration: 0.5s;\n    -webkit-transition-timing-function: cubic-bezier(0.35, 0, 0.25, 1);\n            transition-timing-function: cubic-bezier(0.35, 0, 0.25, 1);\n    -webkit-transition-property: background-color, fill, color;\n    transition-property: background-color, fill, color; }\n  md-toolbar.md-whiteframe-z1-add, md-toolbar.md-whiteframe-z1-remove {\n    -webkit-transition: box-shadow 0.5s linear;\n    transition: box-shadow 0.5s linear; }\n  md-toolbar md-toolbar-filler {\n    width: 72px; }\n  md-toolbar *,\n  md-toolbar *:before,\n  md-toolbar *:after {\n    box-sizing: border-box; }\n  md-toolbar.ng-animate {\n    -webkit-transition: none;\n    transition: none; }\n  md-toolbar.md-tall {\n    height: 128px;\n    min-height: 128px;\n    max-height: 128px; }\n  md-toolbar.md-medium-tall {\n    height: 88px;\n    min-height: 88px;\n    max-height: 88px; }\n    md-toolbar.md-medium-tall .md-toolbar-tools {\n      height: 48px;\n      min-height: 48px;\n      max-height: 48px; }\n  md-toolbar > .md-indent {\n    margin-left: 64px; }\n    [dir=rtl] md-toolbar > .md-indent {\n      margin-left: auto;\n      margin-right: 64px; }\n  md-toolbar ~ md-content > md-list {\n    padding: 0; }\n    md-toolbar ~ md-content > md-list md-list-item:last-child md-divider {\n      display: none; }\n\n.md-toolbar-tools {\n  font-size: 20px;\n  letter-spacing: 0.005em;\n  box-sizing: border-box;\n  font-weight: 400;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: row;\n          flex-direction: row;\n  width: 100%;\n  height: 64px;\n  max-height: 64px;\n  padding: 0 16px;\n  margin: 0; }\n  .md-toolbar-tools h1, .md-toolbar-tools h2, .md-toolbar-tools h3 {\n    font-size: inherit;\n    font-weight: inherit;\n    margin: inherit; }\n  .md-toolbar-tools a {\n    color: inherit;\n    text-decoration: none; }\n  .md-toolbar-tools .fill-height {\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center; }\n  .md-toolbar-tools md-checkbox {\n    margin: inherit; }\n  .md-toolbar-tools .md-button {\n    margin-top: 0;\n    margin-bottom: 0; }\n    .md-toolbar-tools .md-button, .md-toolbar-tools .md-button.md-icon-button md-icon {\n      -webkit-transition-duration: 0.5s;\n              transition-duration: 0.5s;\n      -webkit-transition-timing-function: cubic-bezier(0.35, 0, 0.25, 1);\n              transition-timing-function: cubic-bezier(0.35, 0, 0.25, 1);\n      -webkit-transition-property: background-color, fill, color;\n      transition-property: background-color, fill, color; }\n      .md-toolbar-tools .md-button.ng-animate, .md-toolbar-tools .md-button.md-icon-button md-icon.ng-animate {\n        -webkit-transition: none;\n        transition: none; }\n  .md-toolbar-tools > .md-button:first-child {\n    margin-left: -8px; }\n    [dir=rtl] .md-toolbar-tools > .md-button:first-child {\n      margin-left: auto;\n      margin-right: -8px; }\n  .md-toolbar-tools > .md-button:last-child {\n    margin-right: -8px; }\n    [dir=rtl] .md-toolbar-tools > .md-button:last-child {\n      margin-right: auto;\n      margin-left: -8px; }\n  .md-toolbar-tools > md-menu:last-child {\n    margin-right: -8px; }\n    [dir=rtl] .md-toolbar-tools > md-menu:last-child {\n      margin-right: auto;\n      margin-left: -8px; }\n    .md-toolbar-tools > md-menu:last-child > .md-button {\n      margin-right: 0; }\n      [dir=rtl] .md-toolbar-tools > md-menu:last-child > .md-button {\n        margin-right: auto;\n        margin-left: 0; }\n  @media screen and (-ms-high-contrast: active) {\n    .md-toolbar-tools {\n      border-bottom: 1px solid #fff; } }\n\n@media (min-width: 0) and (max-width: 959px) and (orientation: portrait) {\n  md-toolbar {\n    min-height: 56px; }\n  .md-toolbar-tools {\n    height: 56px;\n    max-height: 56px; } }\n\n@media (min-width: 0) and (max-width: 959px) and (orientation: landscape) {\n  md-toolbar {\n    min-height: 48px; }\n  .md-toolbar-tools {\n    height: 48px;\n    max-height: 48px; } }\n\n.md-truncate {\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis; }\n  .md-truncate.md-clip {\n    text-overflow: clip; }\n  .md-truncate.flex {\n    width: 0; }\n\n.md-tooltip {\n  pointer-events: none;\n  border-radius: 4px;\n  overflow: hidden;\n  opacity: 0;\n  font-weight: 500;\n  font-size: 14px;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  height: 32px;\n  line-height: 32px;\n  padding-right: 16px;\n  padding-left: 16px; }\n  .md-tooltip.md-origin-top {\n    -webkit-transform-origin: center bottom;\n            transform-origin: center bottom;\n    margin-top: -24px; }\n  .md-tooltip.md-origin-right {\n    -webkit-transform-origin: left center;\n            transform-origin: left center;\n    margin-left: 24px; }\n  .md-tooltip.md-origin-bottom {\n    -webkit-transform-origin: center top;\n            transform-origin: center top;\n    margin-top: 24px; }\n  .md-tooltip.md-origin-left {\n    -webkit-transform-origin: right center;\n            transform-origin: right center;\n    margin-left: -24px; }\n  @media (min-width: 960px) {\n    .md-tooltip {\n      font-size: 10px;\n      height: 22px;\n      line-height: 22px;\n      padding-right: 8px;\n      padding-left: 8px; }\n      .md-tooltip.md-origin-top {\n        margin-top: -14px; }\n      .md-tooltip.md-origin-right {\n        margin-left: 14px; }\n      .md-tooltip.md-origin-bottom {\n        margin-top: 14px; }\n      .md-tooltip.md-origin-left {\n        margin-left: -14px; } }\n  .md-tooltip.md-show-add {\n    -webkit-transform: scale(0);\n            transform: scale(0); }\n  .md-tooltip.md-show {\n    -webkit-transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);\n    -webkit-transition-duration: 150ms;\n            transition-duration: 150ms;\n    -webkit-transform: scale(1);\n            transform: scale(1);\n    opacity: 0.9; }\n  .md-tooltip.md-hide {\n    -webkit-transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);\n    -webkit-transition-duration: 150ms;\n            transition-duration: 150ms;\n    -webkit-transform: scale(0);\n            transform: scale(0);\n    opacity: 0; }\n\n.md-virtual-repeat-container {\n  box-sizing: border-box;\n  display: block;\n  margin: 0;\n  overflow: hidden;\n  padding: 0;\n  position: relative; }\n  .md-virtual-repeat-container .md-virtual-repeat-scroller {\n    bottom: 0;\n    box-sizing: border-box;\n    left: 0;\n    margin: 0;\n    overflow-x: hidden;\n    padding: 0;\n    position: absolute;\n    right: 0;\n    top: 0;\n    -webkit-overflow-scrolling: touch; }\n  .md-virtual-repeat-container .md-virtual-repeat-sizer {\n    box-sizing: border-box;\n    height: 1px;\n    display: block;\n    margin: 0;\n    padding: 0;\n    width: 1px; }\n  .md-virtual-repeat-container .md-virtual-repeat-offsetter {\n    box-sizing: border-box;\n    left: 0;\n    margin: 0;\n    padding: 0;\n    position: absolute;\n    right: 0;\n    top: 0; }\n\n.md-virtual-repeat-container.md-orient-horizontal .md-virtual-repeat-scroller {\n  overflow-x: auto;\n  overflow-y: hidden; }\n\n.md-virtual-repeat-container.md-orient-horizontal .md-virtual-repeat-offsetter {\n  bottom: 16px;\n  right: auto;\n  white-space: nowrap; }\n  [dir=rtl] .md-virtual-repeat-container.md-orient-horizontal .md-virtual-repeat-offsetter {\n    right: auto;\n    left: auto; }\n\n.md-whiteframe-1dp, .md-whiteframe-z1 {\n  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-2dp {\n  box-shadow: 0px 1px 5px 0px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 3px 1px -2px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-3dp {\n  box-shadow: 0px 1px 8px 0px rgba(0, 0, 0, 0.2), 0px 3px 4px 0px rgba(0, 0, 0, 0.14), 0px 3px 3px -2px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-4dp, .md-whiteframe-z2 {\n  box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14), 0px 1px 10px 0px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-5dp {\n  box-shadow: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 5px 8px 0px rgba(0, 0, 0, 0.14), 0px 1px 14px 0px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-6dp {\n  box-shadow: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-7dp, .md-whiteframe-z3 {\n  box-shadow: 0px 4px 5px -2px rgba(0, 0, 0, 0.2), 0px 7px 10px 1px rgba(0, 0, 0, 0.14), 0px 2px 16px 1px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-8dp {\n  box-shadow: 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-9dp {\n  box-shadow: 0px 5px 6px -3px rgba(0, 0, 0, 0.2), 0px 9px 12px 1px rgba(0, 0, 0, 0.14), 0px 3px 16px 2px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-10dp, .md-whiteframe-z4 {\n  box-shadow: 0px 6px 6px -3px rgba(0, 0, 0, 0.2), 0px 10px 14px 1px rgba(0, 0, 0, 0.14), 0px 4px 18px 3px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-11dp {\n  box-shadow: 0px 6px 7px -4px rgba(0, 0, 0, 0.2), 0px 11px 15px 1px rgba(0, 0, 0, 0.14), 0px 4px 20px 3px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-12dp {\n  box-shadow: 0px 7px 8px -4px rgba(0, 0, 0, 0.2), 0px 12px 17px 2px rgba(0, 0, 0, 0.14), 0px 5px 22px 4px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-13dp, .md-whiteframe-z5 {\n  box-shadow: 0px 7px 8px -4px rgba(0, 0, 0, 0.2), 0px 13px 19px 2px rgba(0, 0, 0, 0.14), 0px 5px 24px 4px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-14dp {\n  box-shadow: 0px 7px 9px -4px rgba(0, 0, 0, 0.2), 0px 14px 21px 2px rgba(0, 0, 0, 0.14), 0px 5px 26px 4px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-15dp {\n  box-shadow: 0px 8px 9px -5px rgba(0, 0, 0, 0.2), 0px 15px 22px 2px rgba(0, 0, 0, 0.14), 0px 6px 28px 5px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-16dp {\n  box-shadow: 0px 8px 10px -5px rgba(0, 0, 0, 0.2), 0px 16px 24px 2px rgba(0, 0, 0, 0.14), 0px 6px 30px 5px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-17dp {\n  box-shadow: 0px 8px 11px -5px rgba(0, 0, 0, 0.2), 0px 17px 26px 2px rgba(0, 0, 0, 0.14), 0px 6px 32px 5px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-18dp {\n  box-shadow: 0px 9px 11px -5px rgba(0, 0, 0, 0.2), 0px 18px 28px 2px rgba(0, 0, 0, 0.14), 0px 7px 34px 6px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-19dp {\n  box-shadow: 0px 9px 12px -6px rgba(0, 0, 0, 0.2), 0px 19px 29px 2px rgba(0, 0, 0, 0.14), 0px 7px 36px 6px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-20dp {\n  box-shadow: 0px 10px 13px -6px rgba(0, 0, 0, 0.2), 0px 20px 31px 3px rgba(0, 0, 0, 0.14), 0px 8px 38px 7px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-21dp {\n  box-shadow: 0px 10px 13px -6px rgba(0, 0, 0, 0.2), 0px 21px 33px 3px rgba(0, 0, 0, 0.14), 0px 8px 40px 7px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-22dp {\n  box-shadow: 0px 10px 14px -6px rgba(0, 0, 0, 0.2), 0px 22px 35px 3px rgba(0, 0, 0, 0.14), 0px 8px 42px 7px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-23dp {\n  box-shadow: 0px 11px 14px -7px rgba(0, 0, 0, 0.2), 0px 23px 36px 3px rgba(0, 0, 0, 0.14), 0px 9px 44px 8px rgba(0, 0, 0, 0.12); }\n\n.md-whiteframe-24dp {\n  box-shadow: 0px 11px 15px -7px rgba(0, 0, 0, 0.2), 0px 24px 38px 3px rgba(0, 0, 0, 0.14), 0px 9px 46px 8px rgba(0, 0, 0, 0.12); }\n\n@media screen and (-ms-high-contrast: active) {\n  md-whiteframe {\n    border: 1px solid #fff; } }\n\n@media print {\n  md-whiteframe, [md-whiteframe] {\n    background-color: #ffffff; } }\n\n/*\n* Since Layout API uses ng-cloak to hide the dom elements while layouts are adjusted\n*\n*/\n[ng\\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {\n  display: none !important; }\n\n/*\n*\n*  Responsive attributes\n*\n*  References:\n*  1) https://scotch.io/tutorials/a-visual-guide-to-css3-flexbox-properties#flex\n*  2) https://css-tricks.com/almanac/properties/f/flex/\n*  3) https://css-tricks.com/snippets/css/a-guide-to-flexbox/\n*  4) https://github.com/philipwalton/flexbugs#3-min-height-on-a-flex-container-wont-apply-to-its-flex-items\n*  5) http://godban.com.ua/projects/flexgrid\n*\n*\n*/\n@-moz-document url-prefix() {\n  .layout-fill {\n    margin: 0;\n    width: 100%;\n    min-height: 100%;\n    height: 100%; } }\n\n/*\n *  Apply Mixins to create Layout/Flexbox styles\n *\n */\n.flex-order {\n  -webkit-box-ordinal-group: 1;\n  -webkit-order: 0;\n          order: 0; }\n\n.flex-order--20 {\n  -webkit-box-ordinal-group: -19;\n  -webkit-order: -20;\n          order: -20; }\n\n.flex-order--19 {\n  -webkit-box-ordinal-group: -18;\n  -webkit-order: -19;\n          order: -19; }\n\n.flex-order--18 {\n  -webkit-box-ordinal-group: -17;\n  -webkit-order: -18;\n          order: -18; }\n\n.flex-order--17 {\n  -webkit-box-ordinal-group: -16;\n  -webkit-order: -17;\n          order: -17; }\n\n.flex-order--16 {\n  -webkit-box-ordinal-group: -15;\n  -webkit-order: -16;\n          order: -16; }\n\n.flex-order--15 {\n  -webkit-box-ordinal-group: -14;\n  -webkit-order: -15;\n          order: -15; }\n\n.flex-order--14 {\n  -webkit-box-ordinal-group: -13;\n  -webkit-order: -14;\n          order: -14; }\n\n.flex-order--13 {\n  -webkit-box-ordinal-group: -12;\n  -webkit-order: -13;\n          order: -13; }\n\n.flex-order--12 {\n  -webkit-box-ordinal-group: -11;\n  -webkit-order: -12;\n          order: -12; }\n\n.flex-order--11 {\n  -webkit-box-ordinal-group: -10;\n  -webkit-order: -11;\n          order: -11; }\n\n.flex-order--10 {\n  -webkit-box-ordinal-group: -9;\n  -webkit-order: -10;\n          order: -10; }\n\n.flex-order--9 {\n  -webkit-box-ordinal-group: -8;\n  -webkit-order: -9;\n          order: -9; }\n\n.flex-order--8 {\n  -webkit-box-ordinal-group: -7;\n  -webkit-order: -8;\n          order: -8; }\n\n.flex-order--7 {\n  -webkit-box-ordinal-group: -6;\n  -webkit-order: -7;\n          order: -7; }\n\n.flex-order--6 {\n  -webkit-box-ordinal-group: -5;\n  -webkit-order: -6;\n          order: -6; }\n\n.flex-order--5 {\n  -webkit-box-ordinal-group: -4;\n  -webkit-order: -5;\n          order: -5; }\n\n.flex-order--4 {\n  -webkit-box-ordinal-group: -3;\n  -webkit-order: -4;\n          order: -4; }\n\n.flex-order--3 {\n  -webkit-box-ordinal-group: -2;\n  -webkit-order: -3;\n          order: -3; }\n\n.flex-order--2 {\n  -webkit-box-ordinal-group: -1;\n  -webkit-order: -2;\n          order: -2; }\n\n.flex-order--1 {\n  -webkit-box-ordinal-group: 0;\n  -webkit-order: -1;\n          order: -1; }\n\n.flex-order-0 {\n  -webkit-box-ordinal-group: 1;\n  -webkit-order: 0;\n          order: 0; }\n\n.flex-order-1 {\n  -webkit-box-ordinal-group: 2;\n  -webkit-order: 1;\n          order: 1; }\n\n.flex-order-2 {\n  -webkit-box-ordinal-group: 3;\n  -webkit-order: 2;\n          order: 2; }\n\n.flex-order-3 {\n  -webkit-box-ordinal-group: 4;\n  -webkit-order: 3;\n          order: 3; }\n\n.flex-order-4 {\n  -webkit-box-ordinal-group: 5;\n  -webkit-order: 4;\n          order: 4; }\n\n.flex-order-5 {\n  -webkit-box-ordinal-group: 6;\n  -webkit-order: 5;\n          order: 5; }\n\n.flex-order-6 {\n  -webkit-box-ordinal-group: 7;\n  -webkit-order: 6;\n          order: 6; }\n\n.flex-order-7 {\n  -webkit-box-ordinal-group: 8;\n  -webkit-order: 7;\n          order: 7; }\n\n.flex-order-8 {\n  -webkit-box-ordinal-group: 9;\n  -webkit-order: 8;\n          order: 8; }\n\n.flex-order-9 {\n  -webkit-box-ordinal-group: 10;\n  -webkit-order: 9;\n          order: 9; }\n\n.flex-order-10 {\n  -webkit-box-ordinal-group: 11;\n  -webkit-order: 10;\n          order: 10; }\n\n.flex-order-11 {\n  -webkit-box-ordinal-group: 12;\n  -webkit-order: 11;\n          order: 11; }\n\n.flex-order-12 {\n  -webkit-box-ordinal-group: 13;\n  -webkit-order: 12;\n          order: 12; }\n\n.flex-order-13 {\n  -webkit-box-ordinal-group: 14;\n  -webkit-order: 13;\n          order: 13; }\n\n.flex-order-14 {\n  -webkit-box-ordinal-group: 15;\n  -webkit-order: 14;\n          order: 14; }\n\n.flex-order-15 {\n  -webkit-box-ordinal-group: 16;\n  -webkit-order: 15;\n          order: 15; }\n\n.flex-order-16 {\n  -webkit-box-ordinal-group: 17;\n  -webkit-order: 16;\n          order: 16; }\n\n.flex-order-17 {\n  -webkit-box-ordinal-group: 18;\n  -webkit-order: 17;\n          order: 17; }\n\n.flex-order-18 {\n  -webkit-box-ordinal-group: 19;\n  -webkit-order: 18;\n          order: 18; }\n\n.flex-order-19 {\n  -webkit-box-ordinal-group: 20;\n  -webkit-order: 19;\n          order: 19; }\n\n.flex-order-20 {\n  -webkit-box-ordinal-group: 21;\n  -webkit-order: 20;\n          order: 20; }\n\n.offset-0, .flex-offset-0 {\n  margin-left: 0; }\n  [dir=rtl] .offset-0, [dir=rtl] .flex-offset-0 {\n    margin-left: auto;\n    margin-right: 0; }\n\n.offset-5, .flex-offset-5 {\n  margin-left: 5%; }\n  [dir=rtl] .offset-5, [dir=rtl] .flex-offset-5 {\n    margin-left: auto;\n    margin-right: 5%; }\n\n.offset-10, .flex-offset-10 {\n  margin-left: 10%; }\n  [dir=rtl] .offset-10, [dir=rtl] .flex-offset-10 {\n    margin-left: auto;\n    margin-right: 10%; }\n\n.offset-15, .flex-offset-15 {\n  margin-left: 15%; }\n  [dir=rtl] .offset-15, [dir=rtl] .flex-offset-15 {\n    margin-left: auto;\n    margin-right: 15%; }\n\n.offset-20, .flex-offset-20 {\n  margin-left: 20%; }\n  [dir=rtl] .offset-20, [dir=rtl] .flex-offset-20 {\n    margin-left: auto;\n    margin-right: 20%; }\n\n.offset-25, .flex-offset-25 {\n  margin-left: 25%; }\n  [dir=rtl] .offset-25, [dir=rtl] .flex-offset-25 {\n    margin-left: auto;\n    margin-right: 25%; }\n\n.offset-30, .flex-offset-30 {\n  margin-left: 30%; }\n  [dir=rtl] .offset-30, [dir=rtl] .flex-offset-30 {\n    margin-left: auto;\n    margin-right: 30%; }\n\n.offset-35, .flex-offset-35 {\n  margin-left: 35%; }\n  [dir=rtl] .offset-35, [dir=rtl] .flex-offset-35 {\n    margin-left: auto;\n    margin-right: 35%; }\n\n.offset-40, .flex-offset-40 {\n  margin-left: 40%; }\n  [dir=rtl] .offset-40, [dir=rtl] .flex-offset-40 {\n    margin-left: auto;\n    margin-right: 40%; }\n\n.offset-45, .flex-offset-45 {\n  margin-left: 45%; }\n  [dir=rtl] .offset-45, [dir=rtl] .flex-offset-45 {\n    margin-left: auto;\n    margin-right: 45%; }\n\n.offset-50, .flex-offset-50 {\n  margin-left: 50%; }\n  [dir=rtl] .offset-50, [dir=rtl] .flex-offset-50 {\n    margin-left: auto;\n    margin-right: 50%; }\n\n.offset-55, .flex-offset-55 {\n  margin-left: 55%; }\n  [dir=rtl] .offset-55, [dir=rtl] .flex-offset-55 {\n    margin-left: auto;\n    margin-right: 55%; }\n\n.offset-60, .flex-offset-60 {\n  margin-left: 60%; }\n  [dir=rtl] .offset-60, [dir=rtl] .flex-offset-60 {\n    margin-left: auto;\n    margin-right: 60%; }\n\n.offset-65, .flex-offset-65 {\n  margin-left: 65%; }\n  [dir=rtl] .offset-65, [dir=rtl] .flex-offset-65 {\n    margin-left: auto;\n    margin-right: 65%; }\n\n.offset-70, .flex-offset-70 {\n  margin-left: 70%; }\n  [dir=rtl] .offset-70, [dir=rtl] .flex-offset-70 {\n    margin-left: auto;\n    margin-right: 70%; }\n\n.offset-75, .flex-offset-75 {\n  margin-left: 75%; }\n  [dir=rtl] .offset-75, [dir=rtl] .flex-offset-75 {\n    margin-left: auto;\n    margin-right: 75%; }\n\n.offset-80, .flex-offset-80 {\n  margin-left: 80%; }\n  [dir=rtl] .offset-80, [dir=rtl] .flex-offset-80 {\n    margin-left: auto;\n    margin-right: 80%; }\n\n.offset-85, .flex-offset-85 {\n  margin-left: 85%; }\n  [dir=rtl] .offset-85, [dir=rtl] .flex-offset-85 {\n    margin-left: auto;\n    margin-right: 85%; }\n\n.offset-90, .flex-offset-90 {\n  margin-left: 90%; }\n  [dir=rtl] .offset-90, [dir=rtl] .flex-offset-90 {\n    margin-left: auto;\n    margin-right: 90%; }\n\n.offset-95, .flex-offset-95 {\n  margin-left: 95%; }\n  [dir=rtl] .offset-95, [dir=rtl] .flex-offset-95 {\n    margin-left: auto;\n    margin-right: 95%; }\n\n.offset-33, .flex-offset-33 {\n  margin-left: calc(100% / 3); }\n\n.offset-66, .flex-offset-66 {\n  margin-left: calc(200% / 3); }\n  [dir=rtl] .offset-66, [dir=rtl] .flex-offset-66 {\n    margin-left: auto;\n    margin-right: calc(200% / 3); }\n\n.layout-align,\n.layout-align-start-stretch {\n  -webkit-box-pack: start;\n  -webkit-justify-content: flex-start;\n          justify-content: flex-start;\n  -webkit-align-content: stretch;\n          align-content: stretch;\n  -webkit-box-align: stretch;\n  -webkit-align-items: stretch;\n          align-items: stretch; }\n\n.layout-align-start,\n.layout-align-start-start,\n.layout-align-start-center,\n.layout-align-start-end,\n.layout-align-start-stretch {\n  -webkit-box-pack: start;\n  -webkit-justify-content: flex-start;\n          justify-content: flex-start; }\n\n.layout-align-center,\n.layout-align-center-start,\n.layout-align-center-center,\n.layout-align-center-end,\n.layout-align-center-stretch {\n  -webkit-box-pack: center;\n  -webkit-justify-content: center;\n          justify-content: center; }\n\n.layout-align-end,\n.layout-align-end-start,\n.layout-align-end-center,\n.layout-align-end-end,\n.layout-align-end-stretch {\n  -webkit-box-pack: end;\n  -webkit-justify-content: flex-end;\n          justify-content: flex-end; }\n\n.layout-align-space-around,\n.layout-align-space-around-center,\n.layout-align-space-around-start,\n.layout-align-space-around-end,\n.layout-align-space-around-stretch {\n  -webkit-justify-content: space-around;\n          justify-content: space-around; }\n\n.layout-align-space-between,\n.layout-align-space-between-center,\n.layout-align-space-between-start,\n.layout-align-space-between-end,\n.layout-align-space-between-stretch {\n  -webkit-box-pack: justify;\n  -webkit-justify-content: space-between;\n          justify-content: space-between; }\n\n.layout-align-start-start,\n.layout-align-center-start,\n.layout-align-end-start,\n.layout-align-space-between-start,\n.layout-align-space-around-start {\n  -webkit-box-align: start;\n  -webkit-align-items: flex-start;\n          align-items: flex-start;\n  -webkit-align-content: flex-start;\n          align-content: flex-start; }\n\n.layout-align-start-center,\n.layout-align-center-center,\n.layout-align-end-center,\n.layout-align-space-between-center,\n.layout-align-space-around-center {\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  -webkit-align-content: center;\n          align-content: center;\n  max-width: 100%; }\n\n.layout-align-start-center > *,\n.layout-align-center-center > *,\n.layout-align-end-center > *,\n.layout-align-space-between-center > *,\n.layout-align-space-around-center > * {\n  max-width: 100%;\n  box-sizing: border-box; }\n\n.layout-align-start-end,\n.layout-align-center-end,\n.layout-align-end-end,\n.layout-align-space-between-end,\n.layout-align-space-around-end {\n  -webkit-box-align: end;\n  -webkit-align-items: flex-end;\n          align-items: flex-end;\n  -webkit-align-content: flex-end;\n          align-content: flex-end; }\n\n.layout-align-start-stretch,\n.layout-align-center-stretch,\n.layout-align-end-stretch,\n.layout-align-space-between-stretch,\n.layout-align-space-around-stretch {\n  -webkit-box-align: stretch;\n  -webkit-align-items: stretch;\n          align-items: stretch;\n  -webkit-align-content: stretch;\n          align-content: stretch; }\n\n.flex {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1;\n          flex: 1;\n  box-sizing: border-box; }\n\n.flex-grow {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  box-sizing: border-box; }\n\n.flex-initial {\n  -webkit-box-flex: 0;\n  -webkit-flex: 0 1 auto;\n          flex: 0 1 auto;\n  box-sizing: border-box; }\n\n.flex-auto {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 auto;\n          flex: 1 1 auto;\n  box-sizing: border-box; }\n\n.flex-none {\n  -webkit-box-flex: 0;\n  -webkit-flex: 0 0 auto;\n          flex: 0 0 auto;\n  box-sizing: border-box; }\n\n.flex-noshrink {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 0 auto;\n          flex: 1 0 auto;\n  box-sizing: border-box; }\n\n.flex-nogrow {\n  -webkit-box-flex: 0;\n  -webkit-flex: 0 1 auto;\n          flex: 0 1 auto;\n  box-sizing: border-box; }\n\n.flex-0 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 0%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-0 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 0%;\n  max-height: 100%;\n  box-sizing: border-box;\n  min-width: 0; }\n\n.layout-column > .flex-0 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 0%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-0 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 0%;\n  max-height: 100%;\n  box-sizing: border-box;\n  min-width: 0; }\n\n.layout-column > .flex-0 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 0%;\n  box-sizing: border-box;\n  min-height: 0; }\n\n.flex-5 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 5%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-5 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 5%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-5 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 5%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-5 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 5%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-5 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 5%;\n  box-sizing: border-box; }\n\n.flex-10 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 10%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-10 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 10%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-10 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 10%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-10 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 10%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-10 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 10%;\n  box-sizing: border-box; }\n\n.flex-15 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 15%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-15 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 15%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-15 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 15%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-15 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 15%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-15 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 15%;\n  box-sizing: border-box; }\n\n.flex-20 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 20%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-20 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 20%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-20 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 20%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-20 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 20%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-20 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 20%;\n  box-sizing: border-box; }\n\n.flex-25 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 25%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-25 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 25%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-25 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 25%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-25 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 25%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-25 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 25%;\n  box-sizing: border-box; }\n\n.flex-30 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 30%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-30 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 30%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-30 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 30%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-30 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 30%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-30 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 30%;\n  box-sizing: border-box; }\n\n.flex-35 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 35%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-35 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 35%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-35 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 35%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-35 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 35%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-35 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 35%;\n  box-sizing: border-box; }\n\n.flex-40 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 40%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-40 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 40%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-40 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 40%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-40 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 40%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-40 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 40%;\n  box-sizing: border-box; }\n\n.flex-45 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 45%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-45 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 45%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-45 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 45%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-45 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 45%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-45 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 45%;\n  box-sizing: border-box; }\n\n.flex-50 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 50%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-50 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 50%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-50 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 50%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-50 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 50%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-50 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 50%;\n  box-sizing: border-box; }\n\n.flex-55 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 55%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-55 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 55%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-55 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 55%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-55 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 55%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-55 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 55%;\n  box-sizing: border-box; }\n\n.flex-60 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 60%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-60 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 60%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-60 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 60%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-60 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 60%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-60 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 60%;\n  box-sizing: border-box; }\n\n.flex-65 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 65%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-65 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 65%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-65 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 65%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-65 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 65%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-65 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 65%;\n  box-sizing: border-box; }\n\n.flex-70 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 70%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-70 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 70%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-70 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 70%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-70 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 70%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-70 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 70%;\n  box-sizing: border-box; }\n\n.flex-75 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 75%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-75 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 75%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-75 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 75%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-75 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 75%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-75 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 75%;\n  box-sizing: border-box; }\n\n.flex-80 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 80%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-80 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 80%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-80 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 80%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-80 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 80%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-80 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 80%;\n  box-sizing: border-box; }\n\n.flex-85 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 85%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-85 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 85%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-85 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 85%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-85 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 85%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-85 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 85%;\n  box-sizing: border-box; }\n\n.flex-90 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 90%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-90 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 90%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-90 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 90%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-90 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 90%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-90 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 90%;\n  box-sizing: border-box; }\n\n.flex-95 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 95%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-95 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 95%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-95 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 95%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-95 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 95%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-95 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 95%;\n  box-sizing: border-box; }\n\n.flex-100 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-100 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-100 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-100 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-100 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-33 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 33.33%;\n          flex: 1 1 33.33%;\n  max-width: 33.33%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-66 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 66.66%;\n          flex: 1 1 66.66%;\n  max-width: 66.66%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-33 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 33.33%;\n          flex: 1 1 33.33%;\n  max-width: 100%;\n  max-height: 33.33%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-66 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 66.66%;\n          flex: 1 1 66.66%;\n  max-width: 100%;\n  max-height: 66.66%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-33 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 33.33%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex-66 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 66.66%;\n  max-height: 100%;\n  box-sizing: border-box; }\n\n.layout-row > .flex {\n  min-width: 0; }\n\n.layout-column > .flex-33 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 33.33%;\n  box-sizing: border-box; }\n\n.layout-column > .flex-66 {\n  -webkit-box-flex: 1;\n  -webkit-flex: 1 1 100%;\n          flex: 1 1 100%;\n  max-width: 100%;\n  max-height: 66.66%;\n  box-sizing: border-box; }\n\n.layout-column > .flex {\n  min-height: 0; }\n\n.layout, .layout-column, .layout-row {\n  box-sizing: border-box;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex; }\n\n.layout-column {\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: column;\n          flex-direction: column; }\n\n.layout-row {\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n  -webkit-flex-direction: row;\n          flex-direction: row; }\n\n.layout-padding-sm > *,\n.layout-padding > .flex-sm {\n  padding: 4px; }\n\n.layout-padding,\n.layout-padding-gt-sm,\n.layout-padding-md,\n.layout-padding > *,\n.layout-padding-gt-sm > *,\n.layout-padding-md > *,\n.layout-padding > .flex,\n.layout-padding > .flex-gt-sm,\n.layout-padding > .flex-md {\n  padding: 8px; }\n\n.layout-padding-gt-md > *,\n.layout-padding-lg > *,\n.layout-padding-gt-lg > *,\n.layout-padding > .flex-gt-md,\n.layout-padding > .flex-lg,\n.layout-padding > .flex-lg,\n.layout-padding > .flex-gt-lg {\n  padding: 16px; }\n\n.layout-margin-sm > *,\n.layout-margin > .flex-sm {\n  margin: 4px; }\n\n.layout-margin,\n.layout-margin-gt-sm,\n.layout-margin-md,\n.layout-margin > *,\n.layout-margin-gt-sm > *,\n.layout-margin-md > *,\n.layout-margin > .flex,\n.layout-margin > .flex-gt-sm,\n.layout-margin > .flex-md {\n  margin: 8px; }\n\n.layout-margin-gt-md > *,\n.layout-margin-lg > *,\n.layout-margin-gt-lg > *,\n.layout-margin > .flex-gt-md,\n.layout-margin > .flex-lg,\n.layout-margin > .flex-gt-lg {\n  margin: 16px; }\n\n.layout-wrap {\n  -webkit-flex-wrap: wrap;\n          flex-wrap: wrap; }\n\n.layout-nowrap {\n  -webkit-flex-wrap: nowrap;\n          flex-wrap: nowrap; }\n\n.layout-fill {\n  margin: 0;\n  width: 100%;\n  min-height: 100%;\n  height: 100%; }\n\n/**\n * `hide-gt-sm show-gt-lg` should hide from 600px to 1200px\n * `show-md hide-gt-sm` should show from 0px to 960px and hide at >960px\n * `hide-gt-md show-gt-sm` should show everywhere (show overrides hide)`\n *\n *  hide means hide everywhere\n *  Sizes:\n *         $layout-breakpoint-xs:     600px !default;\n *         $layout-breakpoint-sm:     960px !default;\n *         $layout-breakpoint-md:     1280px !default;\n *         $layout-breakpoint-lg:     1920px !default;\n */\n@media (max-width: 599px) {\n  .hide-xs:not(.show-xs):not(.show), .hide:not(.show-xs):not(.show) {\n    display: none; }\n  .flex-order-xs--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-xs--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-xs--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-xs--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-xs--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-xs--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-xs--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-xs--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-xs--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-xs--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-xs--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-xs--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-xs--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-xs--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-xs--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-xs--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-xs--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-xs--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-xs--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-xs--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-xs-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-xs-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-xs-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-xs-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-xs-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-xs-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-xs-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-xs-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-xs-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-xs-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-xs-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-xs-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-xs-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-xs-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-xs-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-xs-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-xs-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-xs-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-xs-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-xs-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-xs-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-xs-0, .flex-offset-xs-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-xs-0, [dir=rtl] .flex-offset-xs-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-xs-5, .flex-offset-xs-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-xs-5, [dir=rtl] .flex-offset-xs-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-xs-10, .flex-offset-xs-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-xs-10, [dir=rtl] .flex-offset-xs-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-xs-15, .flex-offset-xs-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-xs-15, [dir=rtl] .flex-offset-xs-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-xs-20, .flex-offset-xs-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-xs-20, [dir=rtl] .flex-offset-xs-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-xs-25, .flex-offset-xs-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-xs-25, [dir=rtl] .flex-offset-xs-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-xs-30, .flex-offset-xs-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-xs-30, [dir=rtl] .flex-offset-xs-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-xs-35, .flex-offset-xs-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-xs-35, [dir=rtl] .flex-offset-xs-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-xs-40, .flex-offset-xs-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-xs-40, [dir=rtl] .flex-offset-xs-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-xs-45, .flex-offset-xs-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-xs-45, [dir=rtl] .flex-offset-xs-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-xs-50, .flex-offset-xs-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-xs-50, [dir=rtl] .flex-offset-xs-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-xs-55, .flex-offset-xs-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-xs-55, [dir=rtl] .flex-offset-xs-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-xs-60, .flex-offset-xs-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-xs-60, [dir=rtl] .flex-offset-xs-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-xs-65, .flex-offset-xs-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-xs-65, [dir=rtl] .flex-offset-xs-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-xs-70, .flex-offset-xs-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-xs-70, [dir=rtl] .flex-offset-xs-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-xs-75, .flex-offset-xs-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-xs-75, [dir=rtl] .flex-offset-xs-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-xs-80, .flex-offset-xs-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-xs-80, [dir=rtl] .flex-offset-xs-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-xs-85, .flex-offset-xs-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-xs-85, [dir=rtl] .flex-offset-xs-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-xs-90, .flex-offset-xs-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-xs-90, [dir=rtl] .flex-offset-xs-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-xs-95, .flex-offset-xs-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-xs-95, [dir=rtl] .flex-offset-xs-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-xs-33, .flex-offset-xs-33 {\n    margin-left: calc(100% / 3); }\n  .offset-xs-66, .flex-offset-xs-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-xs-66, [dir=rtl] .flex-offset-xs-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-xs,\n  .layout-align-xs-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-xs-start,\n  .layout-align-xs-start-start,\n  .layout-align-xs-start-center,\n  .layout-align-xs-start-end,\n  .layout-align-xs-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-xs-center,\n  .layout-align-xs-center-start,\n  .layout-align-xs-center-center,\n  .layout-align-xs-center-end,\n  .layout-align-xs-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-xs-end,\n  .layout-align-xs-end-start,\n  .layout-align-xs-end-center,\n  .layout-align-xs-end-end,\n  .layout-align-xs-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-xs-space-around,\n  .layout-align-xs-space-around-center,\n  .layout-align-xs-space-around-start,\n  .layout-align-xs-space-around-end,\n  .layout-align-xs-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-xs-space-between,\n  .layout-align-xs-space-between-center,\n  .layout-align-xs-space-between-start,\n  .layout-align-xs-space-between-end,\n  .layout-align-xs-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-xs-start-start,\n  .layout-align-xs-center-start,\n  .layout-align-xs-end-start,\n  .layout-align-xs-space-between-start,\n  .layout-align-xs-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-xs-start-center,\n  .layout-align-xs-center-center,\n  .layout-align-xs-end-center,\n  .layout-align-xs-space-between-center,\n  .layout-align-xs-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-xs-start-center > *,\n  .layout-align-xs-center-center > *,\n  .layout-align-xs-end-center > *,\n  .layout-align-xs-space-between-center > *,\n  .layout-align-xs-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-xs-start-end,\n  .layout-align-xs-center-end,\n  .layout-align-xs-end-end,\n  .layout-align-xs-space-between-end,\n  .layout-align-xs-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-xs-start-stretch,\n  .layout-align-xs-center-stretch,\n  .layout-align-xs-end-stretch,\n  .layout-align-xs-space-between-stretch,\n  .layout-align-xs-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-xs {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-xs-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-xs-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-xs-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-xs-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-xs-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-xs-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-xs-column > .flex-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xs-row > .flex {\n    min-width: 0; }\n  .layout-xs-column > .flex-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-xs-column > .flex {\n    min-height: 0; }\n  .layout-xs, .layout-xs-column, .layout-xs-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-xs-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-xs-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 600px) {\n  .flex-order-gt-xs--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-gt-xs--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-gt-xs--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-gt-xs--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-gt-xs--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-gt-xs--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-gt-xs--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-gt-xs--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-gt-xs--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-gt-xs--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-gt-xs--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-gt-xs--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-gt-xs--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-gt-xs--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-gt-xs--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-gt-xs--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-gt-xs--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-gt-xs--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-gt-xs--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-gt-xs--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-gt-xs-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-gt-xs-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-gt-xs-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-gt-xs-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-gt-xs-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-gt-xs-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-gt-xs-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-gt-xs-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-gt-xs-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-gt-xs-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-gt-xs-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-gt-xs-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-gt-xs-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-gt-xs-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-gt-xs-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-gt-xs-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-gt-xs-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-gt-xs-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-gt-xs-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-gt-xs-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-gt-xs-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-gt-xs-0, .flex-offset-gt-xs-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-gt-xs-0, [dir=rtl] .flex-offset-gt-xs-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-gt-xs-5, .flex-offset-gt-xs-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-gt-xs-5, [dir=rtl] .flex-offset-gt-xs-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-gt-xs-10, .flex-offset-gt-xs-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-gt-xs-10, [dir=rtl] .flex-offset-gt-xs-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-gt-xs-15, .flex-offset-gt-xs-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-gt-xs-15, [dir=rtl] .flex-offset-gt-xs-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-gt-xs-20, .flex-offset-gt-xs-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-gt-xs-20, [dir=rtl] .flex-offset-gt-xs-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-gt-xs-25, .flex-offset-gt-xs-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-gt-xs-25, [dir=rtl] .flex-offset-gt-xs-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-gt-xs-30, .flex-offset-gt-xs-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-gt-xs-30, [dir=rtl] .flex-offset-gt-xs-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-gt-xs-35, .flex-offset-gt-xs-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-gt-xs-35, [dir=rtl] .flex-offset-gt-xs-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-gt-xs-40, .flex-offset-gt-xs-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-gt-xs-40, [dir=rtl] .flex-offset-gt-xs-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-gt-xs-45, .flex-offset-gt-xs-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-gt-xs-45, [dir=rtl] .flex-offset-gt-xs-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-gt-xs-50, .flex-offset-gt-xs-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-gt-xs-50, [dir=rtl] .flex-offset-gt-xs-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-gt-xs-55, .flex-offset-gt-xs-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-gt-xs-55, [dir=rtl] .flex-offset-gt-xs-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-gt-xs-60, .flex-offset-gt-xs-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-gt-xs-60, [dir=rtl] .flex-offset-gt-xs-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-gt-xs-65, .flex-offset-gt-xs-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-gt-xs-65, [dir=rtl] .flex-offset-gt-xs-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-gt-xs-70, .flex-offset-gt-xs-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-gt-xs-70, [dir=rtl] .flex-offset-gt-xs-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-gt-xs-75, .flex-offset-gt-xs-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-gt-xs-75, [dir=rtl] .flex-offset-gt-xs-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-gt-xs-80, .flex-offset-gt-xs-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-gt-xs-80, [dir=rtl] .flex-offset-gt-xs-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-gt-xs-85, .flex-offset-gt-xs-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-gt-xs-85, [dir=rtl] .flex-offset-gt-xs-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-gt-xs-90, .flex-offset-gt-xs-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-gt-xs-90, [dir=rtl] .flex-offset-gt-xs-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-gt-xs-95, .flex-offset-gt-xs-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-gt-xs-95, [dir=rtl] .flex-offset-gt-xs-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-gt-xs-33, .flex-offset-gt-xs-33 {\n    margin-left: calc(100% / 3); }\n  .offset-gt-xs-66, .flex-offset-gt-xs-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-gt-xs-66, [dir=rtl] .flex-offset-gt-xs-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-gt-xs,\n  .layout-align-gt-xs-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-gt-xs-start,\n  .layout-align-gt-xs-start-start,\n  .layout-align-gt-xs-start-center,\n  .layout-align-gt-xs-start-end,\n  .layout-align-gt-xs-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-gt-xs-center,\n  .layout-align-gt-xs-center-start,\n  .layout-align-gt-xs-center-center,\n  .layout-align-gt-xs-center-end,\n  .layout-align-gt-xs-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-gt-xs-end,\n  .layout-align-gt-xs-end-start,\n  .layout-align-gt-xs-end-center,\n  .layout-align-gt-xs-end-end,\n  .layout-align-gt-xs-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-gt-xs-space-around,\n  .layout-align-gt-xs-space-around-center,\n  .layout-align-gt-xs-space-around-start,\n  .layout-align-gt-xs-space-around-end,\n  .layout-align-gt-xs-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-gt-xs-space-between,\n  .layout-align-gt-xs-space-between-center,\n  .layout-align-gt-xs-space-between-start,\n  .layout-align-gt-xs-space-between-end,\n  .layout-align-gt-xs-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-gt-xs-start-start,\n  .layout-align-gt-xs-center-start,\n  .layout-align-gt-xs-end-start,\n  .layout-align-gt-xs-space-between-start,\n  .layout-align-gt-xs-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-gt-xs-start-center,\n  .layout-align-gt-xs-center-center,\n  .layout-align-gt-xs-end-center,\n  .layout-align-gt-xs-space-between-center,\n  .layout-align-gt-xs-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-gt-xs-start-center > *,\n  .layout-align-gt-xs-center-center > *,\n  .layout-align-gt-xs-end-center > *,\n  .layout-align-gt-xs-space-between-center > *,\n  .layout-align-gt-xs-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-gt-xs-start-end,\n  .layout-align-gt-xs-center-end,\n  .layout-align-gt-xs-end-end,\n  .layout-align-gt-xs-space-between-end,\n  .layout-align-gt-xs-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-gt-xs-start-stretch,\n  .layout-align-gt-xs-center-stretch,\n  .layout-align-gt-xs-end-stretch,\n  .layout-align-gt-xs-space-between-stretch,\n  .layout-align-gt-xs-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-gt-xs {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-gt-xs-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-gt-xs-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-xs-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-xs-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-xs-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-xs-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-gt-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-gt-xs-column > .flex-gt-xs-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-gt-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-gt-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-gt-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-gt-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-gt-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-gt-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-gt-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-gt-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-gt-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-gt-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-gt-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-gt-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-gt-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-gt-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-gt-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-gt-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-gt-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-gt-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-gt-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-gt-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex-gt-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-xs-row > .flex {\n    min-width: 0; }\n  .layout-gt-xs-column > .flex-gt-xs-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex-gt-xs-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-xs-column > .flex {\n    min-height: 0; }\n  .layout-gt-xs, .layout-gt-xs-column, .layout-gt-xs-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-gt-xs-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-gt-xs-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 600px) and (max-width: 959px) {\n  .hide:not(.show-gt-xs):not(.show-sm):not(.show), .hide-gt-xs:not(.show-gt-xs):not(.show-sm):not(.show) {\n    display: none; }\n  .hide-sm:not(.show-gt-xs):not(.show-sm):not(.show) {\n    display: none; }\n  .flex-order-sm--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-sm--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-sm--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-sm--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-sm--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-sm--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-sm--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-sm--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-sm--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-sm--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-sm--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-sm--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-sm--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-sm--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-sm--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-sm--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-sm--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-sm--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-sm--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-sm--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-sm-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-sm-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-sm-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-sm-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-sm-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-sm-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-sm-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-sm-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-sm-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-sm-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-sm-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-sm-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-sm-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-sm-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-sm-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-sm-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-sm-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-sm-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-sm-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-sm-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-sm-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-sm-0, .flex-offset-sm-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-sm-0, [dir=rtl] .flex-offset-sm-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-sm-5, .flex-offset-sm-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-sm-5, [dir=rtl] .flex-offset-sm-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-sm-10, .flex-offset-sm-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-sm-10, [dir=rtl] .flex-offset-sm-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-sm-15, .flex-offset-sm-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-sm-15, [dir=rtl] .flex-offset-sm-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-sm-20, .flex-offset-sm-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-sm-20, [dir=rtl] .flex-offset-sm-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-sm-25, .flex-offset-sm-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-sm-25, [dir=rtl] .flex-offset-sm-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-sm-30, .flex-offset-sm-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-sm-30, [dir=rtl] .flex-offset-sm-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-sm-35, .flex-offset-sm-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-sm-35, [dir=rtl] .flex-offset-sm-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-sm-40, .flex-offset-sm-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-sm-40, [dir=rtl] .flex-offset-sm-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-sm-45, .flex-offset-sm-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-sm-45, [dir=rtl] .flex-offset-sm-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-sm-50, .flex-offset-sm-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-sm-50, [dir=rtl] .flex-offset-sm-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-sm-55, .flex-offset-sm-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-sm-55, [dir=rtl] .flex-offset-sm-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-sm-60, .flex-offset-sm-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-sm-60, [dir=rtl] .flex-offset-sm-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-sm-65, .flex-offset-sm-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-sm-65, [dir=rtl] .flex-offset-sm-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-sm-70, .flex-offset-sm-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-sm-70, [dir=rtl] .flex-offset-sm-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-sm-75, .flex-offset-sm-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-sm-75, [dir=rtl] .flex-offset-sm-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-sm-80, .flex-offset-sm-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-sm-80, [dir=rtl] .flex-offset-sm-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-sm-85, .flex-offset-sm-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-sm-85, [dir=rtl] .flex-offset-sm-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-sm-90, .flex-offset-sm-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-sm-90, [dir=rtl] .flex-offset-sm-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-sm-95, .flex-offset-sm-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-sm-95, [dir=rtl] .flex-offset-sm-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-sm-33, .flex-offset-sm-33 {\n    margin-left: calc(100% / 3); }\n  .offset-sm-66, .flex-offset-sm-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-sm-66, [dir=rtl] .flex-offset-sm-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-sm,\n  .layout-align-sm-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-sm-start,\n  .layout-align-sm-start-start,\n  .layout-align-sm-start-center,\n  .layout-align-sm-start-end,\n  .layout-align-sm-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-sm-center,\n  .layout-align-sm-center-start,\n  .layout-align-sm-center-center,\n  .layout-align-sm-center-end,\n  .layout-align-sm-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-sm-end,\n  .layout-align-sm-end-start,\n  .layout-align-sm-end-center,\n  .layout-align-sm-end-end,\n  .layout-align-sm-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-sm-space-around,\n  .layout-align-sm-space-around-center,\n  .layout-align-sm-space-around-start,\n  .layout-align-sm-space-around-end,\n  .layout-align-sm-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-sm-space-between,\n  .layout-align-sm-space-between-center,\n  .layout-align-sm-space-between-start,\n  .layout-align-sm-space-between-end,\n  .layout-align-sm-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-sm-start-start,\n  .layout-align-sm-center-start,\n  .layout-align-sm-end-start,\n  .layout-align-sm-space-between-start,\n  .layout-align-sm-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-sm-start-center,\n  .layout-align-sm-center-center,\n  .layout-align-sm-end-center,\n  .layout-align-sm-space-between-center,\n  .layout-align-sm-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-sm-start-center > *,\n  .layout-align-sm-center-center > *,\n  .layout-align-sm-end-center > *,\n  .layout-align-sm-space-between-center > *,\n  .layout-align-sm-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-sm-start-end,\n  .layout-align-sm-center-end,\n  .layout-align-sm-end-end,\n  .layout-align-sm-space-between-end,\n  .layout-align-sm-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-sm-start-stretch,\n  .layout-align-sm-center-stretch,\n  .layout-align-sm-end-stretch,\n  .layout-align-sm-space-between-stretch,\n  .layout-align-sm-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-sm {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-sm-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-sm-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-sm-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-sm-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-sm-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-sm-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-sm-column > .flex-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-sm-row > .flex {\n    min-width: 0; }\n  .layout-sm-column > .flex-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-sm-column > .flex {\n    min-height: 0; }\n  .layout-sm, .layout-sm-column, .layout-sm-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-sm-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-sm-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 960px) {\n  .flex-order-gt-sm--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-gt-sm--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-gt-sm--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-gt-sm--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-gt-sm--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-gt-sm--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-gt-sm--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-gt-sm--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-gt-sm--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-gt-sm--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-gt-sm--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-gt-sm--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-gt-sm--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-gt-sm--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-gt-sm--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-gt-sm--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-gt-sm--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-gt-sm--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-gt-sm--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-gt-sm--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-gt-sm-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-gt-sm-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-gt-sm-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-gt-sm-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-gt-sm-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-gt-sm-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-gt-sm-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-gt-sm-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-gt-sm-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-gt-sm-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-gt-sm-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-gt-sm-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-gt-sm-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-gt-sm-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-gt-sm-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-gt-sm-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-gt-sm-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-gt-sm-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-gt-sm-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-gt-sm-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-gt-sm-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-gt-sm-0, .flex-offset-gt-sm-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-gt-sm-0, [dir=rtl] .flex-offset-gt-sm-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-gt-sm-5, .flex-offset-gt-sm-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-gt-sm-5, [dir=rtl] .flex-offset-gt-sm-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-gt-sm-10, .flex-offset-gt-sm-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-gt-sm-10, [dir=rtl] .flex-offset-gt-sm-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-gt-sm-15, .flex-offset-gt-sm-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-gt-sm-15, [dir=rtl] .flex-offset-gt-sm-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-gt-sm-20, .flex-offset-gt-sm-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-gt-sm-20, [dir=rtl] .flex-offset-gt-sm-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-gt-sm-25, .flex-offset-gt-sm-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-gt-sm-25, [dir=rtl] .flex-offset-gt-sm-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-gt-sm-30, .flex-offset-gt-sm-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-gt-sm-30, [dir=rtl] .flex-offset-gt-sm-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-gt-sm-35, .flex-offset-gt-sm-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-gt-sm-35, [dir=rtl] .flex-offset-gt-sm-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-gt-sm-40, .flex-offset-gt-sm-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-gt-sm-40, [dir=rtl] .flex-offset-gt-sm-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-gt-sm-45, .flex-offset-gt-sm-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-gt-sm-45, [dir=rtl] .flex-offset-gt-sm-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-gt-sm-50, .flex-offset-gt-sm-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-gt-sm-50, [dir=rtl] .flex-offset-gt-sm-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-gt-sm-55, .flex-offset-gt-sm-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-gt-sm-55, [dir=rtl] .flex-offset-gt-sm-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-gt-sm-60, .flex-offset-gt-sm-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-gt-sm-60, [dir=rtl] .flex-offset-gt-sm-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-gt-sm-65, .flex-offset-gt-sm-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-gt-sm-65, [dir=rtl] .flex-offset-gt-sm-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-gt-sm-70, .flex-offset-gt-sm-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-gt-sm-70, [dir=rtl] .flex-offset-gt-sm-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-gt-sm-75, .flex-offset-gt-sm-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-gt-sm-75, [dir=rtl] .flex-offset-gt-sm-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-gt-sm-80, .flex-offset-gt-sm-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-gt-sm-80, [dir=rtl] .flex-offset-gt-sm-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-gt-sm-85, .flex-offset-gt-sm-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-gt-sm-85, [dir=rtl] .flex-offset-gt-sm-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-gt-sm-90, .flex-offset-gt-sm-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-gt-sm-90, [dir=rtl] .flex-offset-gt-sm-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-gt-sm-95, .flex-offset-gt-sm-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-gt-sm-95, [dir=rtl] .flex-offset-gt-sm-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-gt-sm-33, .flex-offset-gt-sm-33 {\n    margin-left: calc(100% / 3); }\n  .offset-gt-sm-66, .flex-offset-gt-sm-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-gt-sm-66, [dir=rtl] .flex-offset-gt-sm-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-gt-sm,\n  .layout-align-gt-sm-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-gt-sm-start,\n  .layout-align-gt-sm-start-start,\n  .layout-align-gt-sm-start-center,\n  .layout-align-gt-sm-start-end,\n  .layout-align-gt-sm-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-gt-sm-center,\n  .layout-align-gt-sm-center-start,\n  .layout-align-gt-sm-center-center,\n  .layout-align-gt-sm-center-end,\n  .layout-align-gt-sm-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-gt-sm-end,\n  .layout-align-gt-sm-end-start,\n  .layout-align-gt-sm-end-center,\n  .layout-align-gt-sm-end-end,\n  .layout-align-gt-sm-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-gt-sm-space-around,\n  .layout-align-gt-sm-space-around-center,\n  .layout-align-gt-sm-space-around-start,\n  .layout-align-gt-sm-space-around-end,\n  .layout-align-gt-sm-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-gt-sm-space-between,\n  .layout-align-gt-sm-space-between-center,\n  .layout-align-gt-sm-space-between-start,\n  .layout-align-gt-sm-space-between-end,\n  .layout-align-gt-sm-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-gt-sm-start-start,\n  .layout-align-gt-sm-center-start,\n  .layout-align-gt-sm-end-start,\n  .layout-align-gt-sm-space-between-start,\n  .layout-align-gt-sm-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-gt-sm-start-center,\n  .layout-align-gt-sm-center-center,\n  .layout-align-gt-sm-end-center,\n  .layout-align-gt-sm-space-between-center,\n  .layout-align-gt-sm-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-gt-sm-start-center > *,\n  .layout-align-gt-sm-center-center > *,\n  .layout-align-gt-sm-end-center > *,\n  .layout-align-gt-sm-space-between-center > *,\n  .layout-align-gt-sm-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-gt-sm-start-end,\n  .layout-align-gt-sm-center-end,\n  .layout-align-gt-sm-end-end,\n  .layout-align-gt-sm-space-between-end,\n  .layout-align-gt-sm-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-gt-sm-start-stretch,\n  .layout-align-gt-sm-center-stretch,\n  .layout-align-gt-sm-end-stretch,\n  .layout-align-gt-sm-space-between-stretch,\n  .layout-align-gt-sm-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-gt-sm {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-gt-sm-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-gt-sm-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-sm-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-sm-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-sm-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-sm-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-gt-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-gt-sm-column > .flex-gt-sm-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-gt-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-gt-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-gt-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-gt-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-gt-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-gt-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-gt-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-gt-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-gt-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-gt-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-gt-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-gt-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-gt-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-gt-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-gt-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-gt-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-gt-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-gt-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-gt-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-gt-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex-gt-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-sm-row > .flex {\n    min-width: 0; }\n  .layout-gt-sm-column > .flex-gt-sm-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex-gt-sm-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-sm-column > .flex {\n    min-height: 0; }\n  .layout-gt-sm, .layout-gt-sm-column, .layout-gt-sm-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-gt-sm-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-gt-sm-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 960px) and (max-width: 1279px) {\n  .hide:not(.show-gt-xs):not(.show-gt-sm):not(.show-md):not(.show), .hide-gt-xs:not(.show-gt-xs):not(.show-gt-sm):not(.show-md):not(.show), .hide-gt-sm:not(.show-gt-xs):not(.show-gt-sm):not(.show-md):not(.show) {\n    display: none; }\n  .hide-md:not(.show-md):not(.show-gt-sm):not(.show-gt-xs):not(.show) {\n    display: none; }\n  .flex-order-md--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-md--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-md--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-md--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-md--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-md--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-md--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-md--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-md--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-md--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-md--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-md--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-md--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-md--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-md--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-md--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-md--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-md--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-md--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-md--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-md-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-md-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-md-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-md-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-md-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-md-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-md-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-md-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-md-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-md-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-md-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-md-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-md-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-md-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-md-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-md-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-md-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-md-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-md-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-md-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-md-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-md-0, .flex-offset-md-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-md-0, [dir=rtl] .flex-offset-md-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-md-5, .flex-offset-md-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-md-5, [dir=rtl] .flex-offset-md-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-md-10, .flex-offset-md-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-md-10, [dir=rtl] .flex-offset-md-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-md-15, .flex-offset-md-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-md-15, [dir=rtl] .flex-offset-md-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-md-20, .flex-offset-md-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-md-20, [dir=rtl] .flex-offset-md-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-md-25, .flex-offset-md-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-md-25, [dir=rtl] .flex-offset-md-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-md-30, .flex-offset-md-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-md-30, [dir=rtl] .flex-offset-md-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-md-35, .flex-offset-md-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-md-35, [dir=rtl] .flex-offset-md-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-md-40, .flex-offset-md-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-md-40, [dir=rtl] .flex-offset-md-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-md-45, .flex-offset-md-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-md-45, [dir=rtl] .flex-offset-md-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-md-50, .flex-offset-md-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-md-50, [dir=rtl] .flex-offset-md-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-md-55, .flex-offset-md-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-md-55, [dir=rtl] .flex-offset-md-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-md-60, .flex-offset-md-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-md-60, [dir=rtl] .flex-offset-md-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-md-65, .flex-offset-md-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-md-65, [dir=rtl] .flex-offset-md-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-md-70, .flex-offset-md-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-md-70, [dir=rtl] .flex-offset-md-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-md-75, .flex-offset-md-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-md-75, [dir=rtl] .flex-offset-md-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-md-80, .flex-offset-md-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-md-80, [dir=rtl] .flex-offset-md-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-md-85, .flex-offset-md-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-md-85, [dir=rtl] .flex-offset-md-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-md-90, .flex-offset-md-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-md-90, [dir=rtl] .flex-offset-md-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-md-95, .flex-offset-md-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-md-95, [dir=rtl] .flex-offset-md-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-md-33, .flex-offset-md-33 {\n    margin-left: calc(100% / 3); }\n  .offset-md-66, .flex-offset-md-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-md-66, [dir=rtl] .flex-offset-md-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-md,\n  .layout-align-md-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-md-start,\n  .layout-align-md-start-start,\n  .layout-align-md-start-center,\n  .layout-align-md-start-end,\n  .layout-align-md-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-md-center,\n  .layout-align-md-center-start,\n  .layout-align-md-center-center,\n  .layout-align-md-center-end,\n  .layout-align-md-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-md-end,\n  .layout-align-md-end-start,\n  .layout-align-md-end-center,\n  .layout-align-md-end-end,\n  .layout-align-md-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-md-space-around,\n  .layout-align-md-space-around-center,\n  .layout-align-md-space-around-start,\n  .layout-align-md-space-around-end,\n  .layout-align-md-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-md-space-between,\n  .layout-align-md-space-between-center,\n  .layout-align-md-space-between-start,\n  .layout-align-md-space-between-end,\n  .layout-align-md-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-md-start-start,\n  .layout-align-md-center-start,\n  .layout-align-md-end-start,\n  .layout-align-md-space-between-start,\n  .layout-align-md-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-md-start-center,\n  .layout-align-md-center-center,\n  .layout-align-md-end-center,\n  .layout-align-md-space-between-center,\n  .layout-align-md-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-md-start-center > *,\n  .layout-align-md-center-center > *,\n  .layout-align-md-end-center > *,\n  .layout-align-md-space-between-center > *,\n  .layout-align-md-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-md-start-end,\n  .layout-align-md-center-end,\n  .layout-align-md-end-end,\n  .layout-align-md-space-between-end,\n  .layout-align-md-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-md-start-stretch,\n  .layout-align-md-center-stretch,\n  .layout-align-md-end-stretch,\n  .layout-align-md-space-between-stretch,\n  .layout-align-md-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-md {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-md-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-md-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-md-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-md-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-md-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-md-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-md-column > .flex-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-md-row > .flex {\n    min-width: 0; }\n  .layout-md-column > .flex-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-md-column > .flex {\n    min-height: 0; }\n  .layout-md, .layout-md-column, .layout-md-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-md-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-md-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 1280px) {\n  .flex-order-gt-md--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-gt-md--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-gt-md--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-gt-md--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-gt-md--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-gt-md--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-gt-md--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-gt-md--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-gt-md--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-gt-md--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-gt-md--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-gt-md--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-gt-md--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-gt-md--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-gt-md--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-gt-md--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-gt-md--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-gt-md--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-gt-md--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-gt-md--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-gt-md-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-gt-md-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-gt-md-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-gt-md-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-gt-md-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-gt-md-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-gt-md-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-gt-md-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-gt-md-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-gt-md-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-gt-md-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-gt-md-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-gt-md-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-gt-md-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-gt-md-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-gt-md-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-gt-md-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-gt-md-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-gt-md-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-gt-md-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-gt-md-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-gt-md-0, .flex-offset-gt-md-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-gt-md-0, [dir=rtl] .flex-offset-gt-md-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-gt-md-5, .flex-offset-gt-md-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-gt-md-5, [dir=rtl] .flex-offset-gt-md-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-gt-md-10, .flex-offset-gt-md-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-gt-md-10, [dir=rtl] .flex-offset-gt-md-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-gt-md-15, .flex-offset-gt-md-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-gt-md-15, [dir=rtl] .flex-offset-gt-md-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-gt-md-20, .flex-offset-gt-md-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-gt-md-20, [dir=rtl] .flex-offset-gt-md-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-gt-md-25, .flex-offset-gt-md-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-gt-md-25, [dir=rtl] .flex-offset-gt-md-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-gt-md-30, .flex-offset-gt-md-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-gt-md-30, [dir=rtl] .flex-offset-gt-md-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-gt-md-35, .flex-offset-gt-md-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-gt-md-35, [dir=rtl] .flex-offset-gt-md-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-gt-md-40, .flex-offset-gt-md-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-gt-md-40, [dir=rtl] .flex-offset-gt-md-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-gt-md-45, .flex-offset-gt-md-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-gt-md-45, [dir=rtl] .flex-offset-gt-md-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-gt-md-50, .flex-offset-gt-md-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-gt-md-50, [dir=rtl] .flex-offset-gt-md-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-gt-md-55, .flex-offset-gt-md-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-gt-md-55, [dir=rtl] .flex-offset-gt-md-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-gt-md-60, .flex-offset-gt-md-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-gt-md-60, [dir=rtl] .flex-offset-gt-md-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-gt-md-65, .flex-offset-gt-md-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-gt-md-65, [dir=rtl] .flex-offset-gt-md-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-gt-md-70, .flex-offset-gt-md-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-gt-md-70, [dir=rtl] .flex-offset-gt-md-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-gt-md-75, .flex-offset-gt-md-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-gt-md-75, [dir=rtl] .flex-offset-gt-md-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-gt-md-80, .flex-offset-gt-md-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-gt-md-80, [dir=rtl] .flex-offset-gt-md-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-gt-md-85, .flex-offset-gt-md-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-gt-md-85, [dir=rtl] .flex-offset-gt-md-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-gt-md-90, .flex-offset-gt-md-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-gt-md-90, [dir=rtl] .flex-offset-gt-md-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-gt-md-95, .flex-offset-gt-md-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-gt-md-95, [dir=rtl] .flex-offset-gt-md-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-gt-md-33, .flex-offset-gt-md-33 {\n    margin-left: calc(100% / 3); }\n  .offset-gt-md-66, .flex-offset-gt-md-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-gt-md-66, [dir=rtl] .flex-offset-gt-md-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-gt-md,\n  .layout-align-gt-md-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-gt-md-start,\n  .layout-align-gt-md-start-start,\n  .layout-align-gt-md-start-center,\n  .layout-align-gt-md-start-end,\n  .layout-align-gt-md-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-gt-md-center,\n  .layout-align-gt-md-center-start,\n  .layout-align-gt-md-center-center,\n  .layout-align-gt-md-center-end,\n  .layout-align-gt-md-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-gt-md-end,\n  .layout-align-gt-md-end-start,\n  .layout-align-gt-md-end-center,\n  .layout-align-gt-md-end-end,\n  .layout-align-gt-md-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-gt-md-space-around,\n  .layout-align-gt-md-space-around-center,\n  .layout-align-gt-md-space-around-start,\n  .layout-align-gt-md-space-around-end,\n  .layout-align-gt-md-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-gt-md-space-between,\n  .layout-align-gt-md-space-between-center,\n  .layout-align-gt-md-space-between-start,\n  .layout-align-gt-md-space-between-end,\n  .layout-align-gt-md-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-gt-md-start-start,\n  .layout-align-gt-md-center-start,\n  .layout-align-gt-md-end-start,\n  .layout-align-gt-md-space-between-start,\n  .layout-align-gt-md-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-gt-md-start-center,\n  .layout-align-gt-md-center-center,\n  .layout-align-gt-md-end-center,\n  .layout-align-gt-md-space-between-center,\n  .layout-align-gt-md-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-gt-md-start-center > *,\n  .layout-align-gt-md-center-center > *,\n  .layout-align-gt-md-end-center > *,\n  .layout-align-gt-md-space-between-center > *,\n  .layout-align-gt-md-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-gt-md-start-end,\n  .layout-align-gt-md-center-end,\n  .layout-align-gt-md-end-end,\n  .layout-align-gt-md-space-between-end,\n  .layout-align-gt-md-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-gt-md-start-stretch,\n  .layout-align-gt-md-center-stretch,\n  .layout-align-gt-md-end-stretch,\n  .layout-align-gt-md-space-between-stretch,\n  .layout-align-gt-md-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-gt-md {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-gt-md-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-gt-md-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-md-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-md-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-md-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-md-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-gt-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-gt-md-column > .flex-gt-md-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-gt-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-gt-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-gt-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-gt-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-gt-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-gt-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-gt-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-gt-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-gt-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-gt-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-gt-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-gt-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-gt-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-gt-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-gt-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-gt-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-gt-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-gt-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-gt-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-gt-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex-gt-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-md-row > .flex {\n    min-width: 0; }\n  .layout-gt-md-column > .flex-gt-md-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex-gt-md-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-md-column > .flex {\n    min-height: 0; }\n  .layout-gt-md, .layout-gt-md-column, .layout-gt-md-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-gt-md-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-gt-md-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 1280px) and (max-width: 1919px) {\n  .hide:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-lg):not(.show), .hide-gt-xs:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-lg):not(.show), .hide-gt-sm:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-lg):not(.show), .hide-gt-md:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-lg):not(.show) {\n    display: none; }\n  .hide-lg:not(.show-lg):not(.show-gt-md):not(.show-gt-sm):not(.show-gt-xs):not(.show) {\n    display: none; }\n  .flex-order-lg--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-lg--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-lg--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-lg--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-lg--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-lg--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-lg--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-lg--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-lg--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-lg--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-lg--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-lg--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-lg--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-lg--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-lg--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-lg--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-lg--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-lg--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-lg--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-lg--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-lg-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-lg-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-lg-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-lg-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-lg-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-lg-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-lg-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-lg-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-lg-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-lg-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-lg-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-lg-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-lg-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-lg-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-lg-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-lg-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-lg-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-lg-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-lg-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-lg-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-lg-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-lg-0, .flex-offset-lg-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-lg-0, [dir=rtl] .flex-offset-lg-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-lg-5, .flex-offset-lg-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-lg-5, [dir=rtl] .flex-offset-lg-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-lg-10, .flex-offset-lg-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-lg-10, [dir=rtl] .flex-offset-lg-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-lg-15, .flex-offset-lg-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-lg-15, [dir=rtl] .flex-offset-lg-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-lg-20, .flex-offset-lg-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-lg-20, [dir=rtl] .flex-offset-lg-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-lg-25, .flex-offset-lg-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-lg-25, [dir=rtl] .flex-offset-lg-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-lg-30, .flex-offset-lg-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-lg-30, [dir=rtl] .flex-offset-lg-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-lg-35, .flex-offset-lg-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-lg-35, [dir=rtl] .flex-offset-lg-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-lg-40, .flex-offset-lg-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-lg-40, [dir=rtl] .flex-offset-lg-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-lg-45, .flex-offset-lg-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-lg-45, [dir=rtl] .flex-offset-lg-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-lg-50, .flex-offset-lg-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-lg-50, [dir=rtl] .flex-offset-lg-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-lg-55, .flex-offset-lg-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-lg-55, [dir=rtl] .flex-offset-lg-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-lg-60, .flex-offset-lg-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-lg-60, [dir=rtl] .flex-offset-lg-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-lg-65, .flex-offset-lg-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-lg-65, [dir=rtl] .flex-offset-lg-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-lg-70, .flex-offset-lg-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-lg-70, [dir=rtl] .flex-offset-lg-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-lg-75, .flex-offset-lg-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-lg-75, [dir=rtl] .flex-offset-lg-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-lg-80, .flex-offset-lg-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-lg-80, [dir=rtl] .flex-offset-lg-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-lg-85, .flex-offset-lg-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-lg-85, [dir=rtl] .flex-offset-lg-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-lg-90, .flex-offset-lg-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-lg-90, [dir=rtl] .flex-offset-lg-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-lg-95, .flex-offset-lg-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-lg-95, [dir=rtl] .flex-offset-lg-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-lg-33, .flex-offset-lg-33 {\n    margin-left: calc(100% / 3); }\n  .offset-lg-66, .flex-offset-lg-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-lg-66, [dir=rtl] .flex-offset-lg-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-lg,\n  .layout-align-lg-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-lg-start,\n  .layout-align-lg-start-start,\n  .layout-align-lg-start-center,\n  .layout-align-lg-start-end,\n  .layout-align-lg-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-lg-center,\n  .layout-align-lg-center-start,\n  .layout-align-lg-center-center,\n  .layout-align-lg-center-end,\n  .layout-align-lg-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-lg-end,\n  .layout-align-lg-end-start,\n  .layout-align-lg-end-center,\n  .layout-align-lg-end-end,\n  .layout-align-lg-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-lg-space-around,\n  .layout-align-lg-space-around-center,\n  .layout-align-lg-space-around-start,\n  .layout-align-lg-space-around-end,\n  .layout-align-lg-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-lg-space-between,\n  .layout-align-lg-space-between-center,\n  .layout-align-lg-space-between-start,\n  .layout-align-lg-space-between-end,\n  .layout-align-lg-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-lg-start-start,\n  .layout-align-lg-center-start,\n  .layout-align-lg-end-start,\n  .layout-align-lg-space-between-start,\n  .layout-align-lg-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-lg-start-center,\n  .layout-align-lg-center-center,\n  .layout-align-lg-end-center,\n  .layout-align-lg-space-between-center,\n  .layout-align-lg-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-lg-start-center > *,\n  .layout-align-lg-center-center > *,\n  .layout-align-lg-end-center > *,\n  .layout-align-lg-space-between-center > *,\n  .layout-align-lg-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-lg-start-end,\n  .layout-align-lg-center-end,\n  .layout-align-lg-end-end,\n  .layout-align-lg-space-between-end,\n  .layout-align-lg-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-lg-start-stretch,\n  .layout-align-lg-center-stretch,\n  .layout-align-lg-end-stretch,\n  .layout-align-lg-space-between-stretch,\n  .layout-align-lg-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-lg {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-lg-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-lg-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-lg-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-lg-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-lg-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-lg-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-lg-column > .flex-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-lg-row > .flex {\n    min-width: 0; }\n  .layout-lg-column > .flex-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-lg-column > .flex {\n    min-height: 0; }\n  .layout-lg, .layout-lg-column, .layout-lg-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-lg-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-lg-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; } }\n\n@media (min-width: 1920px) {\n  .flex-order-gt-lg--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-gt-lg--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-gt-lg--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-gt-lg--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-gt-lg--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-gt-lg--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-gt-lg--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-gt-lg--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-gt-lg--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-gt-lg--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-gt-lg--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-gt-lg--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-gt-lg--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-gt-lg--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-gt-lg--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-gt-lg--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-gt-lg--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-gt-lg--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-gt-lg--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-gt-lg--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-gt-lg-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-gt-lg-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-gt-lg-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-gt-lg-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-gt-lg-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-gt-lg-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-gt-lg-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-gt-lg-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-gt-lg-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-gt-lg-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-gt-lg-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-gt-lg-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-gt-lg-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-gt-lg-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-gt-lg-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-gt-lg-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-gt-lg-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-gt-lg-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-gt-lg-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-gt-lg-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-gt-lg-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-gt-lg-0, .flex-offset-gt-lg-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-gt-lg-0, [dir=rtl] .flex-offset-gt-lg-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-gt-lg-5, .flex-offset-gt-lg-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-gt-lg-5, [dir=rtl] .flex-offset-gt-lg-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-gt-lg-10, .flex-offset-gt-lg-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-gt-lg-10, [dir=rtl] .flex-offset-gt-lg-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-gt-lg-15, .flex-offset-gt-lg-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-gt-lg-15, [dir=rtl] .flex-offset-gt-lg-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-gt-lg-20, .flex-offset-gt-lg-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-gt-lg-20, [dir=rtl] .flex-offset-gt-lg-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-gt-lg-25, .flex-offset-gt-lg-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-gt-lg-25, [dir=rtl] .flex-offset-gt-lg-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-gt-lg-30, .flex-offset-gt-lg-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-gt-lg-30, [dir=rtl] .flex-offset-gt-lg-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-gt-lg-35, .flex-offset-gt-lg-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-gt-lg-35, [dir=rtl] .flex-offset-gt-lg-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-gt-lg-40, .flex-offset-gt-lg-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-gt-lg-40, [dir=rtl] .flex-offset-gt-lg-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-gt-lg-45, .flex-offset-gt-lg-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-gt-lg-45, [dir=rtl] .flex-offset-gt-lg-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-gt-lg-50, .flex-offset-gt-lg-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-gt-lg-50, [dir=rtl] .flex-offset-gt-lg-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-gt-lg-55, .flex-offset-gt-lg-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-gt-lg-55, [dir=rtl] .flex-offset-gt-lg-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-gt-lg-60, .flex-offset-gt-lg-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-gt-lg-60, [dir=rtl] .flex-offset-gt-lg-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-gt-lg-65, .flex-offset-gt-lg-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-gt-lg-65, [dir=rtl] .flex-offset-gt-lg-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-gt-lg-70, .flex-offset-gt-lg-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-gt-lg-70, [dir=rtl] .flex-offset-gt-lg-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-gt-lg-75, .flex-offset-gt-lg-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-gt-lg-75, [dir=rtl] .flex-offset-gt-lg-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-gt-lg-80, .flex-offset-gt-lg-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-gt-lg-80, [dir=rtl] .flex-offset-gt-lg-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-gt-lg-85, .flex-offset-gt-lg-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-gt-lg-85, [dir=rtl] .flex-offset-gt-lg-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-gt-lg-90, .flex-offset-gt-lg-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-gt-lg-90, [dir=rtl] .flex-offset-gt-lg-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-gt-lg-95, .flex-offset-gt-lg-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-gt-lg-95, [dir=rtl] .flex-offset-gt-lg-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-gt-lg-33, .flex-offset-gt-lg-33 {\n    margin-left: calc(100% / 3); }\n  .offset-gt-lg-66, .flex-offset-gt-lg-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-gt-lg-66, [dir=rtl] .flex-offset-gt-lg-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-gt-lg,\n  .layout-align-gt-lg-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-gt-lg-start,\n  .layout-align-gt-lg-start-start,\n  .layout-align-gt-lg-start-center,\n  .layout-align-gt-lg-start-end,\n  .layout-align-gt-lg-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-gt-lg-center,\n  .layout-align-gt-lg-center-start,\n  .layout-align-gt-lg-center-center,\n  .layout-align-gt-lg-center-end,\n  .layout-align-gt-lg-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-gt-lg-end,\n  .layout-align-gt-lg-end-start,\n  .layout-align-gt-lg-end-center,\n  .layout-align-gt-lg-end-end,\n  .layout-align-gt-lg-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-gt-lg-space-around,\n  .layout-align-gt-lg-space-around-center,\n  .layout-align-gt-lg-space-around-start,\n  .layout-align-gt-lg-space-around-end,\n  .layout-align-gt-lg-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-gt-lg-space-between,\n  .layout-align-gt-lg-space-between-center,\n  .layout-align-gt-lg-space-between-start,\n  .layout-align-gt-lg-space-between-end,\n  .layout-align-gt-lg-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-gt-lg-start-start,\n  .layout-align-gt-lg-center-start,\n  .layout-align-gt-lg-end-start,\n  .layout-align-gt-lg-space-between-start,\n  .layout-align-gt-lg-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-gt-lg-start-center,\n  .layout-align-gt-lg-center-center,\n  .layout-align-gt-lg-end-center,\n  .layout-align-gt-lg-space-between-center,\n  .layout-align-gt-lg-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-gt-lg-start-center > *,\n  .layout-align-gt-lg-center-center > *,\n  .layout-align-gt-lg-end-center > *,\n  .layout-align-gt-lg-space-between-center > *,\n  .layout-align-gt-lg-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-gt-lg-start-end,\n  .layout-align-gt-lg-center-end,\n  .layout-align-gt-lg-end-end,\n  .layout-align-gt-lg-space-between-end,\n  .layout-align-gt-lg-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-gt-lg-start-stretch,\n  .layout-align-gt-lg-center-stretch,\n  .layout-align-gt-lg-end-stretch,\n  .layout-align-gt-lg-space-between-stretch,\n  .layout-align-gt-lg-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-gt-lg {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-gt-lg-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-gt-lg-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-lg-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-lg-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-lg-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-gt-lg-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-gt-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-gt-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-gt-lg-column > .flex-gt-lg-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-gt-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-gt-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-gt-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-gt-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-gt-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-gt-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-gt-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-gt-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-gt-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-gt-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-gt-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-gt-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-gt-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-gt-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-gt-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-gt-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-gt-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-gt-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-gt-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-gt-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-gt-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-gt-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex-gt-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-gt-lg-row > .flex {\n    min-width: 0; }\n  .layout-gt-lg-column > .flex-gt-lg-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex-gt-lg-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-gt-lg-column > .flex {\n    min-height: 0; }\n  .layout-gt-lg, .layout-gt-lg-column, .layout-gt-lg-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-gt-lg-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-gt-lg-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n  .flex-order-xl--20 {\n    -webkit-box-ordinal-group: -19;\n    -webkit-order: -20;\n            order: -20; }\n  .flex-order-xl--19 {\n    -webkit-box-ordinal-group: -18;\n    -webkit-order: -19;\n            order: -19; }\n  .flex-order-xl--18 {\n    -webkit-box-ordinal-group: -17;\n    -webkit-order: -18;\n            order: -18; }\n  .flex-order-xl--17 {\n    -webkit-box-ordinal-group: -16;\n    -webkit-order: -17;\n            order: -17; }\n  .flex-order-xl--16 {\n    -webkit-box-ordinal-group: -15;\n    -webkit-order: -16;\n            order: -16; }\n  .flex-order-xl--15 {\n    -webkit-box-ordinal-group: -14;\n    -webkit-order: -15;\n            order: -15; }\n  .flex-order-xl--14 {\n    -webkit-box-ordinal-group: -13;\n    -webkit-order: -14;\n            order: -14; }\n  .flex-order-xl--13 {\n    -webkit-box-ordinal-group: -12;\n    -webkit-order: -13;\n            order: -13; }\n  .flex-order-xl--12 {\n    -webkit-box-ordinal-group: -11;\n    -webkit-order: -12;\n            order: -12; }\n  .flex-order-xl--11 {\n    -webkit-box-ordinal-group: -10;\n    -webkit-order: -11;\n            order: -11; }\n  .flex-order-xl--10 {\n    -webkit-box-ordinal-group: -9;\n    -webkit-order: -10;\n            order: -10; }\n  .flex-order-xl--9 {\n    -webkit-box-ordinal-group: -8;\n    -webkit-order: -9;\n            order: -9; }\n  .flex-order-xl--8 {\n    -webkit-box-ordinal-group: -7;\n    -webkit-order: -8;\n            order: -8; }\n  .flex-order-xl--7 {\n    -webkit-box-ordinal-group: -6;\n    -webkit-order: -7;\n            order: -7; }\n  .flex-order-xl--6 {\n    -webkit-box-ordinal-group: -5;\n    -webkit-order: -6;\n            order: -6; }\n  .flex-order-xl--5 {\n    -webkit-box-ordinal-group: -4;\n    -webkit-order: -5;\n            order: -5; }\n  .flex-order-xl--4 {\n    -webkit-box-ordinal-group: -3;\n    -webkit-order: -4;\n            order: -4; }\n  .flex-order-xl--3 {\n    -webkit-box-ordinal-group: -2;\n    -webkit-order: -3;\n            order: -3; }\n  .flex-order-xl--2 {\n    -webkit-box-ordinal-group: -1;\n    -webkit-order: -2;\n            order: -2; }\n  .flex-order-xl--1 {\n    -webkit-box-ordinal-group: 0;\n    -webkit-order: -1;\n            order: -1; }\n  .flex-order-xl-0 {\n    -webkit-box-ordinal-group: 1;\n    -webkit-order: 0;\n            order: 0; }\n  .flex-order-xl-1 {\n    -webkit-box-ordinal-group: 2;\n    -webkit-order: 1;\n            order: 1; }\n  .flex-order-xl-2 {\n    -webkit-box-ordinal-group: 3;\n    -webkit-order: 2;\n            order: 2; }\n  .flex-order-xl-3 {\n    -webkit-box-ordinal-group: 4;\n    -webkit-order: 3;\n            order: 3; }\n  .flex-order-xl-4 {\n    -webkit-box-ordinal-group: 5;\n    -webkit-order: 4;\n            order: 4; }\n  .flex-order-xl-5 {\n    -webkit-box-ordinal-group: 6;\n    -webkit-order: 5;\n            order: 5; }\n  .flex-order-xl-6 {\n    -webkit-box-ordinal-group: 7;\n    -webkit-order: 6;\n            order: 6; }\n  .flex-order-xl-7 {\n    -webkit-box-ordinal-group: 8;\n    -webkit-order: 7;\n            order: 7; }\n  .flex-order-xl-8 {\n    -webkit-box-ordinal-group: 9;\n    -webkit-order: 8;\n            order: 8; }\n  .flex-order-xl-9 {\n    -webkit-box-ordinal-group: 10;\n    -webkit-order: 9;\n            order: 9; }\n  .flex-order-xl-10 {\n    -webkit-box-ordinal-group: 11;\n    -webkit-order: 10;\n            order: 10; }\n  .flex-order-xl-11 {\n    -webkit-box-ordinal-group: 12;\n    -webkit-order: 11;\n            order: 11; }\n  .flex-order-xl-12 {\n    -webkit-box-ordinal-group: 13;\n    -webkit-order: 12;\n            order: 12; }\n  .flex-order-xl-13 {\n    -webkit-box-ordinal-group: 14;\n    -webkit-order: 13;\n            order: 13; }\n  .flex-order-xl-14 {\n    -webkit-box-ordinal-group: 15;\n    -webkit-order: 14;\n            order: 14; }\n  .flex-order-xl-15 {\n    -webkit-box-ordinal-group: 16;\n    -webkit-order: 15;\n            order: 15; }\n  .flex-order-xl-16 {\n    -webkit-box-ordinal-group: 17;\n    -webkit-order: 16;\n            order: 16; }\n  .flex-order-xl-17 {\n    -webkit-box-ordinal-group: 18;\n    -webkit-order: 17;\n            order: 17; }\n  .flex-order-xl-18 {\n    -webkit-box-ordinal-group: 19;\n    -webkit-order: 18;\n            order: 18; }\n  .flex-order-xl-19 {\n    -webkit-box-ordinal-group: 20;\n    -webkit-order: 19;\n            order: 19; }\n  .flex-order-xl-20 {\n    -webkit-box-ordinal-group: 21;\n    -webkit-order: 20;\n            order: 20; }\n  .offset-xl-0, .flex-offset-xl-0 {\n    margin-left: 0; }\n    [dir=rtl] .offset-xl-0, [dir=rtl] .flex-offset-xl-0 {\n      margin-left: auto;\n      margin-right: 0; }\n  .offset-xl-5, .flex-offset-xl-5 {\n    margin-left: 5%; }\n    [dir=rtl] .offset-xl-5, [dir=rtl] .flex-offset-xl-5 {\n      margin-left: auto;\n      margin-right: 5%; }\n  .offset-xl-10, .flex-offset-xl-10 {\n    margin-left: 10%; }\n    [dir=rtl] .offset-xl-10, [dir=rtl] .flex-offset-xl-10 {\n      margin-left: auto;\n      margin-right: 10%; }\n  .offset-xl-15, .flex-offset-xl-15 {\n    margin-left: 15%; }\n    [dir=rtl] .offset-xl-15, [dir=rtl] .flex-offset-xl-15 {\n      margin-left: auto;\n      margin-right: 15%; }\n  .offset-xl-20, .flex-offset-xl-20 {\n    margin-left: 20%; }\n    [dir=rtl] .offset-xl-20, [dir=rtl] .flex-offset-xl-20 {\n      margin-left: auto;\n      margin-right: 20%; }\n  .offset-xl-25, .flex-offset-xl-25 {\n    margin-left: 25%; }\n    [dir=rtl] .offset-xl-25, [dir=rtl] .flex-offset-xl-25 {\n      margin-left: auto;\n      margin-right: 25%; }\n  .offset-xl-30, .flex-offset-xl-30 {\n    margin-left: 30%; }\n    [dir=rtl] .offset-xl-30, [dir=rtl] .flex-offset-xl-30 {\n      margin-left: auto;\n      margin-right: 30%; }\n  .offset-xl-35, .flex-offset-xl-35 {\n    margin-left: 35%; }\n    [dir=rtl] .offset-xl-35, [dir=rtl] .flex-offset-xl-35 {\n      margin-left: auto;\n      margin-right: 35%; }\n  .offset-xl-40, .flex-offset-xl-40 {\n    margin-left: 40%; }\n    [dir=rtl] .offset-xl-40, [dir=rtl] .flex-offset-xl-40 {\n      margin-left: auto;\n      margin-right: 40%; }\n  .offset-xl-45, .flex-offset-xl-45 {\n    margin-left: 45%; }\n    [dir=rtl] .offset-xl-45, [dir=rtl] .flex-offset-xl-45 {\n      margin-left: auto;\n      margin-right: 45%; }\n  .offset-xl-50, .flex-offset-xl-50 {\n    margin-left: 50%; }\n    [dir=rtl] .offset-xl-50, [dir=rtl] .flex-offset-xl-50 {\n      margin-left: auto;\n      margin-right: 50%; }\n  .offset-xl-55, .flex-offset-xl-55 {\n    margin-left: 55%; }\n    [dir=rtl] .offset-xl-55, [dir=rtl] .flex-offset-xl-55 {\n      margin-left: auto;\n      margin-right: 55%; }\n  .offset-xl-60, .flex-offset-xl-60 {\n    margin-left: 60%; }\n    [dir=rtl] .offset-xl-60, [dir=rtl] .flex-offset-xl-60 {\n      margin-left: auto;\n      margin-right: 60%; }\n  .offset-xl-65, .flex-offset-xl-65 {\n    margin-left: 65%; }\n    [dir=rtl] .offset-xl-65, [dir=rtl] .flex-offset-xl-65 {\n      margin-left: auto;\n      margin-right: 65%; }\n  .offset-xl-70, .flex-offset-xl-70 {\n    margin-left: 70%; }\n    [dir=rtl] .offset-xl-70, [dir=rtl] .flex-offset-xl-70 {\n      margin-left: auto;\n      margin-right: 70%; }\n  .offset-xl-75, .flex-offset-xl-75 {\n    margin-left: 75%; }\n    [dir=rtl] .offset-xl-75, [dir=rtl] .flex-offset-xl-75 {\n      margin-left: auto;\n      margin-right: 75%; }\n  .offset-xl-80, .flex-offset-xl-80 {\n    margin-left: 80%; }\n    [dir=rtl] .offset-xl-80, [dir=rtl] .flex-offset-xl-80 {\n      margin-left: auto;\n      margin-right: 80%; }\n  .offset-xl-85, .flex-offset-xl-85 {\n    margin-left: 85%; }\n    [dir=rtl] .offset-xl-85, [dir=rtl] .flex-offset-xl-85 {\n      margin-left: auto;\n      margin-right: 85%; }\n  .offset-xl-90, .flex-offset-xl-90 {\n    margin-left: 90%; }\n    [dir=rtl] .offset-xl-90, [dir=rtl] .flex-offset-xl-90 {\n      margin-left: auto;\n      margin-right: 90%; }\n  .offset-xl-95, .flex-offset-xl-95 {\n    margin-left: 95%; }\n    [dir=rtl] .offset-xl-95, [dir=rtl] .flex-offset-xl-95 {\n      margin-left: auto;\n      margin-right: 95%; }\n  .offset-xl-33, .flex-offset-xl-33 {\n    margin-left: calc(100% / 3); }\n  .offset-xl-66, .flex-offset-xl-66 {\n    margin-left: calc(200% / 3); }\n    [dir=rtl] .offset-xl-66, [dir=rtl] .flex-offset-xl-66 {\n      margin-left: auto;\n      margin-right: calc(200% / 3); }\n  .layout-align-xl,\n  .layout-align-xl-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start;\n    -webkit-align-content: stretch;\n            align-content: stretch;\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch; }\n  .layout-align-xl-start,\n  .layout-align-xl-start-start,\n  .layout-align-xl-start-center,\n  .layout-align-xl-start-end,\n  .layout-align-xl-start-stretch {\n    -webkit-box-pack: start;\n    -webkit-justify-content: flex-start;\n            justify-content: flex-start; }\n  .layout-align-xl-center,\n  .layout-align-xl-center-start,\n  .layout-align-xl-center-center,\n  .layout-align-xl-center-end,\n  .layout-align-xl-center-stretch {\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n            justify-content: center; }\n  .layout-align-xl-end,\n  .layout-align-xl-end-start,\n  .layout-align-xl-end-center,\n  .layout-align-xl-end-end,\n  .layout-align-xl-end-stretch {\n    -webkit-box-pack: end;\n    -webkit-justify-content: flex-end;\n            justify-content: flex-end; }\n  .layout-align-xl-space-around,\n  .layout-align-xl-space-around-center,\n  .layout-align-xl-space-around-start,\n  .layout-align-xl-space-around-end,\n  .layout-align-xl-space-around-stretch {\n    -webkit-justify-content: space-around;\n            justify-content: space-around; }\n  .layout-align-xl-space-between,\n  .layout-align-xl-space-between-center,\n  .layout-align-xl-space-between-start,\n  .layout-align-xl-space-between-end,\n  .layout-align-xl-space-between-stretch {\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n            justify-content: space-between; }\n  .layout-align-xl-start-start,\n  .layout-align-xl-center-start,\n  .layout-align-xl-end-start,\n  .layout-align-xl-space-between-start,\n  .layout-align-xl-space-around-start {\n    -webkit-box-align: start;\n    -webkit-align-items: flex-start;\n            align-items: flex-start;\n    -webkit-align-content: flex-start;\n            align-content: flex-start; }\n  .layout-align-xl-start-center,\n  .layout-align-xl-center-center,\n  .layout-align-xl-end-center,\n  .layout-align-xl-space-between-center,\n  .layout-align-xl-space-around-center {\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n            align-items: center;\n    -webkit-align-content: center;\n            align-content: center;\n    max-width: 100%; }\n  .layout-align-xl-start-center > *,\n  .layout-align-xl-center-center > *,\n  .layout-align-xl-end-center > *,\n  .layout-align-xl-space-between-center > *,\n  .layout-align-xl-space-around-center > * {\n    max-width: 100%;\n    box-sizing: border-box; }\n  .layout-align-xl-start-end,\n  .layout-align-xl-center-end,\n  .layout-align-xl-end-end,\n  .layout-align-xl-space-between-end,\n  .layout-align-xl-space-around-end {\n    -webkit-box-align: end;\n    -webkit-align-items: flex-end;\n            align-items: flex-end;\n    -webkit-align-content: flex-end;\n            align-content: flex-end; }\n  .layout-align-xl-start-stretch,\n  .layout-align-xl-center-stretch,\n  .layout-align-xl-end-stretch,\n  .layout-align-xl-space-between-stretch,\n  .layout-align-xl-space-around-stretch {\n    -webkit-box-align: stretch;\n    -webkit-align-items: stretch;\n            align-items: stretch;\n    -webkit-align-content: stretch;\n            align-content: stretch; }\n  .flex-xl {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    box-sizing: border-box; }\n  .flex-xl-grow {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    box-sizing: border-box; }\n  .flex-xl-initial {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-xl-auto {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 auto;\n            flex: 1 1 auto;\n    box-sizing: border-box; }\n  .flex-xl-none {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 0 auto;\n            flex: 0 0 auto;\n    box-sizing: border-box; }\n  .flex-xl-noshrink {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 0 auto;\n            flex: 1 0 auto;\n    box-sizing: border-box; }\n  .flex-xl-nogrow {\n    -webkit-box-flex: 0;\n    -webkit-flex: 0 1 auto;\n            flex: 0 1 auto;\n    box-sizing: border-box; }\n  .flex-xl-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-column > .flex-xl-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 0%;\n    max-height: 100%;\n    box-sizing: border-box;\n    min-width: 0; }\n  .layout-xl-column > .flex-xl-0 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 0%;\n    box-sizing: border-box;\n    min-height: 0; }\n  .flex-xl-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 5%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-5 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 5%;\n    box-sizing: border-box; }\n  .flex-xl-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 10%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-10 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 10%;\n    box-sizing: border-box; }\n  .flex-xl-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 15%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-15 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 15%;\n    box-sizing: border-box; }\n  .flex-xl-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 20%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-20 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 20%;\n    box-sizing: border-box; }\n  .flex-xl-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 25%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-25 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 25%;\n    box-sizing: border-box; }\n  .flex-xl-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 30%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-30 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 30%;\n    box-sizing: border-box; }\n  .flex-xl-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 35%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-35 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 35%;\n    box-sizing: border-box; }\n  .flex-xl-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 40%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-40 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 40%;\n    box-sizing: border-box; }\n  .flex-xl-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 45%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-45 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 45%;\n    box-sizing: border-box; }\n  .flex-xl-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 50%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-50 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 50%;\n    box-sizing: border-box; }\n  .flex-xl-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 55%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-55 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 55%;\n    box-sizing: border-box; }\n  .flex-xl-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 60%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-60 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 60%;\n    box-sizing: border-box; }\n  .flex-xl-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 65%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-65 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 65%;\n    box-sizing: border-box; }\n  .flex-xl-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 70%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-70 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 70%;\n    box-sizing: border-box; }\n  .flex-xl-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 75%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-75 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 75%;\n    box-sizing: border-box; }\n  .flex-xl-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 80%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-80 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 80%;\n    box-sizing: border-box; }\n  .flex-xl-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 85%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-85 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 85%;\n    box-sizing: border-box; }\n  .flex-xl-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 90%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-90 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 90%;\n    box-sizing: border-box; }\n  .flex-xl-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 95%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-95 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 95%;\n    box-sizing: border-box; }\n  .flex-xl-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-100 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-row > .flex-xl-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 33.33%;\n            flex: 1 1 33.33%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-column > .flex-xl-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 66.66%;\n            flex: 1 1 66.66%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 33.33%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex-xl-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 66.66%;\n    max-height: 100%;\n    box-sizing: border-box; }\n  .layout-xl-row > .flex {\n    min-width: 0; }\n  .layout-xl-column > .flex-xl-33 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 33.33%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex-xl-66 {\n    -webkit-box-flex: 1;\n    -webkit-flex: 1 1 100%;\n            flex: 1 1 100%;\n    max-width: 100%;\n    max-height: 66.66%;\n    box-sizing: border-box; }\n  .layout-xl-column > .flex {\n    min-height: 0; }\n  .layout-xl, .layout-xl-column, .layout-xl-row {\n    box-sizing: border-box;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex; }\n  .layout-xl-column {\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column; }\n  .layout-xl-row {\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row; }\n  .hide:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-gt-lg):not(.show-xl):not(.show), .hide-gt-xs:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-gt-lg):not(.show-xl):not(.show), .hide-gt-sm:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-gt-lg):not(.show-xl):not(.show), .hide-gt-md:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-gt-lg):not(.show-xl):not(.show), .hide-gt-lg:not(.show-gt-xs):not(.show-gt-sm):not(.show-gt-md):not(.show-gt-lg):not(.show-xl):not(.show) {\n    display: none; }\n  .hide-xl:not(.show-xl):not(.show-gt-lg):not(.show-gt-md):not(.show-gt-sm):not(.show-gt-xs):not(.show) {\n    display: none; } }\n\n@media print {\n  .hide-print:not(.show-print):not(.show) {\n    display: none !important; } }\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 83 */
-/***/ (function(module, exports) {
-
-/*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
-// css base code, injected by the css-loader
-module.exports = function(useSourceMap) {
-	var list = [];
-
-	// return the list of modules as css string
-	list.toString = function toString() {
-		return this.map(function (item) {
-			var content = cssWithMappingToString(item, useSourceMap);
-			if(item[2]) {
-				return "@media " + item[2] + "{" + content + "}";
-			} else {
-				return content;
-			}
-		}).join("");
-	};
-
-	// import a list of modules into the list
-	list.i = function(modules, mediaQuery) {
-		if(typeof modules === "string")
-			modules = [[null, modules, ""]];
-		var alreadyImportedModules = {};
-		for(var i = 0; i < this.length; i++) {
-			var id = this[i][0];
-			if(typeof id === "number")
-				alreadyImportedModules[id] = true;
-		}
-		for(i = 0; i < modules.length; i++) {
-			var item = modules[i];
-			// skip already imported module
-			// this implementation is not 100% perfect for weird media query combinations
-			//  when a module is imported multiple times with different media queries.
-			//  I hope this will never occur (Hey this way we have smaller bundles)
-			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
-				if(mediaQuery && !item[2]) {
-					item[2] = mediaQuery;
-				} else if(mediaQuery) {
-					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
-				}
-				list.push(item);
-			}
-		}
-	};
-	return list;
-};
-
-function cssWithMappingToString(item, useSourceMap) {
-	var content = item[1] || '';
-	var cssMapping = item[3];
-	if (!cssMapping) {
-		return content;
-	}
-
-	if (useSourceMap && typeof btoa === 'function') {
-		var sourceMapping = toComment(cssMapping);
-		var sourceURLs = cssMapping.sources.map(function (source) {
-			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
-		});
-
-		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
-	}
-
-	return [content].join('\n');
-}
-
-// Adapted from convert-source-map (MIT)
-function toComment(sourceMap) {
-	// eslint-disable-next-line no-undef
-	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
-	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
-
-	return '/*# ' + data + ' */';
-}
-
-
-/***/ }),
-/* 84 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
-
-var stylesInDom = {};
-
-var	memoize = function (fn) {
-	var memo;
-
-	return function () {
-		if (typeof memo === "undefined") memo = fn.apply(this, arguments);
-		return memo;
-	};
-};
-
-var isOldIE = memoize(function () {
-	// Test for IE <= 9 as proposed by Browserhacks
-	// @see http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
-	// Tests for existence of standard globals is to allow style-loader
-	// to operate correctly into non-standard environments
-	// @see https://github.com/webpack-contrib/style-loader/issues/177
-	return window && document && document.all && !window.atob;
-});
-
-var getElement = (function (fn) {
-	var memo = {};
-
-	return function(selector) {
-		if (typeof memo[selector] === "undefined") {
-			var styleTarget = fn.call(this, selector);
-			// Special case to return head of iframe instead of iframe itself
-			if (styleTarget instanceof window.HTMLIFrameElement) {
-				try {
-					// This will throw an exception if access to iframe is blocked
-					// due to cross-origin restrictions
-					styleTarget = styleTarget.contentDocument.head;
-				} catch(e) {
-					styleTarget = null;
-				}
-			}
-			memo[selector] = styleTarget;
-		}
-		return memo[selector]
-	};
-})(function (target) {
-	return document.querySelector(target)
-});
-
-var singleton = null;
-var	singletonCounter = 0;
-var	stylesInsertedAtTop = [];
-
-var	fixUrls = __webpack_require__(85);
-
-module.exports = function(list, options) {
-	if (typeof DEBUG !== "undefined" && DEBUG) {
-		if (typeof document !== "object") throw new Error("The style-loader cannot be used in a non-browser environment");
-	}
-
-	options = options || {};
-
-	options.attrs = typeof options.attrs === "object" ? options.attrs : {};
-
-	// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
-	// tags it will allow on a page
-	if (!options.singleton && typeof options.singleton !== "boolean") options.singleton = isOldIE();
-
-	// By default, add <style> tags to the <head> element
-	if (!options.insertInto) options.insertInto = "head";
-
-	// By default, add <style> tags to the bottom of the target
-	if (!options.insertAt) options.insertAt = "bottom";
-
-	var styles = listToStyles(list, options);
-
-	addStylesToDom(styles, options);
-
-	return function update (newList) {
-		var mayRemove = [];
-
-		for (var i = 0; i < styles.length; i++) {
-			var item = styles[i];
-			var domStyle = stylesInDom[item.id];
-
-			domStyle.refs--;
-			mayRemove.push(domStyle);
-		}
-
-		if(newList) {
-			var newStyles = listToStyles(newList, options);
-			addStylesToDom(newStyles, options);
-		}
-
-		for (var i = 0; i < mayRemove.length; i++) {
-			var domStyle = mayRemove[i];
-
-			if(domStyle.refs === 0) {
-				for (var j = 0; j < domStyle.parts.length; j++) domStyle.parts[j]();
-
-				delete stylesInDom[domStyle.id];
-			}
-		}
-	};
-};
-
-function addStylesToDom (styles, options) {
-	for (var i = 0; i < styles.length; i++) {
-		var item = styles[i];
-		var domStyle = stylesInDom[item.id];
-
-		if(domStyle) {
-			domStyle.refs++;
-
-			for(var j = 0; j < domStyle.parts.length; j++) {
-				domStyle.parts[j](item.parts[j]);
-			}
-
-			for(; j < item.parts.length; j++) {
-				domStyle.parts.push(addStyle(item.parts[j], options));
-			}
-		} else {
-			var parts = [];
-
-			for(var j = 0; j < item.parts.length; j++) {
-				parts.push(addStyle(item.parts[j], options));
-			}
-
-			stylesInDom[item.id] = {id: item.id, refs: 1, parts: parts};
-		}
-	}
-}
-
-function listToStyles (list, options) {
-	var styles = [];
-	var newStyles = {};
-
-	for (var i = 0; i < list.length; i++) {
-		var item = list[i];
-		var id = options.base ? item[0] + options.base : item[0];
-		var css = item[1];
-		var media = item[2];
-		var sourceMap = item[3];
-		var part = {css: css, media: media, sourceMap: sourceMap};
-
-		if(!newStyles[id]) styles.push(newStyles[id] = {id: id, parts: [part]});
-		else newStyles[id].parts.push(part);
-	}
-
-	return styles;
-}
-
-function insertStyleElement (options, style) {
-	var target = getElement(options.insertInto)
-
-	if (!target) {
-		throw new Error("Couldn't find a style target. This probably means that the value for the 'insertInto' parameter is invalid.");
-	}
-
-	var lastStyleElementInsertedAtTop = stylesInsertedAtTop[stylesInsertedAtTop.length - 1];
-
-	if (options.insertAt === "top") {
-		if (!lastStyleElementInsertedAtTop) {
-			target.insertBefore(style, target.firstChild);
-		} else if (lastStyleElementInsertedAtTop.nextSibling) {
-			target.insertBefore(style, lastStyleElementInsertedAtTop.nextSibling);
-		} else {
-			target.appendChild(style);
-		}
-		stylesInsertedAtTop.push(style);
-	} else if (options.insertAt === "bottom") {
-		target.appendChild(style);
-	} else if (typeof options.insertAt === "object" && options.insertAt.before) {
-		var nextSibling = getElement(options.insertInto + " " + options.insertAt.before);
-		target.insertBefore(style, nextSibling);
-	} else {
-		throw new Error("[Style Loader]\n\n Invalid value for parameter 'insertAt' ('options.insertAt') found.\n Must be 'top', 'bottom', or Object.\n (https://github.com/webpack-contrib/style-loader#insertat)\n");
-	}
-}
-
-function removeStyleElement (style) {
-	if (style.parentNode === null) return false;
-	style.parentNode.removeChild(style);
-
-	var idx = stylesInsertedAtTop.indexOf(style);
-	if(idx >= 0) {
-		stylesInsertedAtTop.splice(idx, 1);
-	}
-}
-
-function createStyleElement (options) {
-	var style = document.createElement("style");
-
-	options.attrs.type = "text/css";
-
-	addAttrs(style, options.attrs);
-	insertStyleElement(options, style);
-
-	return style;
-}
-
-function createLinkElement (options) {
-	var link = document.createElement("link");
-
-	options.attrs.type = "text/css";
-	options.attrs.rel = "stylesheet";
-
-	addAttrs(link, options.attrs);
-	insertStyleElement(options, link);
-
-	return link;
-}
-
-function addAttrs (el, attrs) {
-	Object.keys(attrs).forEach(function (key) {
-		el.setAttribute(key, attrs[key]);
-	});
-}
-
-function addStyle (obj, options) {
-	var style, update, remove, result;
-
-	// If a transform function was defined, run it on the css
-	if (options.transform && obj.css) {
-	    result = options.transform(obj.css);
-
-	    if (result) {
-	    	// If transform returns a value, use that instead of the original css.
-	    	// This allows running runtime transformations on the css.
-	    	obj.css = result;
-	    } else {
-	    	// If the transform function returns a falsy value, don't add this css.
-	    	// This allows conditional loading of css
-	    	return function() {
-	    		// noop
-	    	};
-	    }
-	}
-
-	if (options.singleton) {
-		var styleIndex = singletonCounter++;
-
-		style = singleton || (singleton = createStyleElement(options));
-
-		update = applyToSingletonTag.bind(null, style, styleIndex, false);
-		remove = applyToSingletonTag.bind(null, style, styleIndex, true);
-
-	} else if (
-		obj.sourceMap &&
-		typeof URL === "function" &&
-		typeof URL.createObjectURL === "function" &&
-		typeof URL.revokeObjectURL === "function" &&
-		typeof Blob === "function" &&
-		typeof btoa === "function"
-	) {
-		style = createLinkElement(options);
-		update = updateLink.bind(null, style, options);
-		remove = function () {
-			removeStyleElement(style);
-
-			if(style.href) URL.revokeObjectURL(style.href);
-		};
-	} else {
-		style = createStyleElement(options);
-		update = applyToTag.bind(null, style);
-		remove = function () {
-			removeStyleElement(style);
-		};
-	}
-
-	update(obj);
-
-	return function updateStyle (newObj) {
-		if (newObj) {
-			if (
-				newObj.css === obj.css &&
-				newObj.media === obj.media &&
-				newObj.sourceMap === obj.sourceMap
-			) {
-				return;
-			}
-
-			update(obj = newObj);
-		} else {
-			remove();
-		}
-	};
-}
-
-var replaceText = (function () {
-	var textStore = [];
-
-	return function (index, replacement) {
-		textStore[index] = replacement;
-
-		return textStore.filter(Boolean).join('\n');
-	};
-})();
-
-function applyToSingletonTag (style, index, remove, obj) {
-	var css = remove ? "" : obj.css;
-
-	if (style.styleSheet) {
-		style.styleSheet.cssText = replaceText(index, css);
-	} else {
-		var cssNode = document.createTextNode(css);
-		var childNodes = style.childNodes;
-
-		if (childNodes[index]) style.removeChild(childNodes[index]);
-
-		if (childNodes.length) {
-			style.insertBefore(cssNode, childNodes[index]);
-		} else {
-			style.appendChild(cssNode);
-		}
-	}
-}
-
-function applyToTag (style, obj) {
-	var css = obj.css;
-	var media = obj.media;
-
-	if(media) {
-		style.setAttribute("media", media)
-	}
-
-	if(style.styleSheet) {
-		style.styleSheet.cssText = css;
-	} else {
-		while(style.firstChild) {
-			style.removeChild(style.firstChild);
-		}
-
-		style.appendChild(document.createTextNode(css));
-	}
-}
-
-function updateLink (link, options, obj) {
-	var css = obj.css;
-	var sourceMap = obj.sourceMap;
-
-	/*
-		If convertToAbsoluteUrls isn't defined, but sourcemaps are enabled
-		and there is no publicPath defined then lets turn convertToAbsoluteUrls
-		on by default.  Otherwise default to the convertToAbsoluteUrls option
-		directly
-	*/
-	var autoFixUrls = options.convertToAbsoluteUrls === undefined && sourceMap;
-
-	if (options.convertToAbsoluteUrls || autoFixUrls) {
-		css = fixUrls(css);
-	}
-
-	if (sourceMap) {
-		// http://stackoverflow.com/a/26603875
-		css += "\n/*# sourceMappingURL=data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + " */";
-	}
-
-	var blob = new Blob([css], { type: "text/css" });
-
-	var oldSrc = link.href;
-
-	link.href = URL.createObjectURL(blob);
-
-	if(oldSrc) URL.revokeObjectURL(oldSrc);
-}
-
-
-/***/ }),
-/* 85 */
-/***/ (function(module, exports) {
-
-
-/**
- * When source maps are enabled, `style-loader` uses a link element with a data-uri to
- * embed the css on the page. This breaks all relative urls because now they are relative to a
- * bundle instead of the current page.
- *
- * One solution is to only use full urls, but that may be impossible.
- *
- * Instead, this function "fixes" the relative urls to be absolute according to the current page location.
- *
- * A rudimentary test suite is located at `test/fixUrls.js` and can be run via the `npm test` command.
- *
- */
-
-module.exports = function (css) {
-  // get current location
-  var location = typeof window !== "undefined" && window.location;
-
-  if (!location) {
-    throw new Error("fixUrls requires window.location");
-  }
-
-	// blank or null?
-	if (!css || typeof css !== "string") {
-	  return css;
-  }
-
-  var baseUrl = location.protocol + "//" + location.host;
-  var currentDir = baseUrl + location.pathname.replace(/\/[^\/]*$/, "/");
-
-	// convert each url(...)
-	/*
-	This regular expression is just a way to recursively match brackets within
-	a string.
-
-	 /url\s*\(  = Match on the word "url" with any whitespace after it and then a parens
-	   (  = Start a capturing group
-	     (?:  = Start a non-capturing group
-	         [^)(]  = Match anything that isn't a parentheses
-	         |  = OR
-	         \(  = Match a start parentheses
-	             (?:  = Start another non-capturing groups
-	                 [^)(]+  = Match anything that isn't a parentheses
-	                 |  = OR
-	                 \(  = Match a start parentheses
-	                     [^)(]*  = Match anything that isn't a parentheses
-	                 \)  = Match a end parentheses
-	             )  = End Group
-              *\) = Match anything and then a close parens
-          )  = Close non-capturing group
-          *  = Match anything
-       )  = Close capturing group
-	 \)  = Match a close parens
-
-	 /gi  = Get all matches, not the first.  Be case insensitive.
-	 */
-	var fixedCss = css.replace(/url\s*\(((?:[^)(]|\((?:[^)(]+|\([^)(]*\))*\))*)\)/gi, function(fullMatch, origUrl) {
-		// strip quotes (if they exist)
-		var unquotedOrigUrl = origUrl
-			.trim()
-			.replace(/^"(.*)"$/, function(o, $1){ return $1; })
-			.replace(/^'(.*)'$/, function(o, $1){ return $1; });
-
-		// already a full url? no change
-		if (/^(#|data:|http:\/\/|https:\/\/|file:\/\/\/)/i.test(unquotedOrigUrl)) {
-		  return fullMatch;
-		}
-
-		// convert the url to a full url
-		var newUrl;
-
-		if (unquotedOrigUrl.indexOf("//") === 0) {
-		  	//TODO: should we add protocol?
-			newUrl = unquotedOrigUrl;
-		} else if (unquotedOrigUrl.indexOf("/") === 0) {
-			// path should be relative to the base url
-			newUrl = baseUrl + unquotedOrigUrl; // already starts with '/'
-		} else {
-			// path should be relative to current directory
-			newUrl = currentDir + unquotedOrigUrl.replace(/^\.\//, ""); // Strip leading './'
-		}
-
-		// send back the fixed url(...)
-		return "url(" + JSON.stringify(newUrl) + ")";
-	});
-
-	// send back the fixed css
-	return fixedCss;
-};
-
 
 /***/ })
 /******/ ]);
