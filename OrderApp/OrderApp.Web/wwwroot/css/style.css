@@ -1,0 +1,56 @@
+﻿.small-width {
+	width: 30%;
+}
+
+.tiny-width {
+	width: 20%;
+}
+
+.medium-width {
+	width: 45%;
+}
+
+.full-width {
+	width: 100%;
+}
+
+.layout-note {
+	font-size: 0.9em;
+	border-radius: 5px;
+}
+
+	.layout-note p {
+		margin-bottom: 2px;
+		margin-top: 2px;
+	}
+
+.layout-note-icon {
+	font-size: 42px;
+}
+
+.body-container {
+	width: 60%;
+	margin: 0 auto
+}
+
+.medium-border-right {
+	margin-right: 5px;
+}
+
+.circle {
+	border-radius: 50%;
+}
+
+.center-icon {
+	font-size: 70px;
+	width: auto;
+	height: auto;
+}
+
+.margin-top {
+	margin-top: 20px;
+}
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+	display: none !important;
+}

@@ -1,0 +1,55 @@
+﻿@using str = OrderApp.Web.Resources.StringResources
+
+<html lang="en">
+<head>
+	<title>OrderAPP</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" href="~/favicon.png" />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+	<link rel="stylesheet" href="~/css/style.css" />
+</head>
+<body ng-app="OrderApp" class="ng-cloak">
+
+	<md-toolbar class="md-hue-2" ng-controller="ToolbarController">
+		<div class="md-toolbar-tools">
+			<span flex></span>
+
+			<md-button class="md-icon-button" ng-click="redirect.github()">
+				<md-tooltip>GitHub</md-tooltip>
+				<md-icon md-svg-src="/images/github-logo.svg"></md-icon>
+			</md-button>
+		</div>
+
+		<md-fab-speed-dial md-direction="down" class="md-scale md-fab-top-left" ng-mouseenter="isFabOpen=true" ng-mouseleave="isFabOpen=false" md-open="isFabOpen">
+			<md-fab-trigger>
+				<md-button class="md-fab md-accent">
+					<md-icon>menu</md-icon>
+				</md-button>
+			</md-fab-trigger>
+
+			<md-fab-actions>
+				<md-button class="md-fab md-raised md-mini" ng-click="redirect.new()">
+					<md-tooltip md-direction="right">
+						@str.NewOrder
+					</md-tooltip>
+					<md-icon>add</md-icon>
+				</md-button>
+
+
+				<md-button class="md-fab md-raised md-mini" ng-click="redirect.editDialog()">
+					<md-tooltip md-direction="right">
+						@str.EditOrder
+					</md-tooltip>
+					<md-icon>mode_edit</md-icon>
+				</md-button>
+			</md-fab-actions>
+		</md-fab-speed-dial>
+	</md-toolbar>
+
+	<div class="body-container" ng-cloak>
+		@RenderBody()
+	</div>
+
+	<script src="~/js/bundle.js"></script>
+</body>
+</html>

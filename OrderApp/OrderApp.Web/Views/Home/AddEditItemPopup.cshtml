@@ -1,0 +1,72 @@
+﻿@using str = OrderApp.Web.Resources.StringResources
+
+<md-dialog class="small-width">
+	<md-toolbar>
+		<div class="md-toolbar-tools">
+			<h2> {{ isEdit ? "Editar item" : "Adicionar item" }}</h2>
+		</div>
+	</md-toolbar>
+	<md-dialog-content>
+		<md-content layout-padding>
+			<form name="itemForm">
+				<md-input-container class="full-width" flex>
+					<label>@str.Product</label>
+					<md-icon>local_offer</md-icon>
+					<md-select name="product" required ng-model="obj.product" ng-change="changeProduct($event)">
+						<md-option ng-repeat="product in products" ng-value="product">
+							{{product.name}}
+						</md-option>
+					</md-select>
+					<div ng-messages="itemForm.product.$error">
+						<div ng-message="required">@str.RequiredField</div>
+					</div>
+				</md-input-container>
+
+				<div layout="row">
+					<md-input-container class="md-icon-float md-block" flex="40">
+						<label>@str.Amount</label>
+						<input required name="amount" ui-number-mask="0" ng-model="obj.amount" min="1" multiplier="{{ obj.product.multiple }}">
+						<div ng-messages="itemForm.amount.$error">
+							<div ng-message="required">@str.RequiredField</div>
+							<div ng-message="min">@str.GreaterThanZero</div>
+							<div ng-message="multiplier">@str.MultipleOf {{ obj.product.multiple }}</div>
+						</div>
+					</md-input-container>
+
+					<md-input-container class="md-icon-float md-block" flex>
+						<label>@str.Value</label>
+						<md-icon>attach_money</md-icon>
+						<input required name="unitValue" ng-model="obj.unitValue" min-value="{{ obj.product.minValue }}" ui-number-mask ng-change="changeProfitability()">
+						<div ng-messages="itemForm.unitValue.$error">
+							<div ng-message="required">@str.RequiredField</div>
+							<div ng-message="minValue">@str.GreaterOrEqualsTo {{ obj.product.minValue | number:2 }}</div>
+						</div>
+					</md-input-container>
+				</div>
+			</form>
+
+			<div layout="row" class="layout-note" style="background-color: {{ obj.profitability.color }};" ng-show="obj.profitability">
+				<div layout-align="start center" flex="20">
+					<md-icon class="layout-note-icon">{{ obj.profitability.icon }}</md-icon>
+				</div>
+
+				<div layout="column">
+					<p>
+						<b>@str.Profitability</b>
+					</p>
+					<p>
+						<b>{{ obj.profitability.name }}</b>: {{ obj.profitability.message }}
+					</p>
+				</div>
+			</div>
+
+		</md-content>
+	</md-dialog-content>
+
+	<md-dialog-actions layout="row" layout-align="end end">
+		<md-button ng-click="confirm()" class="md-primary md-raised" ng-disabled="itemForm.$invalid || obj.profitability.code == 'low'">
+			<md-icon>done</md-icon>
+			@str.Confirm
+		</md-button>
+	</md-dialog-actions>
+</md-dialog>

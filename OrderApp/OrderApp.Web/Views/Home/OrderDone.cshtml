@@ -1,0 +1,28 @@
+﻿@using str = OrderApp.Web.Resources.StringResources
+
+<md-dialog class="small-width">
+	<md-toolbar>
+		<div class="md-toolbar-tools">
+			<h2>@str.Order {{ orderId }} {{isEdit ? "atualizado" : "gerado"}}</h2>
+		</div>
+	</md-toolbar>
+
+	<md-dialog-content>
+		<div class="flex layout-column layout-align-center-center">
+			<div>
+				<md-icon class="center-icon">sentiment_very_satisfied</md-icon>
+			</div>
+			<p class="md-body-1">
+				@str.Order <b>{{ orderId }}</b> {{isEdit ? "atualizado" : "gerado"}} com sucesso.
+			</p>
+		</div>
+	</md-dialog-content>
+
+	<md-dialog-actions layout="row" layout-align="end end">
+		<md-button ng-click="redirect.new()">
+			<md-icon>done</md-icon>
+			@str.OK
+		</md-button>
+
+	</md-dialog-actions>
+</md-dialog>

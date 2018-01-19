@@ -1,0 +1,111 @@
+﻿@model OrderApp.Models.DTOs.OrderDTO
+@using str = OrderApp.Web.Resources.StringResources
+
+<md-card ng-if="!loading" ng-controller="OrderFormController">
+	<md-toolbar>
+		<div class="md-toolbar-tools">
+			<h2 flex> {{ obj.id ? "Editar pedido" : "Novo pedido"}}</h2>
+		</div>
+	</md-toolbar>
+
+	<md-content layout-padding>
+		<div>
+			<form name="userForm">
+				<div layout="row" md-border-bottom>
+
+					<img width="40" height="40" ng-src="{{getCustomerPicture(obj.customer)}}" class="circle medium-border-right" />
+					<md-autocomplete md-no-cache="true"
+									 md-selected-item="obj.customer"
+									 md-search-text="customerSearch"
+									 md-items="customer in filterCustomers()"
+									 md-item-text="customer.name"
+									 md-min-length="0"
+									 placeholder="@str.SelectCustomer"
+									 required
+									 flex>
+						<md-item-template>
+							<div layout="row">
+								<img width="40" height="40" ng-src="{{getCustomerPicture(customer)}}" class="circle medium-border-right" />
+								<span md-highlight-text="customerSearch" md-highlight-flags="i">{{customer.name}}</span>
+							</div>
+						</md-item-template>
+						<md-not-found>
+							@str.CustomerNotFound
+						</md-not-found>
+					</md-autocomplete>
+				</div>
+
+				<md-tabs md-dynamic-height md-border-bottom>
+					<md-tab label="@str.Items">
+
+						<div layout="row" layout-align="start center">
+
+							<md-button class="md-raised md-accent" ng-click="openOrderItemPopup($event)">
+								<md-icon>add</md-icon>
+								@str.AddItem
+							</md-button>
+							<div flex></div>
+							<div ng-show="!visibleItems.length" class="md-caption">@str.AddAtLeastOneItem</div>
+						</div>
+
+						<md-card style="background-color:{{item.profitability.color}}" ng-repeat="item in visibleItems = (obj.items | filter:{removed:false} | orderBy:'index')  track by $index">
+							<div layout="row">
+								<md-card-title>
+									<md-card-title-text>
+										<span class="md-headline">{{ item.product.name }}</span>
+										<span class="md-subhead">{{ item.amount }} x {{ item.unitValue | number:2 }} = <b>R$ {{ item.amount * item.unitValue | number:2 }}</b></span>
+									</md-card-title-text>
+								</md-card-title>
+								<md-card-actions layout="row" layout-align="end center">
+									<md-button class="md-icon-button" ng-click="openOrderItemPopup($event, item)">
+										<md-icon>mode_edit</md-icon>
+									</md-button>
+									<md-button class="md-icon-button" ng-click="removeItem($event, item)">
+										<md-icon>clear</md-icon>
+									</md-button>
+								</md-card-actions>
+							</div>
+
+						</md-card>
+					</md-tab>
+				</md-tabs>
+
+				<md-divider ng-show="visibleItems.length"></md-divider>
+				<div ng-show="visibleItems.length" layout="row" layout-align="end center">
+					<div flex="60">
+
+					</div>
+					<md-card style="background-color:{{ getOrderProfitability().color }}">
+
+						<md-card-content layout="column">
+							<span class="md-headline">@str.Summary</span>
+							<span class="md-caption">@str.ProductsValue: R$ {{ getProductsTotalValue() | number:2 }}</span>
+							<span class="md-caption">@str.Profitability: {{ getOrderProfitability().name }}</span>
+
+							<span class="md-subhead margin-top">
+								<md-icon>attach_money</md-icon>
+								@str.Total: <b>R$ {{ getOrderTotalValue() | number:2 }}</b>
+							</span>
+						</md-card-content>
+
+					</md-card>
+				</div>
+			</form>
+		</div>
+
+		<md-card-actions layout="row" layout-align="end center">
+			<md-button ng-disabled="!obj.customer && !visibleItems.length" ng-click="cancelOrder($event)">
+				@str.Cancel
+			</md-button>
+			<md-button class="md-primary md-raised" ng-click="confirmOrder($event)" ng-disabled="userForm.$invalid || !visibleItems.length">
+				<md-icon>done</md-icon>
+				@str.Confirm
+			</md-button>
+		</md-card-actions>
+	</md-content>
+</md-card>
+
+<script type="text/javascript">
+	itemToEdit =  @Html.Raw(Json.Serialize(Model));
+	errorMessage = '@TempData["ErrorMessage"]';
+</script>

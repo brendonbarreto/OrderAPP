@@ -1,0 +1,26 @@
+﻿@using str = OrderApp.Web.Resources.StringResources
+
+<md-dialog class="tiny-width">
+	<md-toolbar>
+		<div class="md-toolbar-tools">
+			<h2>@str.EditOrder</h2>
+		</div>
+	</md-toolbar>
+	<md-dialog-content>
+		<p class="ng-binding md-padding">@str.WhatsYourOrderID</p>
+
+		<form name="selectOrderForm">
+			<md-input-container class="md-block">
+				<input type="number" min="1" required ng-model="id">
+			</md-input-container>
+		</form>
+
+	</md-dialog-content>
+
+	<md-dialog-actions layout="row" layout-align="end end">
+		<md-button ng-click="confirm()" class="md-primary md-raised" ng-disabled="selectOrderForm.$invalid">
+			<md-icon>done</md-icon>
+			@str.Edit
+		</md-button>
+	</md-dialog-actions>
+</md-dialog>
